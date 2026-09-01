@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATLAS — Auditoria de Contas</title>
+  <link rel="icon" type="image/png" href="assets/globo_atlas_ouro.png">
+
+  <!-- Tipografia e estilos (tudo LOCAL — funciona 100% offline / file://) -->
+  <link rel="stylesheet" href="libs/manrope.css">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- SQLite no navegador. O sql-wasm-b64.js embute o binário WASM em base64
+       (necessário para abrir por duplo clique/file://, onde fetch local é
+       bloqueado). defer mantém a ordem de execução sem travar o 1º paint. -->
+  <script defer src="libs/sql-wasm.js"></script>
+  <script defer src="libs/sql-wasm-b64.js"></script>
+
+  <!-- Leitor de planilhas (SheetJS) — vendorizado -->
+  <script defer src="libs/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <div id="app">
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="message">Abrindo a ATLAS…</div>
+    </div>
+  </div>
+
+  <!-- Scripts da aplicação (A ORDEM IMPORTA: núcleo → motor → telas → shell) -->
+  <script defer src="js/versao.js"></script>
+  <script defer src="js/utilidades.js"></script>
+  <script defer src="js/schema.js"></script>
+  <script defer src="js/banco.js"></script>
+  <script defer src="js/importador.js"></script>
+  <script defer src="js/motor.js"></script>
+
+  <script defer src="js/telas/dashboard.js"></script>
+  <script defer src="js/telas/clientes.js"></script>
+  <script defer src="js/telas/importar.js"></script>
+  <script defer src="js/telas/base_tabela.js"></script>
+  <script defer src="js/telas/inspecao.js"></script>
+  <script defer src="js/telas/relatorios.js"></script>
+  <script defer src="js/telas/sistema.js"></script>
+
+  <script defer src="js/app.js"></script>
+</body>
+</html>
