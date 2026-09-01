@@ -5,12 +5,16 @@
  * Cruza PRODUÇÃO × REPASSE via Motor.auditar() e mostra, admissão por
  * admissão, o que era esperado, o que foi pago e O QUE FALTA RECEBER.
  *
+ * FILTROS E CARDS: os cards respeitam TODOS os filtros (hospital,
+ * competência, status, busca e MÉDICO). O filtro de médico aplica o
+ * RECORTE da metodologia: a admissão passa a ser lida pelo que é DELE —
+ * produzido = itens em que ele é o executante; esperado/pago/falta = só os
+ * papéis dele. O raio-x continua mostrando a admissão inteira.
+ *
  * Três abas:
  *   • Admissões — a matriz do cruzamento; clique abre o RAIO-X da admissão
- *     (item a item: regra aplicada, esperado, pago, diferença, status).
- *   • Pauta — admissões marcadas para acompanhamento/cobrança (o produto do
- *     serviço: o que a ATLAS está cobrando para o cliente).
- *   • Sem lastro — pagamentos de admissões que não existem na produção.
+ *   • Pauta — admissões marcadas para acompanhamento/cobrança
+ *   • Sem lastro — pagamentos de admissões que não existem na produção
  *
  * Filtro de competência = mês da PRODUÇÃO; o pagamento é procurado em todo
  * o histórico (produção de abril paga em junho conta como paga).
@@ -25,9 +29,12 @@ App.telas['inspecao'] = function () {
   if (!cliente) { App.avisoSemCliente(el); return; }
 
   if (!window.__insp) {
-    window.__insp = { hospitalId: 0, competencia: '', status: 'todos', busca: '', aba: 'admissoes' };
+    window.__insp = { hospitalId: 0, competencia: '', status: 'todos', medico: '', busca: '', aba: 'admissoes' };
   }
   const st = window.__insp;
+  if (st.medico === undefined) st.medico = '';   // state de versão antiga
+
+  const TOL = Number(Banco.configLer('tolerancia_centavos', 0.05)) || 0.05;
 
   const STATUS_ROTULO = {
     NAO_PAGO: 'NÃO PAGO', PAGO_A_OUTRO: 'PAGO A OUTRO', A_MENOR: 'PAGO A MENOR',
@@ -65,6 +72,13 @@ App.telas['inspecao'] = function () {
     const comps = Motor.listarCompetencias(cliente.id, st.hospitalId);
     const r = Motor.auditar({ clienteId: cliente.id, hospitalId: st.hospitalId, competencia: st.competencia });
 
+    // médicos do resultado (nomes já resolvidos pelo De-Para), ordenados
+    const medicos = [...r.porMedico.entries()]
+      .filter(([k]) => k !== 'SEM PROFISSIONAL')
+      .map(([k, reg]) => ({ chave: k, nome: reg.medico }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    if (st.medico && !medicos.some(m => m.chave === st.medico)) st.medico = '';
+
     el.innerHTML = `
       <div class="tela-cabecalho">
         <h1 class="tela-titulo">Inspeção</h1>
@@ -85,6 +99,11 @@ App.telas['inspecao'] = function () {
             <option value="">— todas —</option>
             ${comps.map(c => `<option value="${c}" ${c === st.competencia ? 'selected' : ''}>${Utilidades.compExibir(c)}</option>`).join('')}
           </select></div>
+        <div class="campo"><span class="campo-rotulo">Médico</span>
+          <select class="entrada" id="f-medico">
+            <option value="">— todos —</option>
+            ${medicos.map(m => `<option value="${esc(m.chave)}" ${m.chave === st.medico ? 'selected' : ''}>${esc(m.nome)}</option>`).join('')}
+          </select></div>
         <div class="campo"><span class="campo-rotulo">Status</span>
           <select class="entrada" id="f-status">
             <option value="todos">— todos —</option>
@@ -95,17 +114,7 @@ App.telas['inspecao'] = function () {
           <input class="entrada" id="f-busca" placeholder="admissão, paciente, médico ou procedimento" value="${esc(st.busca)}"></div>
       </div>
 
-      <div class="cards">
-        <div class="card"><div class="card-rotulo">Produzido</div>
-          <div class="card-valor mono">${fmtR(r.kpis.produzido)}</div></div>
-        <div class="card"><div class="card-rotulo">Esperado (regras)</div>
-          <div class="card-valor mono">${fmtR(r.kpis.esperado)}</div></div>
-        <div class="card"><div class="card-rotulo">Pago ao médico</div>
-          <div class="card-valor mono">${fmtR(r.kpis.pago)}</div></div>
-        <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
-          <div class="card-valor mono">${fmtR(r.kpis.falta)}</div>
-          <div class="card-extra">${r.kpis.nPendencias} de ${r.kpis.nAdmissoes} admissões com pendência</div></div>
-      </div>
+      <div id="insp-cards"></div>
 
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="botao ${st.aba === 'admissoes' ? 'botao-marinho' : ''}" data-aba="admissoes">Admissões</button>
@@ -116,6 +125,7 @@ App.telas['inspecao'] = function () {
 
     el.querySelector('#f-hosp').addEventListener('change', e => { st.hospitalId = Number(e.target.value); render(); });
     el.querySelector('#f-comp').addEventListener('change', e => { st.competencia = e.target.value; render(); });
+    el.querySelector('#f-medico').addEventListener('change', e => { st.medico = e.target.value; renderCorpo(r); });
     el.querySelector('#f-status').addEventListener('change', e => { st.status = e.target.value; renderCorpo(r); });
     el.querySelector('#f-busca').addEventListener('input', e => {
       st.busca = e.target.value;
@@ -129,28 +139,90 @@ App.telas['inspecao'] = function () {
   }
 
   // ────────────────────────────────────────────────────────────────────
+  // RECORTE E FILTROS
+  // ────────────────────────────────────────────────────────────────────
+
+  /**
+   * A "visão" da admissão sob o filtro de médico. Sem médico = a admissão
+   * inteira. Com médico = só os papéis DELE: produzido conta os itens em
+   * que ele é o EXECUTANTE (o dono da produção da linha); esperado, pago e
+   * falta somam todos os papéis dele; status = o pior status dos itens dele.
+   * Devolve null quando o médico não participa da admissão.
+   */
+  function recorte(a) {
+    if (!st.medico) {
+      return { itens: a.itens, produzido: a.produzido, esperado: a.esperado,
+               pago: a.pago, falta: a.falta, status: a.status };
+    }
+    const itens = a.itens.filter(i => Utilidades.normalizar(i.medico) === st.medico);
+    if (!itens.length) return null;
+    const v = {
+      itens,
+      produzido: itens.filter(i => i.papel === 'EXECUTANTE')
+        .reduce((s, i) => s + (Number(i.valorProducao) || 0), 0),
+      esperado: itens.reduce((s, i) => s + (i.esperado || 0), 0),
+      pago: itens.reduce((s, i) => s + (i.pago || 0), 0),
+      falta: itens.reduce((s, i) => s + (i.falta || 0), 0),
+    };
+    v.status = itens.reduce((pior, i) =>
+      ((Motor.SEVERIDADE[i.status] || 0) > (Motor.SEVERIDADE[pior] || 0) ? i.status : pior), 'OK');
+    return v;
+  }
+
+  /** Aplica médico + status + busca; devolve [{ a, v }]. */
   function filtrarAdmissoes(r) {
     const buscaN = Utilidades.normalizar(st.busca);
-    return r.admissoes.filter(a => {
+    const out = [];
+    for (const a of r.admissoes) {
+      const v = recorte(a);
+      if (!v) continue;
       if (st.status !== 'todos') {
-        if (st.status === 'OK' ? a.status !== 'OK' : !a.itens.some(i => i.status === st.status)) return false;
+        if (st.status === 'OK' ? v.status !== 'OK' : !v.itens.some(i => i.status === st.status)) continue;
       }
       if (buscaN) {
         const alvo = Utilidades.normalizar(
           a.admissao + ' ' + (a.paciente || '') + ' ' + a.medicos.join(' ') + ' ' +
           a.itens.map(i => i.procedimento).join(' '));
-        if (!alvo.includes(buscaN)) return false;
+        if (!alvo.includes(buscaN)) continue;
       }
-      return true;
-    });
+      out.push({ a, v });
+    }
+    return out;
+  }
+
+  /** Cards calculados sobre a LISTA FILTRADA — os números seguem os filtros. */
+  function renderCards(lista) {
+    const box = el.querySelector('#insp-cards');
+    if (!box) return;
+    const soma = (campo) => lista.reduce((s, x) => s + (x.v[campo] || 0), 0);
+    const nPend = lista.filter(x => x.v.falta > TOL).length;
+    const filtrado = !!(st.medico || st.status !== 'todos' || st.busca.trim());
+    const nomeMed = st.medico
+      ? (el.querySelector('#f-medico option:checked') || {}).textContent : '';
+
+    box.innerHTML = `
+      <div class="cards">
+        <div class="card"><div class="card-rotulo">Produzido${st.medico ? ' (como executante)' : ''}</div>
+          <div class="card-valor mono">${fmtR(soma('produzido'))}</div>
+          ${filtrado ? `<div class="card-extra">${lista.length.toLocaleString('pt-BR')} admissão(ões) no filtro${st.medico ? ' · ' + esc(nomeMed) : ''}</div>` : ''}</div>
+        <div class="card"><div class="card-rotulo">Esperado (regras)</div>
+          <div class="card-valor mono">${fmtR(soma('esperado'))}</div></div>
+        <div class="card"><div class="card-rotulo">Pago ao médico</div>
+          <div class="card-valor mono">${fmtR(soma('pago'))}</div></div>
+        <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
+          <div class="card-valor mono">${fmtR(soma('falta'))}</div>
+          <div class="card-extra">${nPend.toLocaleString('pt-BR')} de ${lista.length.toLocaleString('pt-BR')} admissões com pendência</div></div>
+      </div>`;
   }
 
   function renderCorpo(r) {
     const corpo = el.querySelector('#insp-corpo');
+    const lista = filtrarAdmissoes(r);
+    renderCards(lista);
+
     if (st.aba === 'pauta') { renderPauta(corpo, r); return; }
     if (st.aba === 'semlastro') { renderSemLastro(corpo, r); return; }
 
-    const lista = filtrarAdmissoes(r);
     const pauta = pautaSet();
     const LIMITE = 400;
 
@@ -158,36 +230,36 @@ App.telas['inspecao'] = function () {
       <div class="painel">
         <div class="painel-cabecalho">
           <span class="painel-titulo">Admissões</span>
-          <span class="painel-conta">${lista.length} admissão(ões)${lista.length > LIMITE ? ' — mostrando as ' + LIMITE + ' primeiras' : ''}</span>
+          <span class="painel-conta">${lista.length.toLocaleString('pt-BR')} admissão(ões)${lista.length > LIMITE ? ' — mostrando as ' + LIMITE + ' primeiras' : ''}${st.medico ? ' · valores no recorte do médico' : ''}</span>
         </div>
         ${lista.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
             <th>Admissão</th><th>Data</th><th>Paciente</th><th>Médico(s)</th>
             <th class="num">Produzido</th><th class="num">Esperado</th>
             <th class="num">Pago</th><th class="num">Falta</th><th>Status</th><th></th>
           </tr></thead><tbody>
-          ${lista.slice(0, LIMITE).map((a, i) => `
+          ${lista.slice(0, LIMITE).map((x, i) => `
             <tr class="clique" data-adm="${i}">
-              <td class="mono"><strong>${esc(a.admissao)}</strong></td>
-              <td>${Utilidades.dataExibir(a.data)}</td>
-              <td>${esc(a.paciente || '—')}</td>
-              <td>${esc(a.medicos.slice(0, 2).join(', ') || '—')}${a.medicos.length > 2 ? ' <span class="texto-cinza">+' + (a.medicos.length - 2) + '</span>' : ''}</td>
-              <td class="num">${fmtR(a.produzido)}</td>
-              <td class="num">${fmtR(a.esperado)}</td>
-              <td class="num">${fmtR(a.pago)}</td>
-              <td class="num ${a.falta > 0 ? 'texto-erro' : ''}">${a.falta > 0 ? fmtR(a.falta) : '—'}</td>
-              <td>${badge(a.status)}</td>
-              <td>${pauta.has(String(a.admissao)) ? `<span class="badge badge-${esc(pauta.get(String(a.admissao)))}">📌 ${esc(pauta.get(String(a.admissao)))}</span>` : ''}</td>
+              <td class="mono"><strong>${esc(x.a.admissao)}</strong></td>
+              <td>${Utilidades.dataExibir(x.a.data)}</td>
+              <td>${esc(x.a.paciente || '—')}</td>
+              <td>${esc(x.a.medicos.slice(0, 2).join(', ') || '—')}${x.a.medicos.length > 2 ? ' <span class="texto-cinza">+' + (x.a.medicos.length - 2) + '</span>' : ''}</td>
+              <td class="num">${fmtR(x.v.produzido)}</td>
+              <td class="num">${fmtR(x.v.esperado)}</td>
+              <td class="num">${fmtR(x.v.pago)}</td>
+              <td class="num ${x.v.falta > 0 ? 'texto-erro' : ''}">${x.v.falta > 0 ? fmtR(x.v.falta) : '—'}</td>
+              <td>${badge(x.v.status)}</td>
+              <td>${pauta.has(String(x.a.admissao)) ? `<span class="badge badge-${esc(pauta.get(String(x.a.admissao)))}">📌 ${esc(pauta.get(String(x.a.admissao)))}</span>` : ''}</td>
             </tr>`).join('')}
           </tbody></table></div>` :
         `<div class="tabela-vazia">Nada encontrado com os filtros atuais.</div>`}
       </div>`;
 
     corpo.querySelectorAll('[data-adm]').forEach(tr =>
-      tr.addEventListener('click', () => abrirRaioX(lista[Number(tr.dataset.adm)], r)));
+      tr.addEventListener('click', () => abrirRaioX(lista[Number(tr.dataset.adm)].a, r)));
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // RAIO-X DA ADMISSÃO
+  // RAIO-X DA ADMISSÃO (sempre a admissão INTEIRA)
   // ────────────────────────────────────────────────────────────────────
   function abrirRaioX(a, r) {
     if (!a) return;
@@ -215,6 +287,7 @@ App.telas['inspecao'] = function () {
           <button class="modal-fechar">✕</button>
         </div>
         <div class="modal-corpo">
+          ${st.medico ? `<div class="info-caixa">O filtro de médico está ativo, mas o raio-x mostra a admissão <strong>inteira</strong> — os valores do recorte estão na tabela.</div>` : ''}
           <div class="raiox-kpis">
             <div class="raiox-kpi">Produzido<strong class="mono">${fmtR(a.produzido)}</strong></div>
             <div class="raiox-kpi">Esperado<strong class="mono">${fmtR(a.esperado)}</strong></div>
@@ -340,7 +413,8 @@ App.telas['inspecao'] = function () {
     corpo.innerHTML = `
       <div class="info-caixa">Pagamentos de admissões que <strong>não existem na produção
       importada</strong> do cliente. Ou a produção correspondente ainda não foi importada,
-      ou o pagamento é de outro contexto — vale conferir.</div>
+      ou o pagamento é de outro contexto — vale conferir. (Os filtros de médico/status/busca
+      não se aplicam aqui: sem produção, não há recorte.)</div>
       <div class="painel">
         <div class="painel-cabecalho"><span class="painel-titulo">Repasses sem lastro na produção</span>
           <span class="painel-conta">${r.semProducao.length} admissão(ões)</span></div>
@@ -364,12 +438,12 @@ App.telas['inspecao'] = function () {
       'PROFISSIONAL', 'FONTE', 'VALOR PRODUÇÃO', 'REGRA', 'ESPERADO', 'PAGO', 'FALTA', 'STATUS',
     ]];
     const hospNome = new Map(App.listarHospitais(cliente.id).map(h => [h.id, h.nome]));
-    for (const a of lista) {
-      for (const i of a.itens) {
+    for (const x of lista) {
+      for (const i of x.v.itens) {
         if (!(i.status === 'NAO_PAGO' || i.status === 'PAGO_A_OUTRO' ||
               i.status === 'A_MENOR' || i.status === 'SEM_REGRA')) continue;
         linhas.push([
-          String(a.admissao), Utilidades.dataExibir(i.data), i.paciente || '',
+          String(x.a.admissao), Utilidades.dataExibir(i.data), i.paciente || '',
           hospNome.get(i.hospital_id) || '', Utilidades.compExibir(i.competencia),
           i.procedimento, i.papel, i.medico || '', i.fonte,
           i.valorProducao || 0,
@@ -383,9 +457,10 @@ App.telas['inspecao'] = function () {
     if (linhas.length === 1) { Utilidades.toast('Nenhuma pendência nos filtros atuais.', 'info'); return; }
     linhas.push([]);
     linhas.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL FALTA:',
-      '', '', lista.reduce((s, a) => s + a.falta, 0), '']);
+      '', '', lista.reduce((s, x) => s + x.v.falta, 0), '']);
+    const sufMed = st.medico ? '_' + st.medico.replace(/ /g, '_') : '';
     Utilidades.exportarXLSX(
-      `ATLAS_pendencias_${Utilidades.normalizar(cliente.nome).replace(/ /g, '_')}_${st.competencia || 'todas'}.xlsx`,
+      `ATLAS_pendencias_${Utilidades.normalizar(cliente.nome).replace(/ /g, '_')}${sufMed}_${st.competencia || 'todas'}.xlsx`,
       [{
         nome: 'Pendências', linhas,
         formatos: { moeda: [9, 11, 12, 13] },
