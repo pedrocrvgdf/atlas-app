@@ -3,6 +3,7 @@
  * TELA: Importações (📥)
  *
  * PRODUÇÃO — importação AUTOMÁTICA (a forma da ferramenta de origem):
+ *   um pop-up pergunta se o arquivo é do ANO INTEIRO ou de UM MÊS (e qual);
  *   escolheu o arquivo, importou. A ATLAS acha o cabeçalho ("Cód. Admissão"),
  *   reconhece as colunas pelo layout do relatório analítico, deriva a
  *   competência de cada linha pela data, sobrescreve os meses presentes e
@@ -30,10 +31,12 @@ App.telas['importar'] = function () {
 
   if (!window.__imp) {
     window.__imp = { etapa: 1, hospitalId: 0, tipo: 'PRODUCAO', competencia: '', arq: null,
-      alvo: '', filtro: { aberto: false, adm: '', pac: '', data: '', prod: '' }, anosAbertos: null };
+      alvo: '', escopo: null, filtro: { aberto: false, adm: '', pac: '', data: '', prod: '' }, anosAbertos: null };
   }
   const st = window.__imp;
   if (!st.filtro) st.filtro = { aberto: false, adm: '', pac: '', data: '', prod: '' };
+  const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto',
+    'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
   // Os ids internos ficam (perfis e histórico já gravados); os NOMES são os
   // do produto: SISTEMA (relatório cru do sistema do hospital), PRODUÇÃO
@@ -101,8 +104,11 @@ App.telas['importar'] = function () {
             <div class="campo" id="imp-comp-box" style="max-width:170px; ${comComp ? '' : 'display:none'}">
               <span class="campo-rotulo">Mês do pagamento</span>
               <input type="month" id="imp-comp" value="${esc(st.competencia)}"></div>
-            <div class="campo"><span class="campo-rotulo">Arquivo (.xlsx / .xls / .csv)</span>
-              <input type="file" id="imp-arquivo" accept=".xlsx,.xls,.csv"></div>
+            ${st.tipo === 'PRODUCAO'
+              ? `<div class="campo"><span class="campo-rotulo">Arquivo (.xlsx / .xls / .csv)</span>
+                  <button class="botao botao-ouro" id="imp-prod-abrir">📥 Importar produção…</button></div>`
+              : `<div class="campo"><span class="campo-rotulo">Arquivo (.xlsx / .xls / .csv)</span>
+                  <input type="file" id="imp-arquivo" accept=".xlsx,.xls,.csv"></div>`}
           </div>
           <div class="info-caixa" id="imp-ajuda" style="margin-top:12px">${ajudaTipo(st.tipo)}</div>
         </div>
@@ -111,20 +117,17 @@ App.telas['importar'] = function () {
     area.querySelector('#imp-hosp').addEventListener('change', e => { st.hospitalId = Number(e.target.value); });
     area.querySelector('#imp-tipo').addEventListener('change', e => {
       st.tipo = e.target.value;
-      area.querySelector('#imp-comp-box').style.display = (st.tipo === 'REPASSE' || st.tipo === 'MEDICO') ? '' : 'none';
-      area.querySelector('#imp-ajuda').innerHTML = ajudaTipo(st.tipo);
+      renderEscolha(hospitais);   // o controle de arquivo muda conforme o tipo
     });
     area.querySelector('#imp-comp').addEventListener('change', e => { st.competencia = e.target.value; });
 
-    area.querySelector('#imp-arquivo').addEventListener('change', async (e) => {
+    const abrir = area.querySelector('#imp-prod-abrir');
+    if (abrir) abrir.addEventListener('click', () => abrirEscopoProducao({ hospitalId: st.hospitalId, alvo: '' }));
+
+    const inpArquivo = area.querySelector('#imp-arquivo');
+    if (inpArquivo) inpArquivo.addEventListener('change', async (e) => {
       const f = e.target.files && e.target.files[0];
       if (!f) return;
-      if (st.tipo === 'PRODUCAO') {
-        st.alvo = '';
-        await importarProducaoArquivo(f);
-        e.target.value = '';
-        return;
-      }
       if (st.tipo === 'REPASSE' && !area.querySelector('#imp-comp').value) {
         Utilidades.toast('Informe o MÊS DO PAGAMENTO antes de escolher o arquivo do sistema.', 'aviso', 4200);
         e.target.value = '';
@@ -166,10 +169,11 @@ App.telas['importar'] = function () {
   function ajudaTipo(tipo) {
     if (tipo === 'PRODUCAO') {
       return `<strong>Produção</strong> = tudo que foi produzido (admissão, procedimentos, profissionais
-        por papel, valores). Escolha o arquivo e pronto: a ATLAS acha o cabeçalho
-        (<em>Cód. Admissão</em>), reconhece as colunas, deriva a competência pela data de cada
-        linha e importa o relatório <strong>na íntegra</strong>. Reimportar um mês já existente
-        <strong>sobrescreve</strong> os dados daquela competência (não duplica).`;
+        por papel, valores). Clique em importar, diga se o arquivo é do <strong>ano inteiro</strong> ou
+        de <strong>um mês</strong> e escolha o arquivo: a ATLAS acha o cabeçalho (<em>Cód. Admissão</em>),
+        reconhece as colunas, deriva a competência pela data de cada linha e importa o relatório
+        <strong>na íntegra</strong>. Reimportar um mês já existente <strong>sobrescreve</strong> os dados
+        daquela competência (não duplica).`;
     }
     if (tipo === 'REPASSE') {
       return `<strong>Sistema</strong> = o relatório cru que sai do sistema do hospital (o que ele diz
@@ -188,6 +192,88 @@ App.telas['importar'] = function () {
   // ────────────────────────────────────────────────────────────────────
   // PRODUÇÃO — automático
   // ────────────────────────────────────────────────────────────────────
+
+  /**
+   * Pop-up antes do arquivo: o relatório é do ANO INTEIRO ou de UM MÊS, e
+   * de qual ano (e mês). É o período que o arquivo cobre — só as linhas
+   * dele entram e só os meses que vierem nele são sobrescritos.
+   * opts: { hospitalId, alvo } (alvo = competência do botão Atualizar)
+   */
+  function abrirEscopoProducao(opts) {
+    const hospitais = App.listarHospitais(cliente.id);
+    const hospitalId = opts.hospitalId || st.hospitalId;
+    const hosp = hospitais.find(h => h.id === hospitalId);
+    const hoje = new Date();
+    const anoAtual = hoje.getFullYear();
+    const anosBase = Banco.query(
+      `SELECT DISTINCT substr(competencia, 1, 4) AS ano FROM linhas_producao WHERE cliente_id = ?`, [cliente.id])
+      .map(r => String(r.ano || '')).filter(a => /^\d{4}$/.test(a));
+    const anos = [...new Set([String(anoAtual + 1), ...Array.from({ length: 8 }, (_, i) => String(anoAtual - i)), ...anosBase])]
+      .sort().reverse();
+    const pre = st.escopo || {};
+    const sel = {
+      tipo: opts.alvo ? 'MES' : (pre.tipo === 'MES' ? 'MES' : 'ANO'),
+      ano: opts.alvo ? opts.alvo.slice(0, 4) : (pre.ano || String(anoAtual)),
+      mes: opts.alvo ? opts.alvo.slice(5, 7) : (pre.mes || String(hoje.getMonth() + 1).padStart(2, '0')),
+    };
+    const ov = document.createElement('div');
+    ov.className = 'modal-fundo';
+    ov.innerHTML = `
+      <div class="modal" style="width:560px;max-width:95vw">
+        <div class="modal-cabecalho">
+          <span class="modal-titulo">📥 Importar produção</span>
+          <button class="modal-fechar">✕</button>
+        </div>
+        <div class="modal-corpo">
+          <div class="info-caixa">Hospital: <strong>${esc(hosp ? hosp.nome : '')}</strong>. Diga o que o arquivo cobre —
+            a ATLAS só aceita as linhas desse período e sobrescreve os meses que vierem nele.</div>
+          <div class="raiox-rotulo" style="margin-top:14px">Esta importação é de</div>
+          <div class="imp-escopo">
+            <label class="imp-opcao ${sel.tipo === 'ANO' ? 'ativa' : ''}" data-escopo="ANO">
+              <input type="radio" name="imp-escopo" value="ANO" ${sel.tipo === 'ANO' ? 'checked' : ''}>
+              <div><strong>Ano inteiro</strong><span>o relatório traz todos os meses do ano (ou o ano até aqui)</span></div>
+            </label>
+            <label class="imp-opcao ${sel.tipo === 'MES' ? 'ativa' : ''}" data-escopo="MES">
+              <input type="radio" name="imp-escopo" value="MES" ${sel.tipo === 'MES' ? 'checked' : ''}>
+              <div><strong>Um mês</strong><span>o relatório traz só a competência escolhida</span></div>
+            </label>
+          </div>
+          <div class="linha-campos" style="margin-top:14px">
+            <div class="campo" style="max-width:150px"><span class="campo-rotulo">Ano</span>
+              <select id="imp-esc-ano">${anos.map(a => `<option value="${a}" ${a === sel.ano ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+            <div class="campo" id="imp-esc-mes-box" style="max-width:190px;${sel.tipo === 'MES' ? '' : 'display:none'}">
+              <span class="campo-rotulo">Mês</span>
+              <select id="imp-esc-mes">${MESES.map((nome, i) => { const v = String(i + 1).padStart(2, '0');
+                return `<option value="${v}" ${v === sel.mes ? 'selected' : ''}>${nome}</option>`; }).join('')}</select></div>
+          </div>
+          ${opts.alvo ? `<div class="aviso-caixa" style="margin-top:12px">Atualizando <strong>${esc(Utilidades.compExibir(opts.alvo))}</strong>:
+            o arquivo novo sobrescreve a produção desse mês.</div>` : ''}
+        </div>
+        <div class="modal-rodape">
+          <button class="botao" id="imp-esc-cancelar">Cancelar</button>
+          <button class="botao botao-ouro" id="imp-esc-escolher">Escolher o arquivo…</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
+    ov.querySelector('#imp-esc-cancelar').addEventListener('click', fechar);
+    ov.querySelectorAll('input[name="imp-escopo"]').forEach(r => r.addEventListener('change', () => {
+      sel.tipo = r.value;
+      ov.querySelectorAll('.imp-opcao').forEach(l => l.classList.toggle('ativa', l.dataset.escopo === sel.tipo));
+      ov.querySelector('#imp-esc-mes-box').style.display = sel.tipo === 'MES' ? '' : 'none';
+    }));
+    ov.querySelector('#imp-esc-escolher').addEventListener('click', () => {
+      sel.ano = ov.querySelector('#imp-esc-ano').value;
+      sel.mes = ov.querySelector('#imp-esc-mes').value;
+      st.escopo = { tipo: sel.tipo, ano: sel.ano, mes: sel.tipo === 'MES' ? sel.mes : '' };
+      st.hospitalId = hospitalId; st.tipo = 'PRODUCAO'; st.alvo = opts.alvo || '';
+      fechar();
+      const inp = el.querySelector('#imp-arquivo-prod');
+      if (inp) inp.click();
+    });
+  }
+
   async function importarProducaoArquivo(f) {
     const alvo = st.alvo || '';
     let lido = null;
@@ -199,7 +285,7 @@ App.telas['importar'] = function () {
       await respirar();
       const r = Importador.importarProducao({
         matriz: lido.matriz, clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: f.name,
-        substituir: true, perfil: Importador.perfilLer(st.hospitalId, 'PRODUCAO'),
+        substituir: true, perfil: Importador.perfilLer(st.hospitalId, 'PRODUCAO'), escopo: st.escopo,
       });
       Banco.salvarDebounced();
       st.alvo = ''; st.arq = null; st.etapa = 1;
@@ -236,18 +322,23 @@ App.telas['importar'] = function () {
         </div>
         <div class="modal-corpo">
           <div class="info-caixa"><strong>${esc(nome)}</strong> · cabeçalho na linha ${r.linhaCab + 1}
-            · competência(s): <strong>${esc(comps || '—')}</strong></div>
+            ${r.escopo ? `· período declarado: <strong>${esc(r.rotuloEscopo)}</strong>` : ''}
+            · competência(s) importada(s): <strong>${esc(comps || '—')}</strong></div>
           <div class="cards" style="margin:12px 0">
             <div class="card"><div class="card-rotulo">Linhas lidas</div><div class="card-valor">${n(r.linhasLidas)}</div></div>
             <div class="card card-ok"><div class="card-rotulo">Importadas</div><div class="card-valor">${n(r.inseridas)}</div></div>
             <div class="card"><div class="card-rotulo">Ignoradas</div><div class="card-valor">${n(ignoradas)}</div>
-              <div class="card-extra">${n(r.vazias)} vazias · ${n(r.semData)} sem data · ${n(r.semAdmissao)} sem admissão</div></div>
+              <div class="card-extra">${n(r.vazias)} vazias · ${n(r.semData)} sem data · ${n(r.semAdmissao)} sem admissão${r.escopo ? ` · ${n(r.foraDoEscopo)} fora do período` : ''}</div></div>
             <div class="card"><div class="card-rotulo">Admissões únicas</div><div class="card-valor">${n(r.admissoes)}</div></div>
             <div class="card card-destaque"><div class="card-rotulo">Valor produzido</div><div class="card-valor">${fmtR(r.totalValor)}</div></div>
           </div>
           <div style="font-size:12px">Colunas reconhecidas: <strong>${r.reconhecidas}</strong>${r.naoReconhecidas.length
             ? ` · fora do layout (ficaram de fora): ${esc(r.naoReconhecidas.join(', '))}`
             : ' · todas as colunas do arquivo foram guardadas'}.</div>
+          ${r.escopo && r.foraDoEscopo ? `<div class="aviso-caixa" style="margin-top:10px">⚠ ${n(r.foraDoEscopo)} linha(s) com data fora de
+            ${esc(r.rotuloEscopo)} ficaram de fora — se o arquivo era de outro período, importe de novo com o período certo.</div>` : ''}
+          ${r.mantidas && r.mantidas.length ? `<div class="info-caixa" style="margin-top:10px">Meses de ${esc(r.escopo.ano)} que já estavam na base e
+            não vieram no arquivo foram mantidos: ${esc(r.mantidas.map(Utilidades.compExibir).join(', '))}.</div>` : ''}
           ${r.competencias.length > 1 ? `<div class="aviso-caixa" style="margin-top:10px">⚠ O arquivo trazia
             ${r.competencias.length} meses — todos foram importados (cada um sobrescreveu o que já existia).</div>` : ''}
           ${alvo && !r.competencias.includes(alvo) ? `<div class="aviso-caixa" style="margin-top:10px">⚠ Você pediu
@@ -398,8 +489,7 @@ App.telas['importar'] = function () {
     }));
     const upload = box.querySelector('#imp-arquivo-prod');
     box.querySelectorAll('[data-atualizar]').forEach(b => b.addEventListener('click', () => {
-      st.hospitalId = Number(b.dataset.hosp); st.tipo = 'PRODUCAO'; st.alvo = b.dataset.atualizar;
-      upload.click();
+      abrirEscopoProducao({ hospitalId: Number(b.dataset.hosp), alvo: b.dataset.atualizar });
     }));
     upload.addEventListener('change', async (e) => {
       const f = e.target.files && e.target.files[0];
@@ -553,6 +643,7 @@ App.telas['importar'] = function () {
           const r = Importador.importarProducao({
             matriz: a.matriz, clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: a.nome,
             substituir: area.querySelector('#map-substituir').checked, linhaCab: a.linhaCab, nucleo: a.map,
+            escopo: st.escopo,
           });
           Importador.perfilGravar(st.hospitalId, 'PRODUCAO', porNome, a.linhaCab);
           Banco.salvarDebounced();

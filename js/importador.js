@@ -595,12 +595,16 @@
   /**
    * Importa a PRODUÇÃO automaticamente.
    * p: { matriz, clienteId, hospitalId, arquivo, substituir (padrão true),
-   *      perfil (perfilLer), linhaCab e nucleo (só quando vem do mapeamento manual) }
+   *      perfil (perfilLer), linhaCab e nucleo (só quando vem do mapeamento manual),
+   *      escopo: { tipo: 'ANO'|'MES', ano: '2026', mes: '03' } — o período que
+   *      o arquivo cobre, declarado pelo usuário: só as linhas desse período
+   *      entram (as de fora são contadas em foraDoEscopo) e só os meses que
+   *      vierem nele são sobrescritos. Sem escopo, aceita todas as datas. }
    * Lança erro com .precisaMapear = true (e .linhaCab/.map) quando não
    * reconhece ADMISSÃO ou DATA — a tela cai no mapeamento manual.
    * Devolve o resumo: { linhaCab, cab, map, linhasLidas, inseridas, vazias,
-   *   semData, semAdmissao, competencias[], admissoes, totalValor,
-   *   reconhecidas, naoReconhecidas[] }.
+   *   semData, semAdmissao, foraDoEscopo, escopo, mantidas[], competencias[],
+   *   admissoes, totalValor, reconhecidas, naoReconhecidas[] }.
    */
   function importarProducao(p) {
     const U_ = U();
@@ -621,14 +625,23 @@
     const txt = (raw, col) => String(cel(raw, col)).trim();
     const hora = (v) => v instanceof Date ? v.toTimeString().slice(0, 8) : String(v == null ? '' : v).trim();
 
+    // período declarado pelo usuário (pop-up ano/mês)
+    const escopo = p.escopo && p.escopo.tipo && p.escopo.ano ? {
+      tipo: p.escopo.tipo === 'MES' ? 'MES' : 'ANO', ano: String(p.escopo.ano),
+      mes: p.escopo.tipo === 'MES' ? String(p.escopo.mes || '').padStart(2, '0') : '' } : null;
+    const compEscopo = escopo && escopo.tipo === 'MES' ? escopo.ano + '-' + escopo.mes : '';
+    const dentro = (comp) => !escopo || (escopo.tipo === 'ANO' ? comp.slice(0, 4) === escopo.ano : comp === compEscopo);
+    const rotuloEscopo = !escopo ? '' : (escopo.tipo === 'ANO' ? 'o ano de ' + escopo.ano : U_.compExibir(compEscopo));
+
     const linhas = [];
     const comps = new Set(), adms = new Set();
-    let vazias = 0, semData = 0, semAdmissao = 0, totalValor = 0;
+    let vazias = 0, semData = 0, semAdmissao = 0, foraDoEscopo = 0, totalValor = 0;
     for (let i = linhaCab + 1; i < matriz.length; i++) {
       const raw = matriz[i] || [];
       if (!raw.some(c => c != null && String(c).trim() !== '')) { vazias++; continue; }
       const dataISO = U_.paraDataISO(cel(raw, 'data'));
       if (!dataISO) { semData++; continue; }              // sem data não há competência
+      if (!dentro(U_.competenciaDe(dataISO))) { foraDoEscopo++; continue; }   // fora do período declarado
       const adm = txt(raw, 'admissao').replace(/\.0+$/, '');
       if (!adm) { semAdmissao++; continue; }               // a auditoria é por admissão
       const proc = txt(raw, 'procedimento');
@@ -664,7 +677,21 @@
       comps.add(l.competencia); adms.add(U_.normAdm(adm)); totalValor += valor;
       linhas.push(l);
     }
-    if (!linhas.length) throw new Error('Nenhuma linha com admissão e data abaixo do cabeçalho — é o relatório de produção certo?');
+    if (!linhas.length) {
+      if (escopo && foraDoEscopo) {
+        throw new Error(`O arquivo não tem nenhuma linha de ${rotuloEscopo} — as ${foraDoEscopo.toLocaleString('pt-BR')} linhas com data são de outro período. É o arquivo certo?`);
+      }
+      throw new Error('Nenhuma linha com admissão e data abaixo do cabeçalho — é o relatório de produção certo?');
+    }
+
+    // ano inteiro: meses do ano que já estão na base e NÃO vieram no arquivo
+    // são mantidos (a ATLAS não apaga o que o arquivo não cobre) — o resumo avisa
+    let mantidas = [];
+    if (escopo && escopo.tipo === 'ANO') {
+      mantidas = Banco.query(
+        `SELECT DISTINCT competencia FROM linhas_producao WHERE hospital_id = ? AND competencia LIKE ? ORDER BY competencia`,
+        [p.hospitalId, escopo.ano + '-%']).map(r => r.competencia).filter(c => !comps.has(c));
+    }
 
     const colunas = COLUNAS_NUCLEO.concat(COLUNAS_INTEGRA);
     const sql = `INSERT INTO linhas_producao (cliente_id, hospital_id, importacao_id, ${colunas.join(', ')})
@@ -694,7 +721,8 @@
     const usados = new Set(Object.values(map));
     return {
       linhaCab, cab, map, linhasLidas: Math.max(0, matriz.length - linhaCab - 1),
-      inseridas, vazias, semData, semAdmissao, competencias: lista, admissoes: adms.size,
+      inseridas, vazias, semData, semAdmissao, foraDoEscopo, escopo, rotuloEscopo, mantidas,
+      competencias: lista, admissoes: adms.size,
       totalValor: Math.round(totalValor * 100) / 100,
       reconhecidas: Object.keys(map).length,
       naoReconhecidas: cab.filter((c, i) => c && !usados.has(i)),
