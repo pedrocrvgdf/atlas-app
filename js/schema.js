@@ -112,6 +112,20 @@ CREATE TABLE IF NOT EXISTS linhas_producao (
   laudo         TEXT,  laudo_norm       TEXT,
 
   linha_origem  INTEGER,                    -- nº da linha na planilha (rastreio)
+
+  -- v0.6: a ÍNTEGRA do relatório analítico (importação automática de
+  -- produção — as colunas que não viram campo-núcleo ficam guardadas aqui;
+  -- em banco antigo entram por migração defensiva no banco.js)
+  hora_admissao TEXT, status_admissao TEXT, unidade TEXT, especialidade TEXT,
+  destino TEXT, tipo_produto TEXT, categoria TEXT, subcategoria TEXT,
+  subespecialidade TEXT, medico_externo TEXT, cod_apresentacao TEXT,
+  procedimento_principal TEXT, pacote TEXT, plano TEXT, perfil_particular TEXT,
+  perfil_admissao TEXT, carater_admissao TEXT, observacao_admissao TEXT,
+  sala TEXT, profissional_admissao TEXT, tipo_paciente TEXT, cod_paciente TEXT,
+  data_nascimento TEXT, idade_atendimento REAL, faixa_etaria TEXT, cid_alta TEXT,
+  descricao_cid TEXT, consultor TEXT, medico TEXT, cirurgiao TEXT,
+  instrumentador TEXT, contatologa TEXT, ortoptista TEXT, auxiliar_sadt TEXT,
+  auxiliar2 TEXT,
   FOREIGN KEY (importacao_id) REFERENCES importacoes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_prod_cli_adm  ON linhas_producao(cliente_id, admissao);

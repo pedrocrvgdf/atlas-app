@@ -2,25 +2,38 @@
  * ============================================================================
  * TELA: Importações (📥)
  *
- * Fluxo em 2 etapas:
- *   1. Escolher hospital + tipo de relatório + arquivo (.xlsx/.xls/.csv)
- *   2. Conferir o MAPEAMENTO DE COLUNAS sugerido (a ATLAS casa os cabeçalhos
- *      com os campos por apelidos; perfis salvos do hospital são reaplicados)
- *      e gravar — com opção de SUBSTITUIR as competências do arquivo.
+ * PRODUÇÃO — importação AUTOMÁTICA (a forma da ferramenta de origem):
+ *   escolheu o arquivo, importou. A ATLAS acha o cabeçalho ("Cód. Admissão"),
+ *   reconhece as colunas pelo layout do relatório analítico, deriva a
+ *   competência de cada linha pela data, sobrescreve os meses presentes e
+ *   mostra o resumo. O mapeamento manual só aparece se ela NÃO reconhecer
+ *   admissão/data (layout desconhecido) — e o que o usuário apontar fica
+ *   salvo por hospital para as próximas.
+ *   Abaixo, a PRODUÇÃO IMPORTADA por competência (agrupada por ano) com
+ *   quantidade, admissões, valor, "importada em", Atualizar (relançar o mês)
+ *   e Excluir — e um filtro "contém" por admissão / paciente / data / produto.
  *
- * O mapeamento confirmado fica salvo por hospital × tipo (perfis_importacao):
- * na próxima planilha igual, cai direto certo.
+ * SISTEMA, MÉDICO e BASE TABELA — fluxo em 2 etapas:
+ *   1. Escolher hospital + tipo + arquivo
+ *   2. Conferir o MAPEAMENTO DE COLUNAS sugerido (aliases; perfis salvos do
+ *      hospital são reaplicados) e gravar, com opção de SUBSTITUIR.
  * ============================================================================
  */
 App.telas['importar'] = function () {
   'use strict';
   const el = document.getElementById('conteudo');
   const esc = Utilidades.esc;
+  const fmtR = Utilidades.moeda;
+  const n = (x) => (Number(x) || 0).toLocaleString('pt-BR');
   const cliente = App.clienteAtivo();
   if (!cliente) { App.avisoSemCliente(el); return; }
 
-  if (!window.__imp) window.__imp = { etapa: 1, hospitalId: 0, tipo: 'PRODUCAO', competencia: '', arq: null };
+  if (!window.__imp) {
+    window.__imp = { etapa: 1, hospitalId: 0, tipo: 'PRODUCAO', competencia: '', arq: null,
+      alvo: '', filtro: { aberto: false, adm: '', pac: '', data: '', prod: '' }, anosAbertos: null };
+  }
   const st = window.__imp;
+  if (!st.filtro) st.filtro = { aberto: false, adm: '', pac: '', data: '', prod: '' };
 
   // Os ids internos ficam (perfis e histórico já gravados); os NOMES são os
   // do produto: SISTEMA (relatório cru do sistema do hospital), PRODUÇÃO
@@ -32,6 +45,13 @@ App.telas['importar'] = function () {
     ['BASE_TABELA', 'Base Tabela — regras de repasse'],
   ];
   const TIPO_ROTULO = { REPASSE: 'SISTEMA', PRODUCAO: 'PRODUÇÃO', MEDICO: 'MÉDICO', BASE_TABELA: 'BASE TABELA' };
+
+  // célula legível na prévia (Date do SheetJS vira dd/mm/aaaa, não "Tue Jan 06 2026…")
+  const celTxt = (c) => c instanceof Date ? Utilidades.dataExibir(Utilidades.paraDataISO(c)) : String(c == null ? '' : c);
+  const compsTxt = (s) => String(s || '').split(',').map(x => x.trim()).filter(Boolean)
+    .map(Utilidades.compExibir).join(', ') || '—';
+  const quando = (iso) => (iso || '').slice(0, 16).replace('T', ' ') || '—';
+  const respirar = () => new Promise(r => setTimeout(r, 30));
 
   function render() {
     const hospitais = App.listarHospitais(cliente.id);
@@ -50,10 +70,12 @@ App.telas['importar'] = function () {
         <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span>
       </div>
       <div id="imp-area"></div>
+      <div id="imp-prod"></div>
       <div id="imp-lista"></div>`;
 
     if (st.etapa === 2 && st.arq) renderMapeamento(hospitais);
     else renderEscolha(hospitais);
+    renderProducao(hospitais);
     renderLista();
   }
 
@@ -62,6 +84,7 @@ App.telas['importar'] = function () {
   // ────────────────────────────────────────────────────────────────────
   function renderEscolha(hospitais) {
     const area = el.querySelector('#imp-area');
+    const comComp = st.tipo === 'REPASSE' || st.tipo === 'MEDICO';
     area.innerHTML = `
       <div class="painel">
         <div class="painel-cabecalho"><span class="painel-titulo">Nova importação</span></div>
@@ -75,20 +98,13 @@ App.telas['importar'] = function () {
               <select id="imp-tipo">${TIPOS.map(([v, r]) =>
                 `<option value="${v}" ${v === st.tipo ? 'selected' : ''}>${r}</option>`).join('')}
               </select></div>
-            <div class="campo" id="imp-comp-box" style="max-width:170px; ${st.tipo === 'REPASSE' || st.tipo === 'MEDICO' ? '' : 'display:none'}">
+            <div class="campo" id="imp-comp-box" style="max-width:170px; ${comComp ? '' : 'display:none'}">
               <span class="campo-rotulo">Mês do pagamento</span>
               <input type="month" id="imp-comp" value="${esc(st.competencia)}"></div>
             <div class="campo"><span class="campo-rotulo">Arquivo (.xlsx / .xls / .csv)</span>
               <input type="file" id="imp-arquivo" accept=".xlsx,.xls,.csv"></div>
           </div>
-          <div class="info-caixa" style="margin-top:12px">
-            <strong>Sistema</strong> = o relatório cru que sai do sistema do hospital (o que ele diz
-            que processou/pagou — não necessariamente o que chegou ao médico).
-            <strong>Produção</strong> = tudo que foi produzido na competência (admissão, procedimentos,
-            profissionais por papel, valores). <strong>Médico</strong> = o demonstrativo que o médico de
-            fato recebeu (também importável direto na Inspeção). <strong>Base Tabela</strong> = regras de
-            repasse do hospital, quando ele fornece.
-          </div>
+          <div class="info-caixa" id="imp-ajuda" style="margin-top:12px">${ajudaTipo(st.tipo)}</div>
         </div>
       </div>`;
 
@@ -96,12 +112,19 @@ App.telas['importar'] = function () {
     area.querySelector('#imp-tipo').addEventListener('change', e => {
       st.tipo = e.target.value;
       area.querySelector('#imp-comp-box').style.display = (st.tipo === 'REPASSE' || st.tipo === 'MEDICO') ? '' : 'none';
+      area.querySelector('#imp-ajuda').innerHTML = ajudaTipo(st.tipo);
     });
     area.querySelector('#imp-comp').addEventListener('change', e => { st.competencia = e.target.value; });
 
     area.querySelector('#imp-arquivo').addEventListener('change', async (e) => {
       const f = e.target.files && e.target.files[0];
       if (!f) return;
+      if (st.tipo === 'PRODUCAO') {
+        st.alvo = '';
+        await importarProducaoArquivo(f);
+        e.target.value = '';
+        return;
+      }
       if (st.tipo === 'REPASSE' && !area.querySelector('#imp-comp').value) {
         Utilidades.toast('Informe o MÊS DO PAGAMENTO antes de escolher o arquivo do sistema.', 'aviso', 4200);
         e.target.value = '';
@@ -140,8 +163,276 @@ App.telas['importar'] = function () {
     });
   }
 
+  function ajudaTipo(tipo) {
+    if (tipo === 'PRODUCAO') {
+      return `<strong>Produção</strong> = tudo que foi produzido (admissão, procedimentos, profissionais
+        por papel, valores). Escolha o arquivo e pronto: a ATLAS acha o cabeçalho
+        (<em>Cód. Admissão</em>), reconhece as colunas, deriva a competência pela data de cada
+        linha e importa o relatório <strong>na íntegra</strong>. Reimportar um mês já existente
+        <strong>sobrescreve</strong> os dados daquela competência (não duplica).`;
+    }
+    if (tipo === 'REPASSE') {
+      return `<strong>Sistema</strong> = o relatório cru que sai do sistema do hospital (o que ele diz
+        que processou/pagou — não necessariamente o que chegou ao médico). Informe o mês do
+        pagamento; a ATLAS sugere o mapeamento das colunas e guarda o perfil do hospital.`;
+    }
+    if (tipo === 'MEDICO') {
+      return `<strong>Médico</strong> = o demonstrativo que o médico de fato recebeu para emitir a
+        nota (também importável direto na Inspeção, que já monta a pauta). A competência é lida
+        do cabeçalho do relatório quando existe.`;
+    }
+    return `<strong>Base Tabela</strong> = regras de repasse do hospital (procedimento × papel × fonte
+      → valor fixo ou %), quando ele fornece. Sem ela, o motor infere o padrão pelo histórico.`;
+  }
+
   // ────────────────────────────────────────────────────────────────────
-  // ETAPA 2 — conferir mapeamento e importar
+  // PRODUÇÃO — automático
+  // ────────────────────────────────────────────────────────────────────
+  async function importarProducaoArquivo(f) {
+    const alvo = st.alvo || '';
+    let lido = null;
+    try {
+      Utilidades.loading.mostrar('Lendo a planilha…');
+      await respirar();
+      lido = Importador.lerPlanilha(await f.arrayBuffer());
+      Utilidades.loading.mostrar('Importando a produção…');
+      await respirar();
+      const r = Importador.importarProducao({
+        matriz: lido.matriz, clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: f.name,
+        substituir: true, perfil: Importador.perfilLer(st.hospitalId, 'PRODUCAO'),
+      });
+      Banco.salvarDebounced();
+      st.alvo = ''; st.arq = null; st.etapa = 1;
+      render();
+      resumoProducao(r, f.name, alvo);
+    } catch (err) {
+      if (err && err.precisaMapear && lido) {
+        // layout desconhecido: cai no mapeamento manual já com o que foi reconhecido
+        st.arq = { nome: f.name, matriz: lido.matriz, nomeAba: lido.nomeAba, linhaCab: err.linhaCab,
+          map: Importador.nucleoDoMapa(err.map), usouPerfil: false, aviso: err.message };
+        st.etapa = 2;
+        render();
+        Utilidades.toast(err.message, 'aviso', 5200);
+        return;
+      }
+      console.error(err);
+      Utilidades.toast('Importação falhou: ' + (err.message || err), 'erro', 6000);
+    } finally {
+      Utilidades.loading.esconder();
+    }
+  }
+
+  /** Resumo da importação (o que a ferramenta de origem mostra num alert). */
+  function resumoProducao(r, nome, alvo) {
+    const comps = r.competencias.map(Utilidades.compExibir).join(', ');
+    const ignoradas = r.vazias + r.semData + r.semAdmissao;
+    const ov = document.createElement('div');
+    ov.className = 'modal-fundo';
+    ov.innerHTML = `
+      <div class="modal" style="width:680px;max-width:95vw">
+        <div class="modal-cabecalho">
+          <span class="modal-titulo">✓ Produção importada</span>
+          <button class="modal-fechar">✕</button>
+        </div>
+        <div class="modal-corpo">
+          <div class="info-caixa"><strong>${esc(nome)}</strong> · cabeçalho na linha ${r.linhaCab + 1}
+            · competência(s): <strong>${esc(comps || '—')}</strong></div>
+          <div class="cards" style="margin:12px 0">
+            <div class="card"><div class="card-rotulo">Linhas lidas</div><div class="card-valor">${n(r.linhasLidas)}</div></div>
+            <div class="card card-ok"><div class="card-rotulo">Importadas</div><div class="card-valor">${n(r.inseridas)}</div></div>
+            <div class="card"><div class="card-rotulo">Ignoradas</div><div class="card-valor">${n(ignoradas)}</div>
+              <div class="card-extra">${n(r.vazias)} vazias · ${n(r.semData)} sem data · ${n(r.semAdmissao)} sem admissão</div></div>
+            <div class="card"><div class="card-rotulo">Admissões únicas</div><div class="card-valor">${n(r.admissoes)}</div></div>
+            <div class="card card-destaque"><div class="card-rotulo">Valor produzido</div><div class="card-valor">${fmtR(r.totalValor)}</div></div>
+          </div>
+          <div style="font-size:12px">Colunas reconhecidas: <strong>${r.reconhecidas}</strong>${r.naoReconhecidas.length
+            ? ` · fora do layout (ficaram de fora): ${esc(r.naoReconhecidas.join(', '))}`
+            : ' · todas as colunas do arquivo foram guardadas'}.</div>
+          ${r.competencias.length > 1 ? `<div class="aviso-caixa" style="margin-top:10px">⚠ O arquivo trazia
+            ${r.competencias.length} meses — todos foram importados (cada um sobrescreveu o que já existia).</div>` : ''}
+          ${alvo && !r.competencias.includes(alvo) ? `<div class="aviso-caixa" style="margin-top:10px">⚠ Você pediu
+            para atualizar ${esc(Utilidades.compExibir(alvo))}, mas o arquivo é de ${esc(comps)}.</div>` : ''}
+        </div>
+        <div class="modal-rodape"><button class="botao botao-marinho" id="rp-ok">Fechar</button></div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
+    ov.querySelector('#rp-ok').addEventListener('click', fechar);
+  }
+
+  /** Painel "Produção importada": competências por ano + filtro "contém". */
+  function renderProducao(hospitais) {
+    const box = el.querySelector('#imp-prod');
+    const rows = Banco.query(
+      `SELECT lp.hospital_id, h.nome AS hospital, lp.competencia,
+              SUM(COALESCE(lp.quantidade, 0)) AS qtd, COUNT(DISTINCT lp.admissao) AS adms,
+              SUM(COALESCE(lp.valor, 0)) AS valor, MAX(i.importada_em) AS importada_em
+         FROM linhas_producao lp
+         JOIN hospitais h ON h.id = lp.hospital_id
+         LEFT JOIN importacoes i ON i.id = lp.importacao_id
+        WHERE lp.cliente_id = ?
+        GROUP BY lp.hospital_id, lp.competencia
+        ORDER BY lp.competencia DESC, h.nome`, [cliente.id]);
+    const multiHosp = hospitais.length > 1;
+
+    const grupos = [];
+    for (const r of rows) {
+      const ano = String(r.competencia || '').slice(0, 4) || '—';
+      let g = grupos.find(x => x.ano === ano);
+      if (!g) grupos.push(g = { ano, comps: [], qtd: 0, adms: 0, valor: 0 });
+      g.comps.push(r);
+      g.qtd += Number(r.qtd) || 0; g.adms += Number(r.adms) || 0; g.valor += Number(r.valor) || 0;
+    }
+    const nMeses = (g) => new Set(g.comps.map(c => c.competencia)).size;
+    if (!(st.anosAbertos instanceof Set)) st.anosAbertos = new Set(grupos.length ? [grupos[0].ano] : []);
+    const abertos = st.anosAbertos;
+    const totalValor = rows.reduce((a, r) => a + (Number(r.valor) || 0), 0);
+
+    // filtro "contém"
+    const flt = st.filtro;
+    const temFiltro = !!(flt.adm || flt.pac || flt.data || flt.prod);
+    let resultados = [], totalRes = 0;
+    if (temFiltro) {
+      const where = ['lp.cliente_id = ?'], params = [cliente.id];
+      const like = (col, v) => { where.push(`${col} LIKE ?`); params.push('%' + v.trim() + '%'); };
+      if (flt.adm) like('lp.admissao', flt.adm);
+      if (flt.pac) like('lp.paciente', flt.pac);
+      if (flt.prod) { where.push('(lp.procedimento LIKE ? OR lp.procedimento_principal LIKE ?)');
+        params.push('%' + flt.prod.trim() + '%', '%' + flt.prod.trim() + '%'); }
+      if (flt.data) {
+        // aceita 14/07/2026, 14/07 ou o ISO do banco
+        const m = flt.data.trim().match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);
+        like('lp.data', m ? `${m[3] || ''}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : flt.data.trim());
+      }
+      const sql = where.join(' AND ');
+      totalRes = Banco.escalar(`SELECT COUNT(*) FROM linhas_producao lp WHERE ${sql}`, params) || 0;
+      resultados = Banco.query(
+        `SELECT lp.competencia, lp.admissao, lp.data, lp.paciente, lp.procedimento, lp.valor, h.nome AS hospital
+           FROM linhas_producao lp JOIN hospitais h ON h.id = lp.hospital_id
+          WHERE ${sql} ORDER BY lp.competencia DESC, lp.admissao LIMIT 300`, params);
+    }
+
+    const campoFiltro = (k, rot, ph) => `
+      <div class="campo"><span class="campo-rotulo">${rot}</span>
+        <input type="text" data-fprod="${k}" value="${esc(flt[k] || '')}" placeholder="${ph}"></div>`;
+
+    box.innerHTML = `
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <span class="painel-titulo">Produção importada</span>
+          <span class="painel-conta">${rows.length} competência(s) · ${fmtR(totalValor)} produzidos</span>
+          <div class="painel-acoes">
+            <button class="botao botao-mini ${flt.aberto || temFiltro ? 'botao-marinho' : ''}" id="prod-filtro">⛛ Filtro${temFiltro ? ' ●' : ''}</button>
+            <input type="file" id="imp-arquivo-prod" accept=".xlsx,.xls,.csv" style="display:none">
+          </div>
+        </div>
+        ${flt.aberto ? `<div class="painel-corpo" style="border-bottom:1px solid var(--borda-suave)">
+          <div class="linha-campos">
+            ${campoFiltro('adm', 'Admissão', 'contém…')}${campoFiltro('pac', 'Nome do paciente', 'contém…')}
+            ${campoFiltro('data', 'Data', '14/07/2026 ou 2026-07-14')}${campoFiltro('prod', 'Produto', 'contém…')}
+          </div>
+          ${temFiltro ? `<div style="margin-top:8px;display:flex;gap:10px;align-items:center;font-size:12px">
+            <span><strong>${n(totalRes)}</strong> linha(s) encontrada(s)${totalRes > 300 ? ' · mostrando as 300 primeiras' : ''}</span>
+            <button class="botao botao-mini" id="prod-filtro-limpar">✕ Limpar filtro</button></div>` : ''}
+        </div>` : ''}
+        ${temFiltro ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+            <th>Competência</th>${multiHosp ? '<th>Hospital</th>' : ''}<th>Admissão</th><th>Data</th><th>Paciente</th><th>Produto</th><th class="num">Valor</th>
+          </tr></thead><tbody>
+          ${resultados.length ? resultados.map(r => `<tr>
+            <td class="mono">${esc(Utilidades.compExibir(r.competencia))}</td>${multiHosp ? `<td>${esc(r.hospital)}</td>` : ''}
+            <td class="mono">${esc(r.admissao || '—')}</td><td>${esc(Utilidades.dataExibir(r.data))}</td>
+            <td>${esc(r.paciente || '—')}</td><td>${esc(r.procedimento || '—')}</td>
+            <td class="num mono">${fmtR(r.valor)}</td></tr>`).join('')
+          : `<tr><td colspan="7" class="tabela-vazia">Nenhuma linha da produção casa com o filtro.</td></tr>`}
+          </tbody></table></div>` : ''}
+        ${rows.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+            <th>Competência</th>${multiHosp ? '<th>Hospital</th>' : ''}
+            <th class="num" title="soma da coluna Quantidade">Quantidade</th><th class="num">Admissões</th>
+            <th class="num">Valor produzido</th><th>Importada em</th><th></th>
+          </tr></thead><tbody>
+          ${grupos.map(g => `
+            <tr class="imp-ano clique" data-ano="${esc(g.ano)}" title="${abertos.has(g.ano) ? 'Recolher' : 'Expandir'} os meses de ${esc(g.ano)}">
+              <td colspan="${multiHosp ? 2 : 1}"><strong>${abertos.has(g.ano) ? '▾' : '▸'} ${esc(g.ano)}</strong>
+                <span class="texto-cinza">(${nMeses(g)} ${nMeses(g) === 1 ? 'mês' : 'meses'})</span></td>
+              <td class="num mono">${n(g.qtd)}</td><td class="num mono">${n(g.adms)}</td>
+              <td class="num mono"><strong>${fmtR(g.valor)}</strong></td><td></td><td></td>
+            </tr>
+            ${abertos.has(g.ano) ? g.comps.map(c => `<tr class="imp-mes">
+              <td class="mono" style="padding-left:28px">${esc(Utilidades.compExibir(c.competencia))}</td>
+              ${multiHosp ? `<td>${esc(c.hospital)}</td>` : ''}
+              <td class="num mono">${n(c.qtd)}</td><td class="num mono">${n(c.adms)}</td>
+              <td class="num mono"><strong>${fmtR(c.valor)}</strong></td>
+              <td class="texto-cinza" style="font-size:11px">${esc(quando(c.importada_em))}</td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="botao botao-mini" data-atualizar="${esc(c.competencia)}" data-hosp="${c.hospital_id}"
+                  title="Lançar um relatório ATUALIZADO deste mês (sobrescreve a produção da competência)">↻ Atualizar</button>
+                <button class="botao botao-mini botao-perigo" data-excluir="${esc(c.competencia)}" data-hosp="${c.hospital_id}">Excluir</button>
+              </td>
+            </tr>`).join('') : ''}`).join('')}
+          </tbody></table></div>`
+        : `<div class="tabela-vazia">Nenhuma produção importada ainda — escolha o tipo <strong>Produção</strong> acima e o arquivo.</div>`}
+      </div>`;
+
+    // handlers
+    box.querySelectorAll('.imp-ano').forEach(tr => tr.addEventListener('click', () => {
+      const ano = tr.dataset.ano;
+      if (abertos.has(ano)) abertos.delete(ano); else abertos.add(ano);
+      renderProducao(hospitais);
+    }));
+    box.querySelector('#prod-filtro').addEventListener('click', () => { flt.aberto = !flt.aberto; renderProducao(hospitais); });
+    const limpar = box.querySelector('#prod-filtro-limpar');
+    if (limpar) limpar.addEventListener('click', () => {
+      Object.assign(flt, { adm: '', pac: '', data: '', prod: '' }); renderProducao(hospitais);
+    });
+    let tmr = null;
+    box.querySelectorAll('[data-fprod]').forEach(inp => inp.addEventListener('input', () => {
+      clearTimeout(tmr);
+      tmr = setTimeout(() => {
+        const k = inp.dataset.fprod, pos = inp.selectionStart;
+        flt[k] = inp.value;
+        renderProducao(hospitais);
+        const novo = box.querySelector(`[data-fprod="${k}"]`);
+        if (novo) { novo.focus(); try { novo.setSelectionRange(pos, pos); } catch (_) { /* campo sem seleção */ } }
+      }, 300);
+    }));
+    const upload = box.querySelector('#imp-arquivo-prod');
+    box.querySelectorAll('[data-atualizar]').forEach(b => b.addEventListener('click', () => {
+      st.hospitalId = Number(b.dataset.hosp); st.tipo = 'PRODUCAO'; st.alvo = b.dataset.atualizar;
+      upload.click();
+    }));
+    upload.addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      await importarProducaoArquivo(f);
+      e.target.value = '';
+    });
+    box.querySelectorAll('[data-excluir]').forEach(b => b.addEventListener('click', () => {
+      excluirProducao(Number(b.dataset.hosp), b.dataset.excluir);
+    }));
+  }
+
+  function excluirProducao(hospitalId, comp) {
+    const s = Banco.query(
+      `SELECT COUNT(*) AS qtd, COALESCE(SUM(valor), 0) AS total FROM linhas_producao WHERE hospital_id = ? AND competencia = ?`,
+      [hospitalId, comp])[0] || { qtd: 0, total: 0 };
+    if (!confirm(`Excluir TODA a produção de ${Utilidades.compExibir(comp)} deste hospital?\n\n` +
+      `Serão removidas ${n(s.qtd)} linhas (${fmtR(s.total)} produzidos).\n\n` +
+      `Não dá para desfazer — para recuperar, reimporte o relatório.`)) return;
+    Banco.transacao(() => {
+      Banco.executar('DELETE FROM linhas_producao WHERE hospital_id = ? AND competencia = ?', [hospitalId, comp]);
+      Banco.executar(
+        `DELETE FROM importacoes WHERE tipo = 'PRODUCAO' AND hospital_id = ?
+           AND NOT EXISTS (SELECT 1 FROM linhas_producao lp WHERE lp.importacao_id = importacoes.id)`, [hospitalId]);
+    });
+    Banco.salvarDebounced();
+    Utilidades.toast(`Produção de ${Utilidades.compExibir(comp)} excluída.`, 'ok');
+    render();
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // ETAPA 2 — conferir mapeamento e importar (Sistema, Médico, Base
+  // Tabela — e a Produção só quando o layout não foi reconhecido)
   // ────────────────────────────────────────────────────────────────────
   function renderMapeamento(hospitais) {
     const area = el.querySelector('#imp-area');
@@ -154,7 +445,7 @@ App.telas['importar'] = function () {
     const exemplo = (idx) => {
       for (let i = a.linhaCab + 1; i < Math.min(a.matriz.length, a.linhaCab + 12); i++) {
         const v = (a.matriz[i] || [])[idx];
-        if (v != null && String(v).trim() !== '') return String(v).slice(0, 28);
+        if (v != null && String(v).trim() !== '') return celTxt(v).slice(0, 28);
       }
       return '';
     };
@@ -181,11 +472,12 @@ App.telas['importar'] = function () {
           </div>
         </div>
         <div class="painel-corpo">
+          ${a.aviso ? `<div class="aviso-caixa" style="margin-bottom:12px">⚠ ${esc(a.aviso)} O que você apontar aqui fica salvo para este hospital.</div>` : ''}
           ${a.usouPerfil ? `<div class="info-caixa">Mapeamento salvo deste hospital reaplicado — confira e ajuste se algo mudou.</div>` : ''}
           <div class="linha-campos" style="margin-bottom:12px">
             <div class="campo" style="max-width:220px"><span class="campo-rotulo">Linha do cabeçalho</span>
               <select id="map-linha-cab">${a.matriz.slice(0, Math.min(30, a.matriz.length)).map((l, i) =>
-                `<option value="${i}" ${i === a.linhaCab ? 'selected' : ''}>linha ${i + 1}: ${esc((l || []).slice(0, 4).join(' | ').slice(0, 40))}…</option>`).join('')}
+                `<option value="${i}" ${i === a.linhaCab ? 'selected' : ''}>linha ${i + 1}: ${esc((l || []).slice(0, 4).map(celTxt).join(' | ').slice(0, 40))}…</option>`).join('')}
               </select></div>
           </div>
 
@@ -206,7 +498,7 @@ App.telas['importar'] = function () {
           <div class="raiox-rotulo">Prévia (cabeçalho + primeiras linhas)</div>
           <div class="rolagem-x"><table class="tabela"><tbody>
             ${linhasPrev.map((l, i) => `<tr>${l.slice(0, 14).map(c =>
-              i === 0 ? `<th>${esc(String(c).slice(0, 20))}</th>` : `<td>${esc(String(c).slice(0, 20))}</td>`).join('')}</tr>`).join('')}
+              i === 0 ? `<th>${esc(celTxt(c).slice(0, 20))}</th>` : `<td>${esc(celTxt(c).slice(0, 20))}</td>`).join('')}</tr>`).join('')}
           </tbody></table></div>
 
           <div class="separador"></div>
@@ -220,12 +512,14 @@ App.telas['importar'] = function () {
         </div>
       </div>`;
 
-    area.querySelector('#map-voltar').addEventListener('click', () => { st.arq = null; st.etapa = 1; render(); });
+    area.querySelector('#map-voltar').addEventListener('click', () => { st.arq = null; st.etapa = 1; st.alvo = ''; render(); });
 
     area.querySelector('#map-linha-cab').addEventListener('change', (e) => {
       a.linhaCab = Number(e.target.value);
       const novoCab = (a.matriz[a.linhaCab] || []).map(c => String(c));
-      a.map = Importador.sugerirMapeamento(novoCab, st.tipo);
+      a.map = st.tipo === 'PRODUCAO'
+        ? Importador.nucleoDoMapa(Importador.mapearProducao(novoCab, null, null))
+        : Importador.sugerirMapeamento(novoCab, st.tipo);
       a.usouPerfil = false;
       render();
     });
@@ -240,26 +534,40 @@ App.telas['importar'] = function () {
     });
 
     area.querySelector('#map-importar').addEventListener('click', () => {
-      // valida obrigatórios
-      for (const c of campos) {
-        if (c.obrig && (a.map[c.campo] == null || a.map[c.campo] < 0)) {
+      // valida obrigatórios (na produção automática só admissão e data importam)
+      const obrig = st.tipo === 'PRODUCAO' ? campos.filter(c => c.campo === 'admissao' || c.campo === 'data') : campos.filter(c => c.obrig);
+      for (const c of obrig) {
+        if (a.map[c.campo] == null || a.map[c.campo] < 0) {
           Utilidades.toast(`Aponte a coluna de "${c.rotulo}" — é obrigatória.`, 'aviso', 4200);
           return;
         }
       }
+      // perfil com NOMES de coluna (sobrevive a reordenação)
+      const porNome = {};
+      for (const [campo, idx] of Object.entries(a.map)) {
+        if (idx != null && idx >= 0 && cab[idx]) porNome[campo] = cab[idx];
+      }
       try {
         Utilidades.loading.mostrar('Importando linhas…');
+        if (st.tipo === 'PRODUCAO') {
+          const r = Importador.importarProducao({
+            matriz: a.matriz, clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: a.nome,
+            substituir: area.querySelector('#map-substituir').checked, linhaCab: a.linhaCab, nucleo: a.map,
+          });
+          Importador.perfilGravar(st.hospitalId, 'PRODUCAO', porNome, a.linhaCab);
+          Banco.salvarDebounced();
+          const alvo = st.alvo || '';
+          st.arq = null; st.etapa = 1; st.alvo = '';
+          render();
+          resumoProducao(r, a.nome, alvo);
+          return;
+        }
         const r = Importador.aplicar({
           tipo: st.tipo, matriz: a.matriz, linhaCab: a.linhaCab, map: a.map,
           clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: a.nome,
           competencia: st.competencia,
           substituir: area.querySelector('#map-substituir').checked,
         });
-        // salva o perfil com NOMES de coluna (sobrevive a reordenação)
-        const porNome = {};
-        for (const [campo, idx] of Object.entries(a.map)) {
-          if (idx != null && idx >= 0 && cab[idx]) porNome[campo] = cab[idx];
-        }
         Importador.perfilGravar(st.hospitalId, st.tipo, porNome, a.linhaCab);
         Banco.salvarDebounced();
 
@@ -296,9 +604,9 @@ App.telas['importar'] = function () {
             <th>Competência</th><th class="num">Linhas</th><th></th>
           </tr></thead><tbody>
           ${imps.map(i => `<tr>
-            <td>${esc((i.importada_em || '').slice(0, 16).replace('T', ' '))}</td>
+            <td>${esc(quando(i.importada_em))}</td>
             <td>${esc(i.hospital)}</td><td>${esc(TIPO_ROTULO[i.tipo] || i.tipo)}</td><td>${esc(i.arquivo || '—')}</td>
-            <td>${esc(i.competencia ? Utilidades.compExibir(i.competencia) : '—')}</td>
+            <td>${esc(compsTxt(i.competencia))}</td>
             <td class="num">${(i.n_linhas || 0).toLocaleString('pt-BR')}</td>
             <td style="text-align:right"><button class="botao botao-mini botao-perigo" data-del="${i.id}" data-tipo="${esc(i.tipo)}">excluir</button></td>
           </tr>`).join('')}
@@ -318,7 +626,7 @@ App.telas['importar'] = function () {
         });
         Banco.salvarDebounced();
         Utilidades.toast('Importação excluída.', 'ok');
-        renderLista();
+        render();
       });
     });
   }

@@ -480,6 +480,227 @@
     return { inseridas, competencias: [...compsNoArquivo].sort(), avisos };
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // PRODUÇÃO — importação AUTOMÁTICA (a forma da ferramenta de origem)
+  //
+  // Escolheu o arquivo, importou: a ATLAS acha o cabeçalho (a linha com
+  // "Cód. Admissão"), reconhece as colunas pelo layout do relatório
+  // analítico + aliases, exige só ADMISSÃO e DATA, deriva a competência de
+  // CADA linha pela data (um arquivo pode trazer mais de um mês), apaga as
+  // competências presentes (do hospital) e grava tudo numa transação com
+  // statement preparado. O relatório entra NA ÍNTEGRA: o que não vira
+  // campo-núcleo da auditoria fica guardado nas colunas de mesmo nome.
+  // ──────────────────────────────────────────────────────────────────────
+
+  /** Layout do relatório analítico: cabeçalho da planilha → coluna do banco. */
+  const LAYOUT_PRODUCAO = [
+    ['Cód. Admissão', 'admissao'],            ['Data Admissão', 'data'],
+    ['Hora Admissão', 'hora_admissao'],       ['Status Admissão', 'status_admissao'],
+    ['Unid. Atendimento', 'unidade'],         ['Especialidade', 'especialidade'],
+    ['Tipo Recebimento', 'fonte'],            ['Destino', 'destino'],
+    ['Classificação Produto', 'classificacao'], ['Tipo Produto', 'tipo_produto'],
+    ['Categoria', 'categoria'],               ['Subcategoria', 'subcategoria'],
+    ['Subespecialidade', 'subespecialidade'], ['Médico Externo', 'medico_externo'],
+    ['Cód. Apresentação', 'cod_apresentacao'], ['Procedimento Principal', 'procedimento_principal'],
+    ['Produto', 'procedimento'],              ['Pacote', 'pacote'],
+    ['Convênio', 'convenio'],                 ['Plano', 'plano'],
+    ['Perfil Particular', 'perfil_particular'], ['Perfil Admissão', 'perfil_admissao'],
+    ['Caráter Admissão', 'carater_admissao'], ['Observação Admissão', 'observacao_admissao'],
+    ['Sala', 'sala'],                         ['Profissional Admissão', 'profissional_admissao'],
+    ['Tipo Paciente', 'tipo_paciente'],       ['Cód. Paciente', 'cod_paciente'],
+    ['Paciente', 'paciente'],                 ['Data Nascimento', 'data_nascimento'],
+    ['Idade no Atendimento', 'idade_atendimento'], ['Faixa Etária', 'faixa_etaria'],
+    ['CID Alta', 'cid_alta'],                 ['Descrição CID', 'descricao_cid'],
+    ['Qtd.', 'quantidade'],                   ['Valor R$', 'valor'],
+    ['Indicante', 'indicante'],               ['Solicitante', 'solicitante'],
+    ['Consultor', 'consultor'],               ['Médico', 'medico'],
+    ['Cirurgião', 'cirurgiao'],               ['Instrumentador', 'instrumentador'],
+    ['Contatologa', 'contatologa'],           ['Ortoptista', 'ortoptista'],
+    ['Auxiliar SADT', 'auxiliar_sadt'],       ['Auxiliar 1', 'auxiliar'],
+    ['Auxiliar 2', 'auxiliar2'],
+  ];
+
+  // campo do mapeamento manual (CAMPOS.PRODUCAO) ↔ coluna do banco
+  const NUCLEO_PARA_COLUNA = { executante: 'cirurgiao', executante_alt: 'medico' };
+  const COLUNA_PARA_NUCLEO = { cirurgiao: 'executante', medico: 'executante_alt' };
+
+  /** Linha do cabeçalho da produção: a que tem "Cód. Admissão"; senão, a melhor por aliases. */
+  function detectarCabecalhoProducao(matriz) {
+    const ate = Math.min(matriz.length, 30);
+    for (let i = 0; i < ate; i++) {
+      if ((matriz[i] || []).some(c => U().normalizar(c) === 'COD ADMISSAO')) return i;
+    }
+    return detectarCabecalho(matriz, 'PRODUCAO');
+  }
+
+  /**
+   * Mapeia o cabeçalho da produção → { coluna_do_banco: índice }.
+   *   1º o layout conhecido (nome exato, indiferente a acento/caixa);
+   *   2º os aliases genéricos, só para o núcleo que ainda faltar;
+   *   3º o perfil salvo do hospital (se houver) tem a última palavra;
+   *   4º `nucleo` (o que o usuário apontou no mapeamento manual) manda em tudo.
+   */
+  function mapearProducao(cab, perfil, nucleo) {
+    const norm = cab.map(c => U().normalizar(c));
+    const map = {};
+    const usadas = new Set();
+    for (const [rotulo, col] of LAYOUT_PRODUCAO) {
+      const alvo = U().normalizar(rotulo);
+      const idx = norm.findIndex((n, i) => n === alvo && !usadas.has(i));
+      if (idx >= 0) { map[col] = idx; usadas.add(idx); }
+    }
+    const traduz = (campo) => NUCLEO_PARA_COLUNA[campo] || campo;
+    const sug = sugerirMapeamento(cab, 'PRODUCAO');
+    for (const [campo, idx] of Object.entries(sug)) {
+      const col = traduz(campo);
+      if (idx == null || map[col] != null || usadas.has(idx)) continue;
+      map[col] = idx; usadas.add(idx);
+    }
+    if (perfil) {
+      for (const [campo, idx] of Object.entries(aplicarPerfil(perfil, cab))) {
+        if (idx != null) map[traduz(campo)] = idx;
+      }
+    }
+    if (nucleo) {
+      for (const [campo, idx] of Object.entries(nucleo)) {
+        const col = traduz(campo);
+        if (idx == null || idx < 0) delete map[col]; else map[col] = idx;
+      }
+    }
+    return map;
+  }
+
+  /** O mapa por coluna do banco → mapa do mapeamento manual (CAMPOS.PRODUCAO). */
+  function nucleoDoMapa(map) {
+    const out = {};
+    for (const c of CAMPOS.PRODUCAO) {
+      const col = NUCLEO_PARA_COLUNA[c.campo] || c.campo;
+      if (map[col] != null) out[c.campo] = map[col];
+    }
+    return out;
+  }
+
+  // colunas gravadas na íntegra (além do núcleo da auditoria)
+  const COLUNAS_INTEGRA = ['hora_admissao', 'status_admissao', 'unidade', 'especialidade', 'destino',
+    'tipo_produto', 'categoria', 'subcategoria', 'subespecialidade', 'medico_externo', 'cod_apresentacao',
+    'procedimento_principal', 'pacote', 'plano', 'perfil_particular', 'perfil_admissao', 'carater_admissao',
+    'observacao_admissao', 'sala', 'profissional_admissao', 'tipo_paciente', 'cod_paciente',
+    'data_nascimento', 'idade_atendimento', 'faixa_etaria', 'cid_alta', 'descricao_cid', 'consultor',
+    'medico', 'cirurgiao', 'instrumentador', 'contatologa', 'ortoptista', 'auxiliar_sadt', 'auxiliar2'];
+  const COLUNAS_NUCLEO = ['competencia', 'admissao', 'data', 'paciente', 'convenio', 'fonte', 'classificacao',
+    'procedimento', 'procedimento_norm', 'quantidade', 'valor', 'executante', 'executante_norm',
+    'auxiliar', 'auxiliar_norm', 'indicante', 'indicante_norm', 'solicitante', 'solicitante_norm',
+    'laudo', 'laudo_norm', 'linha_origem'];
+
+  /**
+   * Importa a PRODUÇÃO automaticamente.
+   * p: { matriz, clienteId, hospitalId, arquivo, substituir (padrão true),
+   *      perfil (perfilLer), linhaCab e nucleo (só quando vem do mapeamento manual) }
+   * Lança erro com .precisaMapear = true (e .linhaCab/.map) quando não
+   * reconhece ADMISSÃO ou DATA — a tela cai no mapeamento manual.
+   * Devolve o resumo: { linhaCab, cab, map, linhasLidas, inseridas, vazias,
+   *   semData, semAdmissao, competencias[], admissoes, totalValor,
+   *   reconhecidas, naoReconhecidas[] }.
+   */
+  function importarProducao(p) {
+    const U_ = U();
+    const matriz = p.matriz || [];
+    const linhaCab = p.linhaCab != null ? p.linhaCab : detectarCabecalhoProducao(matriz);
+    const cab = (matriz[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
+    const map = mapearProducao(cab, p.perfil || null, p.nucleo || null);
+    const faltam = ['admissao', 'data'].filter(c => map[c] == null);
+    if (faltam.length) {
+      const e = new Error('Não reconheci a coluna de ' +
+        faltam.map(c => c === 'admissao' ? 'ADMISSÃO' : 'DATA DA ADMISSÃO').join(' nem a de ') +
+        ' — aponte no mapeamento.');
+      e.precisaMapear = true; e.linhaCab = linhaCab; e.map = map;
+      throw e;
+    }
+
+    const cel = (raw, col) => { const i = map[col]; if (i == null) return ''; const v = raw[i]; return v == null ? '' : v; };
+    const txt = (raw, col) => String(cel(raw, col)).trim();
+    const hora = (v) => v instanceof Date ? v.toTimeString().slice(0, 8) : String(v == null ? '' : v).trim();
+
+    const linhas = [];
+    const comps = new Set(), adms = new Set();
+    let vazias = 0, semData = 0, semAdmissao = 0, totalValor = 0;
+    for (let i = linhaCab + 1; i < matriz.length; i++) {
+      const raw = matriz[i] || [];
+      if (!raw.some(c => c != null && String(c).trim() !== '')) { vazias++; continue; }
+      const dataISO = U_.paraDataISO(cel(raw, 'data'));
+      if (!dataISO) { semData++; continue; }              // sem data não há competência
+      const adm = txt(raw, 'admissao').replace(/\.0+$/, '');
+      if (!adm) { semAdmissao++; continue; }               // a auditoria é por admissão
+      const proc = txt(raw, 'procedimento');
+      const fonteTxt = txt(raw, 'fonte'), convenio = txt(raw, 'convenio');
+      const cirurgiao = txt(raw, 'cirurgiao'), medico = txt(raw, 'medico');
+      const executante = cirurgiao || medico;               // cirurgião; senão, o médico
+      const auxiliar = txt(raw, 'auxiliar'), indicante = txt(raw, 'indicante');
+      const solicitante = txt(raw, 'solicitante'), laudo = txt(raw, 'laudo');
+      const valor = U_.paraNumero(cel(raw, 'valor'));
+      const l = {
+        competencia: U_.competenciaDe(dataISO), admissao: adm, data: dataISO,
+        paciente: txt(raw, 'paciente'), convenio,
+        fonte: fonteTxt ? U_.classificarFonte(fonteTxt) : (convenio ? U_.classificarFonte(convenio) : 'CONVENIO'),
+        classificacao: U_.normalizar(cel(raw, 'classificacao')),
+        procedimento: proc, procedimento_norm: U_.normalizar(proc),
+        quantidade: U_.paraNumero(cel(raw, 'quantidade')) || 1,
+        valor,
+        executante, executante_norm: U_.normalizar(executante),
+        auxiliar, auxiliar_norm: U_.normalizar(auxiliar),
+        indicante, indicante_norm: U_.normalizar(indicante),
+        solicitante, solicitante_norm: U_.normalizar(solicitante),
+        laudo, laudo_norm: U_.normalizar(laudo),
+        linha_origem: i + 1,
+      };
+      for (const col of COLUNAS_INTEGRA) {
+        if (map[col] == null) { l[col] = null; continue; }
+        const v = cel(raw, col);
+        if (col === 'hora_admissao') l[col] = hora(v);
+        else if (col === 'data_nascimento') l[col] = U_.paraDataISO(v) || String(v).trim();
+        else if (col === 'idade_atendimento') l[col] = v === '' ? null : U_.paraNumero(v);
+        else l[col] = String(v).trim();
+      }
+      comps.add(l.competencia); adms.add(U_.normAdm(adm)); totalValor += valor;
+      linhas.push(l);
+    }
+    if (!linhas.length) throw new Error('Nenhuma linha com admissão e data abaixo do cabeçalho — é o relatório de produção certo?');
+
+    const colunas = COLUNAS_NUCLEO.concat(COLUNAS_INTEGRA);
+    const sql = `INSERT INTO linhas_producao (cliente_id, hospital_id, importacao_id, ${colunas.join(', ')})
+                 VALUES (?, ?, ?, ${colunas.map(() => '?').join(', ')})`;
+    const lista = [...comps].sort();
+    let inseridas = 0;
+    Banco.transacao(() => {
+      if (p.substituir !== false) {
+        Banco.executar(
+          `DELETE FROM linhas_producao WHERE hospital_id = ? AND competencia IN (${lista.map(() => '?').join(',')})`,
+          [p.hospitalId, ...lista]);
+      }
+      Banco.executar(
+        `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas)
+         VALUES (?, ?, 'PRODUCAO', ?, ?, ?)`,
+        [p.clienteId, p.hospitalId, p.arquivo || '', lista.join(', '), linhas.length]);
+      const impId = Banco.ultimoId();
+      inseridas = Banco.executarLote(sql, linhas.map(l => [p.clienteId, p.hospitalId, impId, ...colunas.map(c => l[c])]));
+      // importações de produção deste hospital que ficaram sem nenhuma linha
+      // (sobrescritas) saem do histórico — ele mostra o que está na base
+      Banco.executar(
+        `DELETE FROM importacoes WHERE tipo = 'PRODUCAO' AND hospital_id = ? AND id <> ?
+           AND NOT EXISTS (SELECT 1 FROM linhas_producao lp WHERE lp.importacao_id = importacoes.id)`,
+        [p.hospitalId, impId]);
+    });
+
+    const usados = new Set(Object.values(map));
+    return {
+      linhaCab, cab, map, linhasLidas: Math.max(0, matriz.length - linhaCab - 1),
+      inseridas, vazias, semData, semAdmissao, competencias: lista, admissoes: adms.size,
+      totalValor: Math.round(totalValor * 100) / 100,
+      reconhecidas: Object.keys(map).length,
+      naoReconhecidas: cab.filter((c, i) => c && !usados.has(i)),
+    };
+  }
+
   const MESES = { JANEIRO: '01', FEVEREIRO: '02', MARCO: '03', ABRIL: '04', MAIO: '05', JUNHO: '06',
     JULHO: '07', AGOSTO: '08', SETEMBRO: '09', OUTUBRO: '10', NOVEMBRO: '11', DEZEMBRO: '12' };
 
@@ -517,5 +738,6 @@
     CAMPOS, lerPlanilha, detectarCabecalho, sugerirMapeamento,
     perfilLer, perfilGravar, aplicarPerfil, aplicar,
     detectarCompetenciaRelatorio, pareceRelatorioMedico,
+    LAYOUT_PRODUCAO, detectarCabecalhoProducao, mapearProducao, nucleoDoMapa, importarProducao,
   };
 })();

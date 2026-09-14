@@ -74,6 +74,17 @@
       };
       // v0.2: status da linha de repasse (detecção de GLOSA — docs/METODOLOGIA.md §5)
       addCol('linhas_repasse', 'status', 'status TEXT');
+      // v0.6: íntegra do relatório analítico de produção (importação automática)
+      for (const col of ['hora_admissao', 'status_admissao', 'unidade', 'especialidade', 'destino',
+        'tipo_produto', 'categoria', 'subcategoria', 'subespecialidade', 'medico_externo',
+        'cod_apresentacao', 'procedimento_principal', 'pacote', 'plano', 'perfil_particular',
+        'perfil_admissao', 'carater_admissao', 'observacao_admissao', 'sala', 'profissional_admissao',
+        'tipo_paciente', 'cod_paciente', 'data_nascimento', 'faixa_etaria', 'cid_alta', 'descricao_cid',
+        'consultor', 'medico', 'cirurgiao', 'instrumentador', 'contatologa', 'ortoptista',
+        'auxiliar_sadt', 'auxiliar2']) {
+        addCol('linhas_producao', col, `${col} TEXT`);
+      }
+      addCol('linhas_producao', 'idade_atendimento', 'idade_atendimento REAL');
     },
 
     // ──────────────────────────────────────────────────────────────────
@@ -106,6 +117,27 @@
       const stmt = this.db.prepare(sql);
       try { stmt.bind(params); stmt.step(); } finally { stmt.free(); }
       this._versao++;
+    },
+
+    /**
+     * Muitas linhas com o MESMO SQL: prepara o statement uma vez e só
+     * troca os parâmetros (50 mil linhas de produção em segundos, não em
+     * minutos). Devolve quantas rodou. Use dentro de transacao().
+     */
+    executarLote(sql, listaParams) {
+      if (!this.db) return 0;
+      const stmt = this.db.prepare(sql);
+      let n = 0;
+      try {
+        for (const params of listaParams) {
+          stmt.bind(params.map(v => v === undefined ? null : v));
+          stmt.step();
+          stmt.reset();
+          n++;
+        }
+      } finally { stmt.free(); }
+      this._versao++;
+      return n;
     },
 
     /** id gerado pelo último INSERT. */
