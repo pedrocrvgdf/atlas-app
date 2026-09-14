@@ -2,18 +2,20 @@
  * ============================================================================
  * TELA: Inspeção da Admissão (🔎) — o módulo de rastreio
  *
- * Rastreia UMA admissão pelas três bases, na ordem em que o dinheiro caminha,
+ * Rastreia UMA admissão pelas bases, na ordem em que o dinheiro caminha,
  * e diz ONDE ELA PAROU (metodologia §1):
  *
- *   Painel 1 · REPASSE CRU      o que chegou do pagador (linhas_repasse)
+ *   Painel 1 · SISTEMA          o relatório cru do sistema do hospital (linhas_repasse)
  *   Painel 2 · RESULTADO AUDITADO  o motor papel a papel: quem devia receber,
  *                               regra, esperado × pago, status e motivo
  *   Painel 3 · PRODUÇÃO ANALÍTICA  o que o hospital produziu (linhas_producao)
+ *   Painel 4 · RECEBIDO PELO MÉDICO  o relatório que o médico de fato recebeu
+ *                               (linhas_medico) — confronto SISTEMA × MÉDICO
  *
  * Diagnóstico em 4 tons:
  *   ok    há valor repassado — "Admissão paga no repasse" + competências,
  *         total, lista analítica, alertas e o "não pago"
- *   etapa está no repasse cru mas nada foi repassado (sem ser glosa total)
+ *   etapa está no sistema mas nada foi repassado (sem ser glosa total)
  *   aviso fora do repasse e dentro da produção — frase fixa de AGUARDANDO
  *   nada  "Admissão não encontrada"
  *
@@ -111,7 +113,7 @@ window.AtlasInspecao = (function () {
   // ────────────────────────────────────────────────────────────────────
   let _memo = { versao: -1, cliente: 0 };
 
-  /** Mapas por admissão NORMALIZADA das três bases + resultado do motor. */
+  /** Mapas por admissão NORMALIZADA das bases (produção, sistema, médico) + resultado do motor. */
   function dados() {
     // robustez: quem chamar o módulo por fora da tela ainda resolve o cliente
     const ativo = App.clienteAtivo && App.clienteAtivo();
@@ -404,8 +406,9 @@ window.AtlasInspecao = (function () {
           ${st.latAberta ? '' : '<button class="botao botao-mini" id="insp-abrir-lat">🗂 planilha do médico</button>'}
         </div>
         <h1>Inspeção da Admissão</h1>
-        <p>Rastreie a admissão pelas três bases, na ordem em que o dinheiro caminha —
-        repasse cru, resultado auditado e produção — e veja onde ela parou.
+        <p>Rastreie a admissão pelas bases, na ordem em que o dinheiro caminha —
+        sistema (relatório cru), resultado auditado, produção e o que o médico de fato
+        recebeu — e veja onde ela parou.
         Cliente: <strong>${esc(cliente.nome)}</strong></p>
       </div>
 
@@ -550,11 +553,11 @@ window.AtlasInspecao = (function () {
       const soGlosa = insp.rep.length && insp.rep.every(l => /glosa/i.test(String(l.status || '')) || !(Number(l.repassado) > 0));
       sub = soGlosa && insp.rep.some(l => /glosa/i.test(String(l.status || '')))
         ? 'As linhas desta admissão constam como <span class="glosa">GLOSA</span> — não há repasse a executar.'
-        : 'A admissão chegou no repasse cru, mas nenhum valor foi repassado — confira o processamento.';
+        : 'A admissão chegou no sistema, mas nenhum valor foi repassado — confira o processamento.';
     } else if (insp.tom === 'aviso') {
       sub = 'A admissão existe na produção e ainda não apareceu no repasse.';
     } else {
-      sub = 'Nenhuma das três bases contém esta admissão — confira o código ou as importações.';
+      sub = 'Nenhuma das bases contém esta admissão — confira o código ou as importações.';
     }
 
     // lista analítica do CRU: procedimento → médico → papéis e valores (×N; glosa em vermelho)
@@ -619,7 +622,7 @@ window.AtlasInspecao = (function () {
         </div>
         ${st.diagAberto ? `<div class="diag-corpo">
           <div class="diag-lista" style="margin-top:10px">${sub}</div>
-          ${analitica ? `<div class="diag-secao"><div class="diag-secao-titulo">O que foi pago (repasse cru)</div>
+          ${analitica ? `<div class="diag-secao"><div class="diag-secao-titulo">O que foi pago (sistema)</div>
             <div class="diag-lista">${analitica}</div></div>` : ''}
           ${confrontoHTML}
           ${alertas.length ? `<div class="diag-secao"><div class="diag-secao-titulo">Alertas</div>
@@ -669,7 +672,7 @@ window.AtlasInspecao = (function () {
         <td class="num">${fmtR(l.repassado)}</td>
         <td>${/glosa/i.test(String(l.status || '')) ? '<span class="badge badge-NAO_PAGO">GLOSA</span>' : esc(l.status || '—')}</td>
       </tr>`).join('')}</tbody></table></div>`
-      : vazio('Nada no repasse cru — ' + (insp.prod.length ? 'o pagador ainda não pagou esta admissão.' : 'admissão fora desta base.'));
+      : vazio('Nada no sistema — ' + (insp.prod.length ? 'o pagador ainda não pagou esta admissão.' : 'admissão fora desta base.'));
 
     // 2 · resultado auditado
     const m = insp.mAdm;
