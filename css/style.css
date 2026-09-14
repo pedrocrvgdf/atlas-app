@@ -38,18 +38,24 @@ html, body {
   font-size: 13.5px; color: var(--tinta); background: var(--papel);
 }
 
-#app { display: flex; min-height: 100vh; }
+#app { display: block; min-height: 100vh; position: relative; }
+
+/* ── MARCA D'ÁGUA — o titã ATLAS ao fundo de toda a ferramenta ─────────── */
+.marca-dagua { position: fixed; left: 50%; top: 55%;
+  transform: translate(-50%, -50%); width: min(620px, 74vw); height: min(86vh, 1040px);
+  background: url('../assets/atlas-titan.png') center/contain no-repeat;
+  opacity: .05; pointer-events: none; z-index: 0; }
 
 /* ── Carregamento inicial ─────────────────────────────────────────────── */
 .loading-overlay {
   position: fixed; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 14px;
-  background: var(--azul-900); color: #cfd9e6; z-index: 50;
+  background: var(--papel); color: var(--cinza); z-index: 50;
 }
-.loading-overlay .spinner {
+.loading-overlay .spinner, #atlas-loading .al-spin {
   width: 42px; height: 42px; border-radius: 50%;
   border: 3px solid rgba(184,150,90,.25); border-top-color: var(--ouro);
-  animation: girar 1s linear infinite;
+  animation: girar 1s linear infinite; margin: 0 auto;
 }
 @keyframes girar { to { transform: rotate(360deg); } }
 
@@ -57,53 +63,54 @@ html, body {
   border: 1px solid var(--borda); border-radius: var(--raio); padding: 26px; }
 
 /* ══════════════════════════════════════════════════════════════════════
-   BARRA LATERAL
+   BARRA FLUTUANTE (o único menu — a Inspeção é a base da ferramenta)
    ══════════════════════════════════════════════════════════════════════ */
-.sidebar {
-  width: 248px; flex: 0 0 248px; min-height: 100vh;
-  background: linear-gradient(180deg, var(--azul-900) 0%, #0c1526 100%);
-  color: #c9d5e4; display: flex; flex-direction: column;
-  position: sticky; top: 0; height: 100vh;
-}
+.topo-wrap { position: sticky; top: 0; z-index: 40; padding: 12px 22px 6px; }
+.topo { max-width: 1380px; margin: 0 auto; background: var(--branco);
+  border: 1px solid var(--borda); border-radius: 16px;
+  box-shadow: 0 12px 34px rgba(10,17,32,.12);
+  display: flex; align-items: center; gap: 18px; padding: 10px 20px; flex-wrap: wrap; }
 
-.marca { display: flex; align-items: center; gap: 12px; padding: 22px 20px 16px; }
-.marca-globo { width: 46px; height: 46px; border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(184,150,90,.35), 0 4px 14px rgba(0,0,0,.4); }
-.marca-nome { font-size: 21px; font-weight: 800; letter-spacing: .22em; color: #f2ede2; }
-.marca-sub { font-size: 9px; font-weight: 700; letter-spacing: .18em; color: var(--ouro); margin-top: 2px; }
+.topo-marca { display: flex; flex-direction: column; line-height: 1.05; cursor: pointer;
+  padding: 2px 6px 2px 0; }
+.marca-nome { font-size: 19px; font-weight: 800; letter-spacing: .2em; color: var(--tinta); }
+.topo-sub { font-size: 8px; font-weight: 700; letter-spacing: .2em; color: var(--ouro-escuro); }
 
-.cliente-box { margin: 6px 14px 14px; padding: 10px 12px; border-radius: 10px;
-  background: rgba(255,255,255,.05); border: 1px solid rgba(184,150,90,.22); }
-.cliente-rotulo { font-size: 9.5px; font-weight: 700; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--ouro); margin-bottom: 6px; }
-.cliente-select { width: 100%; background: var(--azul-800); color: #e6ecf4;
-  border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 7px 8px;
-  font: inherit; font-size: 12.5px; outline: none; cursor: pointer; }
-.cliente-vazio { font-size: 11.5px; color: var(--cinza-claro); line-height: 1.5; }
+.topo-nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.topo-link { border: none; background: none; font: inherit; font-size: 13px; font-weight: 700;
+  color: var(--cinza); padding: 8px 13px; border-radius: 10px; cursor: pointer; position: relative;
+  transition: color .13s, background .13s; }
+.topo-link:hover { color: var(--tinta); background: var(--papel); }
+.topo-link.ativo { color: var(--tinta); }
+.topo-link.ativo::after { content: ''; position: absolute; left: 13px; right: 13px; bottom: 3px;
+  height: 2.5px; border-radius: 3px; background: var(--ouro); }
+.drop-seta { font-size: 9px; opacity: .7; }
 
-.menu { flex: 1; padding: 4px 12px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; }
-.menu-item { display: flex; align-items: center; gap: 11px; width: 100%;
-  padding: 10px 12px; border: none; border-radius: 9px; background: transparent;
-  color: #b9c6d7; font: inherit; font-size: 13px; font-weight: 600;
-  cursor: pointer; text-align: left; position: relative;
-  transition: background .14s ease, color .14s ease; }
-.menu-item:hover { background: rgba(255,255,255,.06); color: #eef3f9; }
-.menu-item.ativo { background: var(--ouro-suave); color: #f4e9d3; }
-.menu-item.ativo::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
-  width: 3px; border-radius: 3px; background: var(--ouro); }
-.menu-icone { font-size: 15px; width: 20px; text-align: center; }
-.menu-destaque .menu-nome::after { content: '●'; color: var(--ouro);
-  font-size: 7px; margin-left: 7px; vertical-align: 2px; }
+.topo-drop { position: relative; }
+.topo-menu { position: absolute; top: calc(100% + 8px); left: 0; min-width: 210px;
+  background: var(--branco); border: 1px solid var(--borda); border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(10,17,32,.18); padding: 8px; z-index: 60; }
+.topo-menu-item { display: flex; align-items: center; gap: 10px; width: 100%;
+  border: none; background: none; font: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--tinta); text-align: left; padding: 9px 11px; border-radius: 9px; cursor: pointer; }
+.topo-menu-item:hover { background: var(--papel); }
+.topo-menu-item.ativo { background: var(--ouro-suave); }
+.topo-versao { font-size: 9.5px; letter-spacing: .08em; color: var(--cinza-claro);
+  padding: 8px 11px 4px; border-top: 1px solid var(--borda-suave); margin-top: 6px; }
 
-.rodape { padding: 14px 20px 18px; font-size: 10px; letter-spacing: .12em;
-  color: #6d7d92; border-top: 1px solid rgba(255,255,255,.07); }
-.rodape-versao { margin-top: 3px; color: #51617a; letter-spacing: .04em; }
+.topo-cliente { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.topo-cliente-rotulo { font-size: 10px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--cinza); }
+.topo-cliente-select { font: inherit; font-size: 12.5px; font-weight: 700;
+  border: 1px solid var(--borda); border-radius: 10px; padding: 7px 10px;
+  background: var(--papel); color: var(--tinta); outline: none; cursor: pointer; max-width: 230px; }
+.topo-cliente-select:focus { border-color: var(--ouro); }
 
 /* ══════════════════════════════════════════════════════════════════════
    CONTEÚDO
    ══════════════════════════════════════════════════════════════════════ */
-.main { flex: 1; min-width: 0; }
-#conteudo { padding: 26px 30px 60px; max-width: 1380px; margin: 0 auto; }
+.main { position: relative; z-index: 1; }
+#conteudo { padding: 14px 30px 60px; max-width: 1380px; margin: 0 auto; }
 
 .tela-cabecalho { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
 .tela-titulo { font-size: 21px; font-weight: 800; letter-spacing: -.01em; margin: 0; }
@@ -261,8 +268,6 @@ input.entrada:focus, select.entrada:focus { border-color: var(--ouro); box-shado
 #atlas-loading.mostrar { display: flex; }
 #atlas-loading .al-box { background: var(--branco); border-radius: 14px;
   padding: 22px 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
-#atlas-loading .al-globo { width: 46px; height: 46px; border-radius: 50%;
-  animation: girar 1.4s linear infinite; }
 #atlas-loading .al-msg { margin-top: 10px; font-weight: 700; font-size: 12.5px; }
 
 /* ── Miudezas ────────────────────────────────────────────────────────── */
@@ -278,9 +283,8 @@ input.entrada:focus, select.entrada:focus { border-color: var(--ouro); box-shado
   padding: 10px 14px; font-size: 12px; color: #2f5f83; margin-bottom: 12px; line-height: 1.55; }
 
 @media (max-width: 900px) {
-  #app { flex-direction: column; }
-  .sidebar { width: 100%; flex: none; height: auto; position: static; min-height: 0; }
-  .menu { flex-direction: row; flex-wrap: wrap; }
+  .topo { gap: 8px; padding: 8px 12px; }
+  .topo-cliente { margin-left: 0; width: 100%; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -294,10 +298,7 @@ input.entrada:focus, select.entrada:focus { border-color: var(--ouro); box-shado
   color: #e8eef7; padding: 30px 34px 74px; margin-bottom: -44px; }
 .insp-hero h1 { margin: 0 0 6px; font-size: 24px; font-weight: 800; letter-spacing: -.01em; color: #f4f0e6; }
 .insp-hero p { margin: 0; font-size: 12.5px; color: #b9c6d7; max-width: 640px; line-height: 1.55; }
-.insp-hero::after { content: ''; position: absolute; right: 26px; top: 22px; width: 54px; height: 54px;
-  border-radius: 50%; background: url('../assets/globo_atlas_ouro.png') center/cover;
-  box-shadow: 0 0 0 2px rgba(184,150,90,.4), 0 6px 18px rgba(0,0,0,.35); opacity: .95; }
-.insp-hero-acoes { position: absolute; right: 96px; top: 30px; display: flex; gap: 8px; }
+.insp-hero-acoes { position: absolute; right: 26px; top: 30px; display: flex; gap: 8px; }
 .insp-hero-acoes .botao { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #dfe8f2; }
 .insp-hero-acoes .botao:hover { background: rgba(255,255,255,.16); }
 

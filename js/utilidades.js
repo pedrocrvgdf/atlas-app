@@ -230,7 +230,7 @@
       if (!el) {
         el = document.createElement('div');
         el.id = 'atlas-loading';
-        el.innerHTML = '<div class="al-box"><img src="assets/globo_atlas_ouro.png" alt="" class="al-globo">' +
+        el.innerHTML = '<div class="al-box"><div class="al-spin"></div>' +
           '<div class="al-msg"></div></div>';
         document.body.appendChild(el);
       }

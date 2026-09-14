@@ -16,16 +16,20 @@
   const App = window.App = window.App || {};
   App.telas = App.telas || {};
 
-  const MENU = [
-    { id: 'visao',      nome: 'Visão Geral',  icone: '🧭' },
-    { id: 'clientes',   nome: 'Clientes',     icone: '👥' },
-    { id: 'importar',   nome: 'Importações',  icone: '📥' },
-    { id: 'base',       nome: 'Base Tabela',  icone: '📚' },
-    { id: 'medicos',    nome: 'Médicos',      icone: '🩺' },
-    { id: 'auditoria',  nome: 'Auditoria',    icone: '📋' },
-    { id: 'inspecao',   nome: 'Inspeção',     icone: '🔎', destaque: true },
-    { id: 'relatorios', nome: 'Relatórios',   icone: '📄' },
-    { id: 'sistema',    nome: 'Sistema',      icone: '⚙️' },
+  // A INSPEÇÃO é a base da ferramenta (abre nela); análise fica à mão na
+  // barra flutuante e os módulos de CADASTRO moram no menu suspenso.
+  const PRINCIPAIS = [
+    { id: 'inspecao',   nome: 'Inspeção',   icone: '🔎' },
+    { id: 'auditoria',  nome: 'Auditoria',  icone: '📋' },
+    { id: 'relatorios', nome: 'Relatórios', icone: '📄' },
+  ];
+  const CADASTROS = [
+    { id: 'visao',    nome: 'Visão Geral',  icone: '🧭' },
+    { id: 'clientes', nome: 'Clientes',     icone: '👥' },
+    { id: 'importar', nome: 'Importações',  icone: '📥' },
+    { id: 'base',     nome: 'Base Tabela',  icone: '📚' },
+    { id: 'medicos',  nome: 'Médicos',      icone: '🩺' },
+    { id: 'sistema',  nome: 'Sistema',      icone: '⚙️' },
   ];
 
   let _telaAtual = null;
@@ -70,54 +74,71 @@
       `<option value="${c.id}" ${ativo && ativo.id === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`
     ).join('');
 
-    const itens = MENU.map(m => `
-      <button class="menu-item ${m.destaque ? 'menu-destaque' : ''}" data-tela="${m.id}">
-        <span class="menu-icone">${m.icone}</span><span class="menu-nome">${m.nome}</span>
-      </button>`).join('');
-
     document.getElementById('app').innerHTML = `
-      <aside class="sidebar">
-        <div class="marca">
-          <img src="assets/globo_atlas_ouro.png" alt="" class="marca-globo">
-          <div class="marca-textos">
-            <div class="marca-nome">ATLAS</div>
-            <div class="marca-sub">AUDITORIA DE CONTAS</div>
+      <div class="marca-dagua" aria-hidden="true"></div>
+
+      <div class="topo-wrap">
+        <header class="topo">
+          <div class="topo-marca" data-tela="inspecao" role="button">
+            <span class="marca-nome">ATLAS</span>
+            <span class="topo-sub">AUDITORIA DE CONTAS</span>
           </div>
-        </div>
 
-        <div class="cliente-box">
-          <div class="cliente-rotulo">Cliente ativo</div>
-          ${clientes.length ? `
-            <select id="sel-cliente" class="cliente-select">
-              <option value="0" ${!ativo ? 'selected' : ''}>— selecione —</option>
-              ${opcoes}
-            </select>` : `
-            <div class="cliente-vazio">Nenhum cliente ainda.<br>Cadastre em <strong>Clientes</strong>.</div>`}
-        </div>
+          <nav class="topo-nav">
+            ${PRINCIPAIS.map(m => `
+              <button class="topo-link" data-tela="${m.id}">${m.icone} ${m.nome}</button>`).join('')}
+            <div class="topo-drop">
+              <button class="topo-link" id="drop-cadastros">🗃 Cadastros <span class="drop-seta">▾</span></button>
+              <div class="topo-menu" id="menu-cadastros" hidden>
+                ${CADASTROS.map(m => `
+                  <button class="topo-menu-item" data-tela="${m.id}">
+                    <span>${m.icone}</span> ${m.nome}</button>`).join('')}
+                <div class="topo-versao">ATLAS COMPANY · ${esc(v.pacote)} · ${esc(v.gerado || '')}</div>
+              </div>
+            </div>
+          </nav>
 
-        <nav class="menu">${itens}</nav>
+          <div class="topo-cliente">
+            <span class="topo-cliente-rotulo">Cliente</span>
+            ${clientes.length ? `
+              <select id="sel-cliente" class="topo-cliente-select">
+                <option value="0" ${!ativo ? 'selected' : ''}>— selecione —</option>
+                ${opcoes}
+              </select>` :
+              `<button class="botao botao-mini botao-ouro" data-tela="clientes">＋ cadastrar</button>`}
+          </div>
+        </header>
+      </div>
 
-        <div class="rodape">
-          <div>ATLAS COMPANY</div>
-          <div class="rodape-versao">${esc(v.pacote)} · ${esc(v.gerado || '')}</div>
-        </div>
-      </aside>
       <main class="main"><div id="conteudo"></div></main>
     `;
 
     const sel = document.getElementById('sel-cliente');
     if (sel) sel.addEventListener('change', () => App.setClienteAtivo(sel.value));
 
-    document.querySelectorAll('.menu-item').forEach(btn => {
-      btn.addEventListener('click', () => App.navegar(btn.dataset.tela));
+    // navegação (barra + menu suspenso)
+    document.querySelectorAll('[data-tela]').forEach(btn => {
+      btn.addEventListener('click', () => { fecharMenu(); App.navegar(btn.dataset.tela); });
     });
+    const drop = document.getElementById('drop-cadastros');
+    const menu = document.getElementById('menu-cadastros');
+    function fecharMenu() { if (menu) menu.hidden = true; }
+    if (drop) {
+      drop.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; });
+      document.addEventListener('click', (e) => {
+        if (menu && !menu.hidden && !menu.contains(e.target)) fecharMenu();
+      });
+    }
   };
 
   App.navegar = function (id) {
     if (!App.telas[id]) id = 'visao';
     _telaAtual = id;
-    document.querySelectorAll('.menu-item').forEach(b =>
+    document.querySelectorAll('.topo-link[data-tela], .topo-menu-item').forEach(b =>
       b.classList.toggle('ativo', b.dataset.tela === id));
+    const drop = document.getElementById('drop-cadastros');
+    if (drop) drop.classList.toggle('ativo',
+      ['visao', 'clientes', 'importar', 'base', 'medicos', 'sistema'].includes(id));
     const alvo = document.getElementById('conteudo');
     alvo.innerHTML = '';
     try {
@@ -158,7 +179,7 @@
     try {
       await Banco.inicializar();
       App.renderShell();
-      App.navegar('visao');
+      App.navegar('inspecao');   // a Inspeção é a base da ferramenta
     } catch (e) {
       console.error('[app] boot falhou:', e);
       document.getElementById('app').innerHTML = `
