@@ -330,8 +330,23 @@ App.telas['importar'] = function () {
             <div class="card"><div class="card-rotulo">Ignoradas</div><div class="card-valor">${n(ignoradas)}</div>
               <div class="card-extra">${n(r.vazias)} vazias · ${n(r.semData)} sem data · ${n(r.semAdmissao)} sem admissão${r.escopo ? ` · ${n(r.foraDoEscopo)} fora do período` : ''}</div></div>
             <div class="card"><div class="card-rotulo">Admissões únicas</div><div class="card-valor">${n(r.admissoes)}</div></div>
+            <div class="card"><div class="card-rotulo">Quantidade (soma)</div><div class="card-valor">${n(r.totalQuantidade)}</div></div>
             <div class="card card-destaque"><div class="card-rotulo">Valor produzido</div><div class="card-valor">${fmtR(r.totalValor)}</div></div>
           </div>
+          ${r.truncado ? `<div class="aviso-caixa" style="margin-bottom:12px;border-color:#e5c4c4;background:#fdf3f3">
+            <strong>⚠ Arquivo cortado no limite de exportação.</strong> ${r.truncado.motivo === 'nota'
+              ? `O próprio arquivo avisa: <em>${esc(r.truncado.nota)}</em>.`
+              : `Ele tem exatamente ${n(r.truncado.limite)} linhas de dados — é o teto de exportação do Power BI.`}
+            O relatório tinha mais linhas do que isso e elas <strong>não vieram</strong>: o total deste período não vai fechar
+            com o sistema. Exporte em períodos menores (mês a mês) e importe cada um como <strong>"Um mês"</strong>.</div>` : ''}
+          ${r.porCompetencia && r.porCompetencia.length ? `<div class="rolagem-x" style="margin-bottom:12px"><table class="tabela"><thead><tr>
+              <th>Competência</th><th class="num">Linhas</th><th class="num">Quantidade</th><th class="num">Valor produzido</th>
+            </tr></thead><tbody>
+            ${r.porCompetencia.map(c => `<tr><td class="mono">${esc(Utilidades.compExibir(c.competencia))}</td>
+              <td class="num mono">${n(c.linhas)}</td><td class="num mono">${n(c.quantidade)}</td><td class="num mono">${fmtR(c.valor)}</td></tr>`).join('')}
+            </tbody></table></div>
+            <div class="texto-cinza" style="font-size:11.5px;margin-bottom:10px">Para conferir no Excel, some a coluna <em>Valor R$</em> só nas
+              linhas de dados (uma linha de totais colada no fim do arquivo não entra e pode vir do relatório completo, não do exportado).</div>` : ''}
           <div style="font-size:12px">Colunas reconhecidas: <strong>${r.reconhecidas}</strong>${r.naoReconhecidas.length
             ? ` · fora do layout (ficaram de fora): ${esc(r.naoReconhecidas.join(', '))}`
             : ' · todas as colunas do arquivo foram guardadas'}.</div>
@@ -344,12 +359,36 @@ App.telas['importar'] = function () {
           ${alvo && !r.competencias.includes(alvo) ? `<div class="aviso-caixa" style="margin-top:10px">⚠ Você pediu
             para atualizar ${esc(Utilidades.compExibir(alvo))}, mas o arquivo é de ${esc(comps)}.</div>` : ''}
         </div>
-        <div class="modal-rodape"><button class="botao botao-marinho" id="rp-ok">Fechar</button></div>
+        <div class="modal-rodape">
+          ${r.importacaoId ? `<button class="botao botao-perigo" id="rp-excluir" style="margin-right:auto"
+            title="Desfaz: as linhas que esta importação trouxe saem da base">🗑 Excluir esta importação</button>` : ''}
+          <button class="botao botao-marinho" id="rp-ok">Fechar</button>
+        </div>
       </div>`;
     document.body.appendChild(ov);
     const fechar = () => ov.remove();
     ov.querySelector('.modal-fechar').addEventListener('click', fechar);
     ov.querySelector('#rp-ok').addEventListener('click', fechar);
+    const desfazer = ov.querySelector('#rp-excluir');
+    if (desfazer) desfazer.addEventListener('click', () => {
+      if (!confirm(`Excluir a importação de "${nome}"?\n\nAs ${n(r.inseridas)} linhas que ela trouxe saem da base` +
+        ` (${comps || '—'}). O que existia antes nessas competências já foi sobrescrito e não volta.`)) return;
+      excluirImportacao(r.importacaoId);
+      fechar();
+      Utilidades.toast('Importação excluída.', 'ok');
+      render();
+    });
+  }
+
+  /** Apaga uma importação e TODAS as linhas que ela trouxe (qualquer tipo). */
+  function excluirImportacao(id) {
+    Banco.transacao(() => {
+      Banco.executar('DELETE FROM linhas_producao WHERE importacao_id = ?', [id]);
+      Banco.executar('DELETE FROM linhas_repasse WHERE importacao_id = ?', [id]);
+      Banco.executar('DELETE FROM linhas_medico WHERE importacao_id = ?', [id]);
+      Banco.executar('DELETE FROM importacoes WHERE id = ?', [id]);
+    });
+    Banco.salvarDebounced();
   }
 
   /** Painel "Produção importada": competências por ano + filtro "contém". */
@@ -447,7 +486,9 @@ App.telas['importar'] = function () {
               <td colspan="${multiHosp ? 2 : 1}"><strong>${abertos.has(g.ano) ? '▾' : '▸'} ${esc(g.ano)}</strong>
                 <span class="texto-cinza">(${nMeses(g)} ${nMeses(g) === 1 ? 'mês' : 'meses'})</span></td>
               <td class="num mono">${n(g.qtd)}</td><td class="num mono">${n(g.adms)}</td>
-              <td class="num mono"><strong>${fmtR(g.valor)}</strong></td><td></td><td></td>
+              <td class="num mono"><strong>${fmtR(g.valor)}</strong></td><td></td>
+              <td style="text-align:right;white-space:nowrap"><button class="botao botao-mini botao-perigo" data-excluir-ano="${esc(g.ano)}"
+                title="Excluir toda a produção de ${esc(g.ano)}${multiHosp ? ' (todos os hospitais do cliente)' : ''}">Excluir ano</button></td>
             </tr>
             ${abertos.has(g.ano) ? g.comps.map(c => `<tr class="imp-mes">
               <td class="mono" style="padding-left:28px">${esc(Utilidades.compExibir(c.competencia))}</td>
@@ -500,6 +541,28 @@ App.telas['importar'] = function () {
     box.querySelectorAll('[data-excluir]').forEach(b => b.addEventListener('click', () => {
       excluirProducao(Number(b.dataset.hosp), b.dataset.excluir);
     }));
+    box.querySelectorAll('[data-excluir-ano]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();   // a linha do ano também recolhe/expande no clique
+      excluirAno(b.dataset.excluirAno, multiHosp);
+    }));
+  }
+
+  function excluirAno(ano, multiHosp) {
+    const s = Banco.query(
+      `SELECT COUNT(*) AS qtd, COALESCE(SUM(valor), 0) AS total, COUNT(DISTINCT competencia) AS meses
+         FROM linhas_producao WHERE cliente_id = ? AND competencia LIKE ?`, [cliente.id, ano + '-%'])[0] || { qtd: 0, total: 0, meses: 0 };
+    if (!confirm(`Excluir TODA a produção de ${ano}${multiHosp ? ' (todos os hospitais do cliente)' : ''}?\n\n` +
+      `Serão removidas ${n(s.qtd)} linhas de ${n(s.meses)} competência(s) (${fmtR(s.total)} produzidos).\n\n` +
+      `Não dá para desfazer — para recuperar, reimporte os relatórios.`)) return;
+    Banco.transacao(() => {
+      Banco.executar('DELETE FROM linhas_producao WHERE cliente_id = ? AND competencia LIKE ?', [cliente.id, ano + '-%']);
+      Banco.executar(
+        `DELETE FROM importacoes WHERE tipo = 'PRODUCAO' AND cliente_id = ?
+           AND NOT EXISTS (SELECT 1 FROM linhas_producao lp WHERE lp.importacao_id = importacoes.id)`, [cliente.id]);
+    });
+    Banco.salvarDebounced();
+    Utilidades.toast(`Produção de ${ano} excluída.`, 'ok');
+    render();
   }
 
   function excluirProducao(hospitalId, comp) {
@@ -699,7 +762,8 @@ App.telas['importar'] = function () {
             <td>${esc(i.hospital)}</td><td>${esc(TIPO_ROTULO[i.tipo] || i.tipo)}</td><td>${esc(i.arquivo || '—')}</td>
             <td>${esc(compsTxt(i.competencia))}</td>
             <td class="num">${(i.n_linhas || 0).toLocaleString('pt-BR')}</td>
-            <td style="text-align:right"><button class="botao botao-mini botao-perigo" data-del="${i.id}" data-tipo="${esc(i.tipo)}">excluir</button></td>
+            <td style="text-align:right"><button class="botao botao-mini botao-perigo" data-del="${i.id}" data-tipo="${esc(i.tipo)}"
+              title="Apaga esta importação e todas as linhas que ela trouxe">Excluir importação</button></td>
           </tr>`).join('')}
           </tbody></table></div>` :
         `<div class="tabela-vazia">Nenhuma importação ainda.</div>`}
@@ -709,13 +773,7 @@ App.telas['importar'] = function () {
       btn.addEventListener('click', () => {
         const id = Number(btn.dataset.del);
         if (!confirm('Excluir esta importação e TODAS as linhas que ela trouxe?')) return;
-        Banco.transacao(() => {
-          Banco.executar('DELETE FROM linhas_producao WHERE importacao_id = ?', [id]);
-          Banco.executar('DELETE FROM linhas_repasse WHERE importacao_id = ?', [id]);
-          Banco.executar('DELETE FROM linhas_medico WHERE importacao_id = ?', [id]);
-          Banco.executar('DELETE FROM importacoes WHERE id = ?', [id]);
-        });
-        Banco.salvarDebounced();
+        excluirImportacao(id);
         Utilidades.toast('Importação excluída.', 'ok');
         render();
       });

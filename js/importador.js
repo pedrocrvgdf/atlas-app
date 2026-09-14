@@ -603,8 +603,11 @@
    * Lança erro com .precisaMapear = true (e .linhaCab/.map) quando não
    * reconhece ADMISSÃO ou DATA — a tela cai no mapeamento manual.
    * Devolve o resumo: { linhaCab, cab, map, linhasLidas, inseridas, vazias,
-   *   semData, semAdmissao, foraDoEscopo, escopo, mantidas[], competencias[],
-   *   admissoes, totalValor, reconhecidas, naoReconhecidas[] }.
+   *   semData, semAdmissao, foraDoEscopo, escopo, mantidas[], truncado
+   *   ({motivo:'nota'|'contagem', limite} quando o arquivo parece cortado no
+   *   limite de exportação do Power BI), competencias[], admissoes, totalValor,
+   *   totalQuantidade, porCompetencia[{competencia, linhas, valor, quantidade}],
+   *   reconhecidas, naoReconhecidas[] }.
    */
   function importarProducao(p) {
     const U_ = U();
@@ -633,9 +636,24 @@
     const dentro = (comp) => !escopo || (escopo.tipo === 'ANO' ? comp.slice(0, 4) === escopo.ano : comp === compEscopo);
     const rotuloEscopo = !escopo ? '' : (escopo.tipo === 'ANO' ? 'o ano de ' + escopo.ano : U_.compExibir(compEscopo));
 
+    // Exportação cortada: o Power BI para em 150.000 linhas e escreve a nota
+    // "Exported data limited to 150000 rows" acima do cabeçalho — quando o
+    // relatório tem mais linhas que isso, o arquivo vem incompleto e o total
+    // do período NÃO fecha. Detecta pela nota ou pela contagem exata.
+    let truncado = null;
+    for (let i = 0; i < linhaCab; i++) {
+      for (const c of (matriz[i] || [])) {
+        const m = String(c == null ? '' : c).match(/limited to\s+([\d.,]+)\s+rows|limitad[oa]s?\s+a\s+([\d.,]+)\s+linhas/i);
+        if (m) { truncado = { motivo: 'nota', limite: Number(String(m[1] || m[2]).replace(/\D/g, '')) || 150000, nota: String(c).trim() }; }
+      }
+    }
+    const nDados = Math.max(0, matriz.length - linhaCab - 1);
+    if (!truncado && nDados >= 150000 && nDados <= 150003) truncado = { motivo: 'contagem', limite: 150000, nota: '' };
+
     const linhas = [];
     const comps = new Set(), adms = new Set();
-    let vazias = 0, semData = 0, semAdmissao = 0, foraDoEscopo = 0, totalValor = 0;
+    const porComp = new Map();   // competência → { linhas, valor, quantidade }
+    let vazias = 0, semData = 0, semAdmissao = 0, foraDoEscopo = 0, totalValor = 0, totalQuantidade = 0;
     for (let i = linhaCab + 1; i < matriz.length; i++) {
       const raw = matriz[i] || [];
       if (!raw.some(c => c != null && String(c).trim() !== '')) { vazias++; continue; }
@@ -674,7 +692,9 @@
         else if (col === 'idade_atendimento') l[col] = v === '' ? null : U_.paraNumero(v);
         else l[col] = String(v).trim();
       }
-      comps.add(l.competencia); adms.add(U_.normAdm(adm)); totalValor += valor;
+      comps.add(l.competencia); adms.add(U_.normAdm(adm)); totalValor += valor; totalQuantidade += l.quantidade;
+      const pc = porComp.get(l.competencia) || { competencia: l.competencia, linhas: 0, valor: 0, quantidade: 0 };
+      pc.linhas++; pc.valor += valor; pc.quantidade += l.quantidade; porComp.set(l.competencia, pc);
       linhas.push(l);
     }
     if (!linhas.length) {
@@ -697,7 +717,7 @@
     const sql = `INSERT INTO linhas_producao (cliente_id, hospital_id, importacao_id, ${colunas.join(', ')})
                  VALUES (?, ?, ?, ${colunas.map(() => '?').join(', ')})`;
     const lista = [...comps].sort();
-    let inseridas = 0;
+    let inseridas = 0, impId = null;
     Banco.transacao(() => {
       if (p.substituir !== false) {
         Banco.executar(
@@ -708,7 +728,7 @@
         `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas)
          VALUES (?, ?, 'PRODUCAO', ?, ?, ?)`,
         [p.clienteId, p.hospitalId, p.arquivo || '', lista.join(', '), linhas.length]);
-      const impId = Banco.ultimoId();
+      impId = Banco.ultimoId();
       inseridas = Banco.executarLote(sql, linhas.map(l => [p.clienteId, p.hospitalId, impId, ...colunas.map(c => l[c])]));
       // importações de produção deste hospital que ficaram sem nenhuma linha
       // (sobrescritas) saem do histórico — ele mostra o que está na base
@@ -720,10 +740,14 @@
 
     const usados = new Set(Object.values(map));
     return {
+      importacaoId: impId,
       linhaCab, cab, map, linhasLidas: Math.max(0, matriz.length - linhaCab - 1),
-      inseridas, vazias, semData, semAdmissao, foraDoEscopo, escopo, rotuloEscopo, mantidas,
+      inseridas, vazias, semData, semAdmissao, foraDoEscopo, escopo, rotuloEscopo, mantidas, truncado,
       competencias: lista, admissoes: adms.size,
       totalValor: Math.round(totalValor * 100) / 100,
+      totalQuantidade: Math.round(totalQuantidade * 100) / 100,
+      porCompetencia: lista.map(c => { const pc = porComp.get(c); return { competencia: c, linhas: pc.linhas,
+        valor: Math.round(pc.valor * 100) / 100, quantidade: Math.round(pc.quantidade * 100) / 100 }; }),
       reconhecidas: Object.keys(map).length,
       naoReconhecidas: cab.filter((c, i) => c && !usados.has(i)),
     };

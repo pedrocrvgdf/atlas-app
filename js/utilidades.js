@@ -115,6 +115,15 @@
       else s = s.replace(/,/g, '');
     } else if (temVirgula) {
       s = s.replace(/\./g, '').replace(',', '.');
+    } else if (temPonto) {
+      // texto pt-BR sem casa decimal: "1.234" e "12.500.000" são milhares;
+      // "3.5" e "0.125" continuam decimais
+      const partes = s.split('.');
+      const inteiro = partes[0].replace('-', '');
+      if (partes.length > 2 ||
+          (partes.length === 2 && partes[1].length === 3 && /^\d+$/.test(inteiro) && Number(inteiro) !== 0)) {
+        s = s.replace(/\./g, '');
+      }
     }
     const n = parseFloat(s);
     return isFinite(n) ? n : 0;
