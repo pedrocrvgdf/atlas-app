@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS importacoes (
   arquivo      TEXT,                        -- nome do arquivo original
   competencia  TEXT,                        -- YYYY-MM informada no import (repasse)
   n_linhas     INTEGER DEFAULT 0,
+  origem       TEXT,                        -- SISTEMA: CONVENIO | PARTICULAR | TODAS (v0.7)
   importada_em TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (cliente_id)  REFERENCES clientes(id),
   FOREIGN KEY (hospital_id) REFERENCES hospitais(id)

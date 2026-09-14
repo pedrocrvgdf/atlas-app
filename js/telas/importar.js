@@ -2,22 +2,28 @@
  * ============================================================================
  * TELA: Importações (📥)
  *
- * PRODUÇÃO — importação AUTOMÁTICA (a forma da ferramenta de origem):
- *   um pop-up pergunta se o arquivo é do ANO INTEIRO ou de UM MÊS (e qual);
- *   escolheu o arquivo, importou. A ATLAS acha o cabeçalho ("Cód. Admissão"),
- *   reconhece as colunas pelo layout do relatório analítico, deriva a
- *   competência de cada linha pela data, sobrescreve os meses presentes e
- *   mostra o resumo. O mapeamento manual só aparece se ela NÃO reconhecer
- *   admissão/data (layout desconhecido) — e o que o usuário apontar fica
- *   salvo por hospital para as próximas.
- *   Abaixo, a PRODUÇÃO IMPORTADA por competência (agrupada por ano) com
- *   quantidade, admissões, valor, "importada em", Atualizar (relançar o mês)
- *   e Excluir — e um filtro "contém" por admissão / paciente / data / produto.
+ * Escolheu o hospital e o tipo (cards), soltou o arquivo na zona — importou.
  *
- * SISTEMA, MÉDICO e BASE TABELA — fluxo em 2 etapas:
- *   1. Escolher hospital + tipo + arquivo
- *   2. Conferir o MAPEAMENTO DE COLUNAS sugerido (aliases; perfis salvos do
- *      hospital são reaplicados) e gravar, com opção de SUBSTITUIR.
+ * PRODUÇÃO  um pop-up pergunta se o arquivo é do ANO INTEIRO ou de UM MÊS (e
+ *           qual); a ATLAS acha o cabeçalho ("Cód. Admissão"), reconhece as
+ *           colunas do relatório analítico, deriva a competência de cada linha
+ *           pela data, sobrescreve os meses presentes e mostra o resumo.
+ * SISTEMA   o relatório cru do sistema do hospital pode ser SÓ de Convênio,
+ *           SÓ de Particular ou dos dois juntos (segmentado "Este relatório é
+ *           de"); informa-se o mês do pagamento. A ATLAS reconhece as colunas
+ *           pelos aliases + perfil do hospital e importa direto, com resumo.
+ *           A substituição respeita a origem (reimportar o Particular de um
+ *           mês não apaga o Convênio do mesmo mês).
+ * MÉDICO    o relatório que o médico recebeu: competência lida do cabeçalho,
+ *           importação direta (mesma pipeline da Inspeção).
+ * BASE      regras de repasse do hospital: importação direta quando
+ *           reconhecida.
+ *
+ * O MAPEAMENTO MANUAL de colunas só aparece quando a ATLAS não reconhece o
+ * layout — e o que o usuário aponta vira perfil do hospital para as próximas.
+ *
+ * Abaixo: a PRODUÇÃO IMPORTADA por competência (agrupada por ano) com
+ * Atualizar/Excluir e filtro "contém", e o HISTÓRICO de importações.
  * ============================================================================
  */
 App.telas['importar'] = function () {
@@ -30,11 +36,13 @@ App.telas['importar'] = function () {
   if (!cliente) { App.avisoSemCliente(el); return; }
 
   if (!window.__imp) {
-    window.__imp = { etapa: 1, hospitalId: 0, tipo: 'PRODUCAO', competencia: '', arq: null,
-      alvo: '', escopo: null, filtro: { aberto: false, adm: '', pac: '', data: '', prod: '' }, anosAbertos: null };
+    window.__imp = { etapa: 1, hospitalId: 0, tipo: 'PRODUCAO', competencia: '', origem: 'CONVENIO', arq: null,
+      alvo: '', escopo: null, aguardando: false,
+      filtro: { aberto: false, adm: '', pac: '', data: '', prod: '' }, anosAbertos: null };
   }
   const st = window.__imp;
   if (!st.filtro) st.filtro = { aberto: false, adm: '', pac: '', data: '', prod: '' };
+  if (!st.origem) st.origem = 'CONVENIO';
   const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto',
     'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -42,12 +50,19 @@ App.telas['importar'] = function () {
   // do produto: SISTEMA (relatório cru do sistema do hospital), PRODUÇÃO
   // (tudo que foi produzido) e MÉDICO (o que ele de fato recebeu).
   const TIPOS = [
-    ['REPASSE', 'Sistema — relatório cru do sistema do hospital'],
-    ['PRODUCAO', 'Produção — tudo que foi produzido na competência'],
-    ['MEDICO', 'Médico — o relatório que o médico de fato recebeu'],
-    ['BASE_TABELA', 'Base Tabela — regras de repasse'],
+    { id: 'REPASSE', icone: '🏥', nome: 'Sistema', desc: 'relatório cru do sistema do hospital' },
+    { id: 'PRODUCAO', icone: '📋', nome: 'Produção', desc: 'tudo que foi produzido' },
+    { id: 'MEDICO', icone: '🧾', nome: 'Médico', desc: 'o que o médico de fato recebeu' },
+    { id: 'BASE_TABELA', icone: '📐', nome: 'Base Tabela', desc: 'regras de repasse do hospital' },
   ];
   const TIPO_ROTULO = { REPASSE: 'SISTEMA', PRODUCAO: 'PRODUÇÃO', MEDICO: 'MÉDICO', BASE_TABELA: 'BASE TABELA' };
+  const ORIGENS = [
+    { id: 'CONVENIO', nome: 'Convênio', desc: 'só o relatório dos convênios' },
+    { id: 'PARTICULAR', nome: 'Particular', desc: 'só o relatório dos particulares' },
+    { id: 'TODAS', nome: 'Convênio + Particular', desc: 'um relatório com os dois juntos' },
+  ];
+  const ORIGEM_ROTULO = { CONVENIO: 'Convênio', PARTICULAR: 'Particular', TODAS: 'Convênio + Particular' };
+  const chipOrigem = (o) => o ? `<span class="imp-chip imp-chip-${esc(o)}">${esc(ORIGEM_ROTULO[o] || o)}</span>` : '';
 
   // célula legível na prévia (Date do SheetJS vira dd/mm/aaaa, não "Tue Jan 06 2026…")
   const celTxt = (c) => c instanceof Date ? Utilidades.dataExibir(Utilidades.paraDataISO(c)) : String(c == null ? '' : c);
@@ -83,121 +98,342 @@ App.telas['importar'] = function () {
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // ETAPA 1 — escolher hospital, tipo e arquivo
+  // NOVA IMPORTAÇÃO — hospital, cards de tipo, opções do tipo e a zona
   // ────────────────────────────────────────────────────────────────────
   function renderEscolha(hospitais) {
     const area = el.querySelector('#imp-area');
-    const comComp = st.tipo === 'REPASSE' || st.tipo === 'MEDICO';
+    const tipo = TIPOS.find(t => t.id === st.tipo) || TIPOS[1];
+
+    const opcoes = () => {
+      if (st.tipo === 'REPASSE') {
+        return `<div class="imp-opcoes">
+          <div class="campo"><span class="campo-rotulo">Este relatório é de</span>
+            <div class="imp-seg" id="imp-origem">${ORIGENS.map(o =>
+              `<button type="button" class="imp-seg-btn ${o.id === st.origem ? 'ativa' : ''}" data-origem="${o.id}" title="${esc(o.desc)}">${esc(o.nome)}</button>`).join('')}</div></div>
+          <div class="campo" style="max-width:170px"><span class="campo-rotulo">Mês do pagamento</span>
+            <input type="month" id="imp-comp" value="${esc(st.competencia)}"></div>
+        </div>`;
+      }
+      if (st.tipo === 'MEDICO') {
+        return `<div class="imp-opcoes">
+          <div class="campo" style="max-width:170px"><span class="campo-rotulo">Mês do pagamento</span>
+            <input type="month" id="imp-comp" value="${esc(st.competencia)}">
+            <span class="campo-dica">se ficar vazio, a ATLAS lê do cabeçalho do relatório</span></div>
+        </div>`;
+      }
+      if (st.tipo === 'PRODUCAO') {
+        return `<div class="imp-opcoes"><span class="campo-dica">Ao importar, a ATLAS pergunta se o arquivo é do ano inteiro ou de um mês.</span></div>`;
+      }
+      return '';
+    };
+    const tituloZona = () => {
+      if (st.tipo === 'REPASSE') {
+        return `Relatório do sistema · ${ORIGEM_ROTULO[st.origem]}` +
+          (st.competencia ? ` · pagamento ${Utilidades.compExibir(st.competencia)}` : '');
+      }
+      if (st.tipo === 'PRODUCAO') return 'Relatório de produção';
+      if (st.tipo === 'MEDICO') return 'Relatório que o médico recebeu';
+      return 'Base Tabela do hospital';
+    };
+
     area.innerHTML = `
-      <div class="painel">
-        <div class="painel-cabecalho"><span class="painel-titulo">Nova importação</span></div>
+      <div class="painel imp-painel">
+        <div class="painel-cabecalho">
+          <span class="painel-titulo">Nova importação</span>
+          <span class="painel-conta">escolha o hospital e o tipo de relatório, depois solte o arquivo</span>
+        </div>
         <div class="painel-corpo">
-          <div class="linha-campos">
+          <div class="imp-topo">
             <div class="campo"><span class="campo-rotulo">Hospital / clínica</span>
               <select id="imp-hosp">${hospitais.map(h =>
                 `<option value="${h.id}" ${h.id === st.hospitalId ? 'selected' : ''}>${esc(h.nome)}</option>`).join('')}
               </select></div>
-            <div class="campo"><span class="campo-rotulo">Tipo de relatório</span>
-              <select id="imp-tipo">${TIPOS.map(([v, r]) =>
-                `<option value="${v}" ${v === st.tipo ? 'selected' : ''}>${r}</option>`).join('')}
-              </select></div>
-            <div class="campo" id="imp-comp-box" style="max-width:170px; ${comComp ? '' : 'display:none'}">
-              <span class="campo-rotulo">Mês do pagamento</span>
-              <input type="month" id="imp-comp" value="${esc(st.competencia)}"></div>
-            ${st.tipo === 'PRODUCAO'
-              ? `<div class="campo"><span class="campo-rotulo">Arquivo (.xlsx / .xls / .csv)</span>
-                  <button class="botao botao-ouro" id="imp-prod-abrir">📥 Importar produção…</button></div>`
-              : `<div class="campo"><span class="campo-rotulo">Arquivo (.xlsx / .xls / .csv)</span>
-                  <input type="file" id="imp-arquivo" accept=".xlsx,.xls,.csv"></div>`}
+            <div class="imp-tipos">${TIPOS.map(t => `
+              <button type="button" class="imp-tipo ${t.id === st.tipo ? 'ativa' : ''}" data-tipo="${t.id}">
+                <span class="imp-tipo-icone">${t.icone}</span>
+                <span class="imp-tipo-nome">${esc(t.nome)}</span>
+                <span class="imp-tipo-desc">${esc(t.desc)}</span>
+              </button>`).join('')}</div>
           </div>
-          <div class="info-caixa" id="imp-ajuda" style="margin-top:12px">${ajudaTipo(st.tipo)}</div>
+          ${opcoes()}
+          <div class="imp-drop" id="imp-drop" tabindex="0" role="button" aria-label="Escolher o arquivo">
+            <input type="file" id="imp-drop-input" accept=".xlsx,.xls,.csv" hidden>
+            <div class="imp-drop-icone">${tipo.icone}</div>
+            <div class="imp-drop-titulo">${esc(tituloZona())}</div>
+            <div class="imp-drop-sub">Arraste o arquivo aqui ou <strong>clique para escolher</strong> · .xlsx, .xls ou .csv</div>
+          </div>
+          <div class="info-caixa imp-ajuda" id="imp-ajuda">${ajudaTipo(st.tipo)}</div>
         </div>
       </div>`;
 
     area.querySelector('#imp-hosp').addEventListener('change', e => { st.hospitalId = Number(e.target.value); });
-    area.querySelector('#imp-tipo').addEventListener('change', e => {
-      st.tipo = e.target.value;
-      renderEscolha(hospitais);   // o controle de arquivo muda conforme o tipo
+    area.querySelectorAll('[data-tipo]').forEach(b => b.addEventListener('click', () => {
+      st.tipo = b.dataset.tipo; renderEscolha(hospitais);
+    }));
+    area.querySelectorAll('[data-origem]').forEach(b => b.addEventListener('click', () => {
+      st.origem = b.dataset.origem; renderEscolha(hospitais);
+    }));
+    const comp = area.querySelector('#imp-comp');
+    if (comp) comp.addEventListener('change', e => {
+      st.competencia = e.target.value;
+      area.querySelector('.imp-drop-titulo').textContent = tituloZona();
     });
-    area.querySelector('#imp-comp').addEventListener('change', e => { st.competencia = e.target.value; });
 
-    const abrir = area.querySelector('#imp-prod-abrir');
-    if (abrir) abrir.addEventListener('click', () => abrirEscopoProducao({ hospitalId: st.hospitalId, alvo: '' }));
-
-    const inpArquivo = area.querySelector('#imp-arquivo');
-    if (inpArquivo) inpArquivo.addEventListener('change', async (e) => {
-      const f = e.target.files && e.target.files[0];
-      if (!f) return;
-      if (st.tipo === 'REPASSE' && !area.querySelector('#imp-comp').value) {
+    // a zona: clique abre o seletor (produção: primeiro o pop-up do período);
+    // arrastar e soltar entrega o arquivo direto
+    const zona = area.querySelector('#imp-drop');
+    const input = area.querySelector('#imp-drop-input');
+    const abrir = () => {
+      if (st.tipo === 'PRODUCAO') { abrirEscopoProducao({ hospitalId: st.hospitalId, alvo: '' }); return; }
+      if (st.tipo === 'REPASSE' && !st.competencia) {
         Utilidades.toast('Informe o MÊS DO PAGAMENTO antes de escolher o arquivo do sistema.', 'aviso', 4200);
-        e.target.value = '';
+        const c = area.querySelector('#imp-comp'); if (c) c.focus();
         return;
       }
-      st.competencia = area.querySelector('#imp-comp').value || '';
-      try {
-        Utilidades.loading.mostrar('Lendo a planilha…');
-        const buf = await f.arrayBuffer();
-        const { matriz, nomeAba } = Importador.lerPlanilha(buf);
-        if (st.tipo === 'MEDICO' && !st.competencia) {
-          st.competencia = Importador.detectarCompetenciaRelatorio(matriz);
-          if (!st.competencia) {
-            Utilidades.toast('Não achei a competência no cabeçalho — informe o MÊS DO PAGAMENTO e escolha o arquivo de novo.', 'aviso', 5000);
-            e.target.value = '';
-            return;
-          }
-        }
-        const linhaCab = Importador.detectarCabecalho(matriz, st.tipo);
-        const cab = (matriz[linhaCab] || []).map(c => String(c));
-
-        // perfil salvo do hospital × tipo tem prioridade sobre a sugestão
-        const perfil = Importador.perfilLer(st.hospitalId, st.tipo);
-        let map = perfil ? Importador.aplicarPerfil(perfil, cab) : {};
-        if (!Object.keys(map).length) map = Importador.sugerirMapeamento(cab, st.tipo);
-
-        st.arq = { nome: f.name, matriz, nomeAba, linhaCab, map, usouPerfil: !!perfil && Object.keys(map).length > 0 };
-        st.etapa = 2;
-        render();
-      } catch (err) {
-        console.error(err);
-        Utilidades.toast('Não consegui ler o arquivo: ' + (err.message || err), 'erro', 5000);
-      } finally {
-        Utilidades.loading.esconder();
-      }
+      input.click();
+    };
+    zona.addEventListener('click', (e) => { if (e.target !== input) abrir(); });
+    zona.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } });
+    zona.addEventListener('dragover', (e) => { e.preventDefault(); zona.classList.add('arrastando'); });
+    zona.addEventListener('dragleave', () => zona.classList.remove('arrastando'));
+    zona.addEventListener('drop', async (e) => {
+      e.preventDefault(); zona.classList.remove('arrastando');
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) await receberArquivo(f, { solto: true });
+    });
+    input.addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      await receberArquivo(f, { solto: false });
+      e.target.value = '';
     });
   }
 
   function ajudaTipo(tipo) {
     if (tipo === 'PRODUCAO') {
       return `<strong>Produção</strong> = tudo que foi produzido (admissão, procedimentos, profissionais
-        por papel, valores). Clique em importar, diga se o arquivo é do <strong>ano inteiro</strong> ou
-        de <strong>um mês</strong> e escolha o arquivo: a ATLAS acha o cabeçalho (<em>Cód. Admissão</em>),
-        reconhece as colunas, deriva a competência pela data de cada linha e importa o relatório
-        <strong>na íntegra</strong>. Reimportar um mês já existente <strong>sobrescreve</strong> os dados
-        daquela competência (não duplica).`;
+        por papel, valores). A ATLAS acha o cabeçalho (<em>Cód. Admissão</em>), reconhece as colunas,
+        deriva a competência pela data de cada linha e importa o relatório <strong>na íntegra</strong>.
+        Reimportar um mês já existente <strong>sobrescreve</strong> os dados daquela competência (não duplica).`;
     }
     if (tipo === 'REPASSE') {
-      return `<strong>Sistema</strong> = o relatório cru que sai do sistema do hospital (o que ele diz
-        que processou/pagou — não necessariamente o que chegou ao médico). Informe o mês do
-        pagamento; a ATLAS sugere o mapeamento das colunas e guarda o perfil do hospital.`;
+      return `<strong>Sistema</strong> = o relatório cru que sai do sistema do hospital (o que ele diz que
+        processou/pagou — não necessariamente o que chegou ao médico). Ele pode vir <strong>separado</strong>
+        (um arquivo de Convênio, outro de Particular) ou <strong>junto</strong>: diga qual é, informe o mês do
+        pagamento e solte o arquivo. Reimportar substitui só o mês <em>e a origem</em> do arquivo.`;
     }
     if (tipo === 'MEDICO') {
-      return `<strong>Médico</strong> = o demonstrativo que o médico de fato recebeu para emitir a
-        nota (também importável direto na Inspeção, que já monta a pauta). A competência é lida
-        do cabeçalho do relatório quando existe.`;
+      return `<strong>Médico</strong> = o demonstrativo que o médico de fato recebeu para emitir a nota
+        (também importável direto na Inspeção, que já monta a pauta). A competência é lida do cabeçalho
+        do relatório quando existe.`;
     }
     return `<strong>Base Tabela</strong> = regras de repasse do hospital (procedimento × papel × fonte
       → valor fixo ou %), quando ele fornece. Sem ela, o motor infere o padrão pelo histórico.`;
   }
 
+  /** O arquivo chegou (clique ou arrasto): cada tipo tem seu caminho. */
+  async function receberArquivo(f, opts) {
+    if (st.tipo === 'PRODUCAO') {
+      if (st.aguardando) { st.aguardando = false; await importarProducaoArquivo(f); return; }
+      abrirEscopoProducao({ hospitalId: st.hospitalId, alvo: '', arquivo: f });   // soltou direto: pergunta o período
+      return;
+    }
+    if (st.tipo === 'REPASSE') { await importarSistemaArquivo(f); return; }
+    if (st.tipo === 'MEDICO') { await importarMedicoArquivo(f); return; }
+    await importarBaseArquivo(f);
+    void opts;
+  }
+
+  /** Lê a planilha com o overlay de trabalho. */
+  async function lerArquivo(f, msg) {
+    Utilidades.loading.mostrar(msg || 'Lendo a planilha…');
+    await respirar();
+    return Importador.lerPlanilha(await f.arrayBuffer());
+  }
+
+  /** Mapeamento automático: perfil do hospital primeiro, aliases completam. */
+  function mapaAutomatico(cab, tipo) {
+    const perfil = Importador.perfilLer(st.hospitalId, tipo);
+    const map = perfil ? Importador.aplicarPerfil(perfil, cab) : {};
+    const usadas = new Set(Object.values(map));
+    for (const [campo, idx] of Object.entries(Importador.sugerirMapeamento(cab, tipo))) {
+      if (map[campo] == null && idx != null && !usadas.has(idx)) { map[campo] = idx; usadas.add(idx); }
+    }
+    return { map, usouPerfil: !!perfil && Object.keys(map).length > 0 };
+  }
+
+  /** Grava o perfil do hospital com NOMES de coluna (sobrevive a reordenação). */
+  function gravarPerfil(tipo, cab, map, linhaCab) {
+    const porNome = {};
+    for (const [campo, idx] of Object.entries(map)) if (idx != null && idx >= 0 && cab[idx]) porNome[campo] = cab[idx];
+    Importador.perfilGravar(st.hospitalId, tipo, porNome, linhaCab);
+  }
+
+  /** Layout não reconhecido: cai no mapeamento manual com o que foi possível. */
+  function cairNoMapeamento(f, lido, linhaCab, map, aviso) {
+    st.arq = { nome: f.name, matriz: lido.matriz, nomeAba: lido.nomeAba, linhaCab, map, usouPerfil: false, aviso };
+    st.etapa = 2;
+    render();
+    Utilidades.toast(aviso, 'aviso', 5200);
+  }
+
   // ────────────────────────────────────────────────────────────────────
-  // PRODUÇÃO — automático
+  // SISTEMA — Convênio / Particular / os dois juntos
+  // ────────────────────────────────────────────────────────────────────
+  async function importarSistemaArquivo(f) {
+    if (!st.competencia) { Utilidades.toast('Informe o MÊS DO PAGAMENTO antes do arquivo do sistema.', 'aviso', 4200); return; }
+    let lido = null;
+    try {
+      lido = await lerArquivo(f);
+      const linhaCab = Importador.detectarCabecalho(lido.matriz, 'REPASSE');
+      const cab = (lido.matriz[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
+      const { map } = mapaAutomatico(cab, 'REPASSE');
+      const faltam = Importador.CAMPOS.REPASSE.filter(c => c.obrig && map[c.campo] == null);
+      if (faltam.length) {
+        cairNoMapeamento(f, lido, linhaCab, map,
+          'Não reconheci a coluna de ' + faltam.map(c => c.rotulo.split(' (')[0].toUpperCase()).join(' nem a de ') + ' — aponte no mapeamento.');
+        return;
+      }
+      Utilidades.loading.mostrar('Importando o relatório do sistema…');
+      await respirar();
+      const r = Importador.aplicar({
+        tipo: 'REPASSE', matriz: lido.matriz, linhaCab, map, clienteId: cliente.id, hospitalId: st.hospitalId,
+        arquivo: f.name, competencia: st.competencia, substituir: true, origem: st.origem,
+      });
+      gravarPerfil('REPASSE', cab, map, linhaCab);
+      Banco.salvarDebounced();
+      render();
+      resumoSistema(r, f.name, cab, map);
+    } catch (err) {
+      console.error(err);
+      Utilidades.toast('Importação falhou: ' + (err.message || err), 'erro', 6000);
+    } finally {
+      Utilidades.loading.esconder();
+    }
+  }
+
+  /** Resumo do SISTEMA: origem, mês, totais e as colunas que a ATLAS usou. */
+  function resumoSistema(r, nome, cab, map) {
+    const reconhecidas = Importador.CAMPOS.REPASSE.filter(c => map[c.campo] != null)
+      .map(c => `${esc(c.rotulo.split(' (')[0])} ← <strong>${esc(cab[map[c.campo]] || '')}</strong>`);
+    const faltando = Importador.CAMPOS.REPASSE.filter(c => !c.obrig && map[c.campo] == null).map(c => c.rotulo.split(' (')[0]);
+    const todasDivergem = r.divergentes > 0 && r.divergentes >= r.inseridas;
+    const ov = document.createElement('div');
+    ov.className = 'modal-fundo';
+    ov.innerHTML = `
+      <div class="modal" style="width:700px;max-width:95vw">
+        <div class="modal-cabecalho">
+          <span class="modal-titulo">✓ Sistema importado</span>
+          <button class="modal-fechar">✕</button>
+        </div>
+        <div class="modal-corpo">
+          <div class="info-caixa"><strong>${esc(nome)}</strong> · mês do pagamento <strong>${esc(Utilidades.compExibir(r.competencias[0] || st.competencia))}</strong>
+            · origem ${chipOrigem(r.origem)}</div>
+          <div class="cards" style="margin:12px 0">
+            <div class="card card-ok"><div class="card-rotulo">Linhas importadas</div><div class="card-valor">${n(r.inseridas)}</div>
+              ${r.avisos.length ? `<div class="card-extra">${n(r.avisos.length)} ignorada(s) sem admissão/procedimento</div>` : ''}</div>
+            <div class="card"><div class="card-rotulo">Admissões únicas</div><div class="card-valor">${n(r.admissoes)}</div></div>
+            <div class="card"><div class="card-rotulo">Produzido</div><div class="card-valor">${fmtR(r.produzido)}</div></div>
+            <div class="card card-destaque"><div class="card-rotulo">Repassado</div><div class="card-valor">${fmtR(r.repassado)}</div></div>
+          </div>
+          ${r.divergentes ? `<div class="aviso-caixa" style="margin-bottom:12px${todasDivergem ? ';border-color:#e5c4c4;background:#fdf3f3' : ''}">
+            <strong>⚠ ${todasDivergem ? 'TODAS as' : n(r.divergentes)} linha(s)</strong> trazem na coluna do arquivo um tipo de recebimento
+            diferente de <strong>${esc(ORIGEM_ROTULO[r.origem])}</strong>${todasDivergem
+              ? ' — parece o relatório da outra origem. Exclua esta importação e importe de novo com a origem certa.'
+              : ' — elas foram gravadas como ' + esc(ORIGEM_ROTULO[r.origem]) + ', que é o que você declarou. Confira o arquivo.'}</div>` : ''}
+          <div style="font-size:12px;line-height:1.7">Colunas reconhecidas: ${reconhecidas.join(' · ')}.
+            ${faltando.length ? `<br><span class="texto-cinza">Sem coluna no arquivo (opcionais): ${esc(faltando.join(', '))}.</span>` : ''}</div>
+        </div>
+        <div class="modal-rodape">
+          ${r.importacaoId ? `<button class="botao botao-perigo" id="rs-excluir" style="margin-right:auto"
+            title="Desfaz: as linhas que esta importação trouxe saem da base">🗑 Excluir esta importação</button>` : ''}
+          <button class="botao botao-marinho" id="rs-ok">Fechar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
+    ov.querySelector('#rs-ok').addEventListener('click', fechar);
+    const desfazer = ov.querySelector('#rs-excluir');
+    if (desfazer) desfazer.addEventListener('click', () => {
+      if (!confirm(`Excluir a importação de "${nome}"?\n\nAs ${n(r.inseridas)} linhas que ela trouxe saem da base.` +
+        ` O que existia antes nesse mês e origem já foi sobrescrito e não volta.`)) return;
+      excluirImportacao(r.importacaoId);
+      fechar();
+      Utilidades.toast('Importação excluída.', 'ok');
+      render();
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // MÉDICO e BASE TABELA — diretos quando reconhecidos
+  // ────────────────────────────────────────────────────────────────────
+  async function importarMedicoArquivo(f) {
+    let lido = null;
+    try {
+      lido = await lerArquivo(f);
+      const det = Importador.pareceRelatorioMedico(lido.matriz);
+      const comp = st.competencia || Importador.detectarCompetenciaRelatorio(lido.matriz);
+      if (!det.ok) {
+        if (!comp) { Utilidades.toast('Não achei a competência no cabeçalho — informe o MÊS DO PAGAMENTO e escolha o arquivo de novo.', 'aviso', 5000); return; }
+        st.competencia = comp;
+        cairNoMapeamento(f, lido, det.linhaCab, det.map, 'Não reconheci papel + valor + procedimento — aponte no mapeamento.');
+        return;
+      }
+      if (!comp) { Utilidades.toast('Não achei a competência no cabeçalho — informe o MÊS DO PAGAMENTO e escolha o arquivo de novo.', 'aviso', 5000); return; }
+      Utilidades.loading.mostrar('Importando o relatório do médico…');
+      await respirar();
+      const r = window.AtlasInspecao.importarRelatorioMedico(lido.matriz,
+        { hospitalId: st.hospitalId, competencia: comp, arquivo: f.name, substituir: true, montarPauta: false });
+      render();
+      Utilidades.toast(`${n(r.inseridas)} linha(s) do relatório do médico em ${Utilidades.compExibir(comp)}` +
+        (r.casadas ? ` · ${r.casadas} admissões casadas por paciente+data` : '') +
+        (r.semAdmissao ? ` · ${r.semAdmissao} sem admissão` : ''), 'ok', 6000);
+    } catch (err) {
+      console.error(err);
+      Utilidades.toast('Importação falhou: ' + (err.message || err), 'erro', 6000);
+    } finally {
+      Utilidades.loading.esconder();
+    }
+  }
+
+  async function importarBaseArquivo(f) {
+    let lido = null;
+    try {
+      lido = await lerArquivo(f);
+      const linhaCab = Importador.detectarCabecalho(lido.matriz, 'BASE_TABELA');
+      const cab = (lido.matriz[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
+      const { map } = mapaAutomatico(cab, 'BASE_TABELA');
+      if (map.procedimento == null || (map.valor == null && map.percentual == null)) {
+        cairNoMapeamento(f, lido, linhaCab, map, 'Não reconheci procedimento + valor/percentual — aponte no mapeamento.');
+        return;
+      }
+      const r = Importador.aplicar({
+        tipo: 'BASE_TABELA', matriz: lido.matriz, linhaCab, map, clienteId: cliente.id, hospitalId: st.hospitalId,
+        arquivo: f.name, competencia: '', substituir: true,
+      });
+      gravarPerfil('BASE_TABELA', cab, map, linhaCab);
+      Banco.salvarDebounced();
+      render();
+      Utilidades.toast(`${n(r.inseridas)} regra(s) da Base Tabela importadas (a base anterior do hospital foi substituída).`, 'ok', 5200);
+    } catch (err) {
+      console.error(err);
+      Utilidades.toast('Importação falhou: ' + (err.message || err), 'erro', 6000);
+    } finally {
+      Utilidades.loading.esconder();
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // PRODUÇÃO — pop-up do período + importação automática
   // ────────────────────────────────────────────────────────────────────
 
   /**
    * Pop-up antes do arquivo: o relatório é do ANO INTEIRO ou de UM MÊS, e
    * de qual ano (e mês). É o período que o arquivo cobre — só as linhas
    * dele entram e só os meses que vierem nele são sobrescritos.
-   * opts: { hospitalId, alvo } (alvo = competência do botão Atualizar)
+   * opts: { hospitalId, alvo (competência do botão Atualizar),
+   *         arquivo (quando o arquivo já foi solto na zona) }
    */
   function abrirEscopoProducao(opts) {
     const hospitais = App.listarHospitais(cliente.id);
@@ -225,8 +461,8 @@ App.telas['importar'] = function () {
           <button class="modal-fechar">✕</button>
         </div>
         <div class="modal-corpo">
-          <div class="info-caixa">Hospital: <strong>${esc(hosp ? hosp.nome : '')}</strong>. Diga o que o arquivo cobre —
-            a ATLAS só aceita as linhas desse período e sobrescreve os meses que vierem nele.</div>
+          <div class="info-caixa">Hospital: <strong>${esc(hosp ? hosp.nome : '')}</strong>${opts.arquivo ? ` · arquivo <strong>${esc(opts.arquivo.name)}</strong>` : ''}.
+            Diga o que o arquivo cobre — a ATLAS só aceita as linhas desse período e sobrescreve os meses que vierem nele.</div>
           <div class="raiox-rotulo" style="margin-top:14px">Esta importação é de</div>
           <div class="imp-escopo">
             <label class="imp-opcao ${sel.tipo === 'ANO' ? 'ativa' : ''}" data-escopo="ANO">
@@ -251,7 +487,7 @@ App.telas['importar'] = function () {
         </div>
         <div class="modal-rodape">
           <button class="botao" id="imp-esc-cancelar">Cancelar</button>
-          <button class="botao botao-ouro" id="imp-esc-escolher">Escolher o arquivo…</button>
+          <button class="botao botao-ouro" id="imp-esc-escolher">${opts.arquivo ? '📥 Importar' : 'Escolher o arquivo…'}</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
@@ -263,13 +499,15 @@ App.telas['importar'] = function () {
       ov.querySelectorAll('.imp-opcao').forEach(l => l.classList.toggle('ativa', l.dataset.escopo === sel.tipo));
       ov.querySelector('#imp-esc-mes-box').style.display = sel.tipo === 'MES' ? '' : 'none';
     }));
-    ov.querySelector('#imp-esc-escolher').addEventListener('click', () => {
+    ov.querySelector('#imp-esc-escolher').addEventListener('click', async () => {
       sel.ano = ov.querySelector('#imp-esc-ano').value;
       sel.mes = ov.querySelector('#imp-esc-mes').value;
       st.escopo = { tipo: sel.tipo, ano: sel.ano, mes: sel.tipo === 'MES' ? sel.mes : '' };
       st.hospitalId = hospitalId; st.tipo = 'PRODUCAO'; st.alvo = opts.alvo || '';
       fechar();
-      const inp = el.querySelector('#imp-arquivo-prod');
+      if (opts.arquivo) { await importarProducaoArquivo(opts.arquivo); return; }
+      st.aguardando = true;   // o próximo arquivo escolhido é desta importação
+      const inp = el.querySelector('#imp-drop-input') || el.querySelector('#imp-arquivo-prod');
       if (inp) inp.click();
     });
   }
@@ -278,9 +516,7 @@ App.telas['importar'] = function () {
     const alvo = st.alvo || '';
     let lido = null;
     try {
-      Utilidades.loading.mostrar('Lendo a planilha…');
-      await respirar();
-      lido = Importador.lerPlanilha(await f.arrayBuffer());
+      lido = await lerArquivo(f);
       Utilidades.loading.mostrar('Importando a produção…');
       await respirar();
       const r = Importador.importarProducao({
@@ -288,17 +524,14 @@ App.telas['importar'] = function () {
         substituir: true, perfil: Importador.perfilLer(st.hospitalId, 'PRODUCAO'), escopo: st.escopo,
       });
       Banco.salvarDebounced();
-      st.alvo = ''; st.arq = null; st.etapa = 1;
+      st.alvo = ''; st.arq = null; st.etapa = 1; st.aguardando = false;
       render();
       resumoProducao(r, f.name, alvo);
     } catch (err) {
+      st.aguardando = false;
       if (err && err.precisaMapear && lido) {
         // layout desconhecido: cai no mapeamento manual já com o que foi reconhecido
-        st.arq = { nome: f.name, matriz: lido.matriz, nomeAba: lido.nomeAba, linhaCab: err.linhaCab,
-          map: Importador.nucleoDoMapa(err.map), usouPerfil: false, aviso: err.message };
-        st.etapa = 2;
-        render();
-        Utilidades.toast(err.message, 'aviso', 5200);
+        cairNoMapeamento(f, lido, err.linhaCab, Importador.nucleoDoMapa(err.map), err.message);
         return;
       }
       console.error(err);
@@ -503,7 +736,7 @@ App.telas['importar'] = function () {
               </td>
             </tr>`).join('') : ''}`).join('')}
           </tbody></table></div>`
-        : `<div class="tabela-vazia">Nenhuma produção importada ainda — escolha o tipo <strong>Produção</strong> acima e o arquivo.</div>`}
+        : `<div class="tabela-vazia">Nenhuma produção importada ainda — escolha <strong>Produção</strong> acima e solte o arquivo.</div>`}
       </div>`;
 
     // handlers
@@ -528,13 +761,18 @@ App.telas['importar'] = function () {
         if (novo) { novo.focus(); try { novo.setSelectionRange(pos, pos); } catch (_) { /* campo sem seleção */ } }
       }, 300);
     }));
+    // o botão Atualizar abre o pop-up do período já com o mês; o arquivo
+    // escolhido em seguida entra pela zona (ou por este input reserva)
     const upload = box.querySelector('#imp-arquivo-prod');
     box.querySelectorAll('[data-atualizar]').forEach(b => b.addEventListener('click', () => {
+      st.tipo = 'PRODUCAO'; st.hospitalId = Number(b.dataset.hosp);
+      if (st.etapa !== 1 || !el.querySelector('#imp-drop')) { st.arq = null; st.etapa = 1; render(); }
       abrirEscopoProducao({ hospitalId: Number(b.dataset.hosp), alvo: b.dataset.atualizar });
     }));
     upload.addEventListener('change', async (e) => {
       const f = e.target.files && e.target.files[0];
       if (!f) return;
+      st.aguardando = false;
       await importarProducaoArquivo(f);
       e.target.value = '';
     });
@@ -584,8 +822,7 @@ App.telas['importar'] = function () {
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // ETAPA 2 — conferir mapeamento e importar (Sistema, Médico, Base
-  // Tabela — e a Produção só quando o layout não foi reconhecido)
+  // MAPEAMENTO MANUAL — só quando a ATLAS não reconheceu o layout
   // ────────────────────────────────────────────────────────────────────
   function renderMapeamento(hospitais) {
     const area = el.querySelector('#imp-area');
@@ -618,6 +855,7 @@ App.telas['importar'] = function () {
         <div class="painel-cabecalho">
           <span class="painel-titulo">Mapeamento de colunas — ${esc(a.nome)}</span>
           <span class="painel-conta">${esc(hosp ? hosp.nome : '')} · ${esc(TIPO_ROTULO[st.tipo] || st.tipo)}
+            ${st.tipo === 'REPASSE' ? '· ' + chipOrigem(st.origem) : ''}
             ${(st.tipo === 'REPASSE' || st.tipo === 'MEDICO') ? '· pagamento ' + esc(Utilidades.compExibir(st.competencia)) : ''}
             · aba "${esc(a.nomeAba)}" · ${a.matriz.length} linhas</span>
           <div class="painel-acoes">
@@ -659,7 +897,9 @@ App.telas['importar'] = function () {
             <input type="checkbox" id="map-substituir" checked>
             ${st.tipo === 'BASE_TABELA'
               ? 'Substituir a Base Tabela atual deste hospital'
-              : 'Substituir dados já importados deste hospital para as competências presentes no arquivo (reimportação segura, sem duplicar)'}
+              : st.tipo === 'REPASSE'
+                ? 'Substituir o que já foi importado deste hospital para este mês de pagamento e esta origem (reimportação segura, sem duplicar)'
+                : 'Substituir dados já importados deste hospital para as competências presentes no arquivo (reimportação segura, sem duplicar)'}
           </label>
           <button class="botao botao-ouro" id="map-importar">📥 Importar agora</button>
         </div>
@@ -695,11 +935,6 @@ App.telas['importar'] = function () {
           return;
         }
       }
-      // perfil com NOMES de coluna (sobrevive a reordenação)
-      const porNome = {};
-      for (const [campo, idx] of Object.entries(a.map)) {
-        if (idx != null && idx >= 0 && cab[idx]) porNome[campo] = cab[idx];
-      }
       try {
         Utilidades.loading.mostrar('Importando linhas…');
         if (st.tipo === 'PRODUCAO') {
@@ -708,7 +943,7 @@ App.telas['importar'] = function () {
             substituir: area.querySelector('#map-substituir').checked, linhaCab: a.linhaCab, nucleo: a.map,
             escopo: st.escopo,
           });
-          Importador.perfilGravar(st.hospitalId, 'PRODUCAO', porNome, a.linhaCab);
+          gravarPerfil('PRODUCAO', cab, a.map, a.linhaCab);
           Banco.salvarDebounced();
           const alvo = st.alvo || '';
           st.arq = null; st.etapa = 1; st.alvo = '';
@@ -719,14 +954,16 @@ App.telas['importar'] = function () {
         const r = Importador.aplicar({
           tipo: st.tipo, matriz: a.matriz, linhaCab: a.linhaCab, map: a.map,
           clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: a.nome,
-          competencia: st.competencia,
+          competencia: st.competencia, origem: st.origem,
           substituir: area.querySelector('#map-substituir').checked,
         });
-        Importador.perfilGravar(st.hospitalId, st.tipo, porNome, a.linhaCab);
+        gravarPerfil(st.tipo, cab, a.map, a.linhaCab);
         Banco.salvarDebounced();
 
+        const nome = a.nome, mapa = { ...a.map };
         st.arq = null; st.etapa = 1;
         render();
+        if (st.tipo === 'REPASSE') { resumoSistema(r, nome, cab, mapa); return; }
         const comps = r.competencias.length ? ' Competências: ' + r.competencias.map(Utilidades.compExibir).join(', ') + '.' : '';
         Utilidades.toast(`${r.inseridas.toLocaleString('pt-BR')} linhas importadas.${comps}` +
           (r.avisos.length ? ` (${r.avisos.length} avisos)` : ''), 'ok', 5200);
@@ -752,14 +989,17 @@ App.telas['importar'] = function () {
 
     box.innerHTML = `
       <div class="painel">
-        <div class="painel-cabecalho"><span class="painel-titulo">Histórico de importações</span></div>
+        <div class="painel-cabecalho"><span class="painel-titulo">Histórico de importações</span>
+          <span class="painel-conta">o que está na base agora — importações totalmente sobrescritas saem da lista</span></div>
         ${imps.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
             <th>Quando</th><th>Hospital</th><th>Tipo</th><th>Arquivo</th>
             <th>Competência</th><th class="num">Linhas</th><th></th>
           </tr></thead><tbody>
           ${imps.map(i => `<tr>
             <td>${esc(quando(i.importada_em))}</td>
-            <td>${esc(i.hospital)}</td><td>${esc(TIPO_ROTULO[i.tipo] || i.tipo)}</td><td>${esc(i.arquivo || '—')}</td>
+            <td>${esc(i.hospital)}</td>
+            <td><span class="imp-chip">${esc(TIPO_ROTULO[i.tipo] || i.tipo)}</span> ${i.tipo === 'REPASSE' ? chipOrigem(i.origem || 'TODAS') : ''}</td>
+            <td>${esc(i.arquivo || '—')}</td>
             <td>${esc(compsTxt(i.competencia))}</td>
             <td class="num">${(i.n_linhas || 0).toLocaleString('pt-BR')}</td>
             <td style="text-align:right"><button class="botao botao-mini botao-perigo" data-del="${i.id}" data-tipo="${esc(i.tipo)}"

@@ -434,3 +434,42 @@ input.entrada:focus, select.entrada:focus { border-color: var(--ouro); box-shado
 .imp-opcao span { display: block; font-size: 11.5px; color: var(--cinza); margin-top: 2px; line-height: 1.35; }
 .imp-opcao.ativa { border-color: var(--ouro-escuro); background: #fbf7ee; box-shadow: 0 0 0 2px rgba(184,150,90,.18); }
 @media (max-width: 640px) { .imp-escopo { grid-template-columns: 1fr; } }
+
+/* ── Importações: cards de tipo, segmentado de origem, zona de arrastar ── */
+.imp-topo { display: grid; grid-template-columns: minmax(220px, 1fr) 2.4fr; gap: 14px; align-items: end; margin-bottom: 14px; }
+.imp-tipos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.imp-tipo { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left;
+  padding: 10px 12px; border: 1px solid var(--borda); border-radius: 12px; background: var(--branco);
+  font: inherit; color: var(--tinta); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.imp-tipo:hover { border-color: rgba(184,150,90,.6); }
+.imp-tipo.ativa { border-color: var(--ouro-escuro); background: #fbf7ee; box-shadow: 0 0 0 2px rgba(184,150,90,.18); }
+.imp-tipo-icone { font-size: 18px; line-height: 1; }
+.imp-tipo-nome { font-size: 13px; font-weight: 800; margin-top: 5px; }
+.imp-tipo-desc { font-size: 11px; color: var(--cinza); line-height: 1.3; }
+.imp-opcoes { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+.imp-seg { display: inline-flex; border: 1px solid var(--borda); border-radius: 999px; padding: 3px; background: var(--papel); gap: 2px; }
+.imp-seg-btn { border: none; background: none; font: inherit; font-size: 12px; font-weight: 700; color: var(--cinza);
+  padding: 7px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: background .12s, color .12s; }
+.imp-seg-btn:hover { color: var(--tinta); }
+.imp-seg-btn.ativa { background: var(--marinho); color: #fff; box-shadow: 0 2px 8px rgba(30,58,95,.25); }
+.imp-drop { position: relative; border: 1.5px dashed var(--borda); border-radius: 14px; padding: 26px 20px; text-align: center;
+  background: linear-gradient(180deg, #fffdf9, var(--branco)); cursor: pointer; outline: none;
+  transition: border-color .15s, background .15s, box-shadow .15s; }
+.imp-drop:hover, .imp-drop:focus-visible { border-color: var(--ouro); box-shadow: 0 0 0 3px var(--ouro-suave); }
+.imp-drop.arrastando { border-color: var(--ouro-escuro); background: #fbf7ee; box-shadow: 0 0 0 4px var(--ouro-suave); }
+.imp-drop-icone { font-size: 30px; line-height: 1; margin-bottom: 8px; }
+.imp-drop-titulo { font-size: 14px; font-weight: 800; }
+.imp-drop-sub { font-size: 12px; color: var(--cinza); margin-top: 4px; }
+.imp-ajuda { margin-top: 14px; }
+.campo-dica { font-size: 10.5px; color: var(--cinza-claro); }
+.imp-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 800;
+  letter-spacing: .05em; background: var(--papel); border: 1px solid var(--borda); color: var(--cinza); white-space: nowrap; }
+.imp-chip-CONVENIO { background: #e3edf5; color: #2f5f83; border-color: transparent; }
+.imp-chip-PARTICULAR { background: #ece7f3; color: #5d4a80; border-color: transparent; }
+.imp-chip-TODAS { background: #e2f2ea; color: #1f6247; border-color: transparent; }
+@media (max-width: 900px) { .imp-topo { grid-template-columns: 1fr; } .imp-tipos { grid-template-columns: repeat(2, 1fr); } }
+
+/* selects com a cara da ferramenta (sem o widget cru do sistema) */
+.campo select, select.entrada { appearance: none; -webkit-appearance: none; padding-right: 30px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235d6b7e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; }

@@ -294,6 +294,14 @@
     const avisos = [];
     const linhas = [];
     const compsNoArquivo = new Set();
+    // SISTEMA: o relatório pode ser SÓ de Convênio, SÓ de Particular ou dos
+    // dois juntos. Nos dois primeiros a fonte de toda linha é a declarada
+    // (a coluna do arquivo, se disser outra coisa, vira aviso); no "juntos"
+    // a fonte sai da coluna. A substituição respeita a origem: reimportar o
+    // Particular de um mês não apaga o Convênio do mesmo mês.
+    const origem = tipo === 'REPASSE' && (p.origem === 'CONVENIO' || p.origem === 'PARTICULAR') ? p.origem : null;
+    let divergentes = 0, produzido = 0, repassado = 0;
+    const admissoes = new Set();
 
     for (let i = p.linhaCab + 1; i < p.matriz.length; i++) {
       const raw = p.matriz[i] || [];
@@ -385,11 +393,12 @@
         linhas.push(l);
       } else {  // REPASSE
         const papel = String(celula(raw, p.map, 'papel')).trim();
+        if (origem && fonteTxt !== '' && U_.classificarFonte(fonteTxt) !== origem) divergentes++;
         const l = {
           admissao: adm, data: dataISO,
           competencia: p.competencia || U_.competenciaDe(dataISO) || '',
           paciente: String(celula(raw, p.map, 'paciente')).trim(),
-          convenio, fonte,
+          convenio, fonte: origem || fonte,
           procedimento: proc, procedimento_norm: U_.normalizar(proc),
           papel, papel_canon: U_.papelCanonico(papel),
           medico: String(celula(raw, p.map, 'medico')).trim(),
@@ -400,13 +409,14 @@
           linha_origem: i + 1,
         };
         if (l.competencia) compsNoArquivo.add(l.competencia);
+        produzido += l.produzido; repassado += l.repassado; admissoes.add(U_.normAdm(adm));
         linhas.push(l);
       }
     }
 
     if (!linhas.length) throw new Error('Nenhuma linha válida encontrada abaixo do cabeçalho.');
 
-    let inseridas = 0;
+    let inseridas = 0, impId = null;
     Banco.transacao(() => {
       // substituir: apaga o que já existia para as mesmas competências
       if (p.substituir) {
@@ -419,17 +429,19 @@
           if (comps.length) {
             const marcas = comps.map(() => '?').join(',');
             Banco.executar(
-              `DELETE FROM ${tabela} WHERE hospital_id = ? AND competencia IN (${marcas})`,
-              [p.hospitalId, ...comps]);
+              `DELETE FROM ${tabela} WHERE hospital_id = ? AND competencia IN (${marcas})` +
+              (origem ? ' AND fonte = ?' : ''),
+              origem ? [p.hospitalId, ...comps, origem] : [p.hospitalId, ...comps]);
           }
         }
       }
 
       Banco.executar(
-        `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [p.clienteId, p.hospitalId, tipo, p.arquivo || '', p.competencia || '', linhas.length]);
-      const impId = Banco.ultimoId();
+        `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas, origem)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [p.clienteId, p.hospitalId, tipo, p.arquivo || '', p.competencia || '', linhas.length,
+          tipo === 'REPASSE' ? (origem || 'TODAS') : null]);
+      impId = Banco.ultimoId();
 
       for (const l of linhas) {
         if (tipo === 'BASE_TABELA') {
@@ -475,9 +487,22 @@
         }
         inseridas++;
       }
+      // importações deste tipo/hospital que ficaram sem nenhuma linha
+      // (sobrescritas) saem do histórico — ele mostra o que está na base
+      if (tipo !== 'BASE_TABELA') {
+        const tabela = tipo === 'PRODUCAO' ? 'linhas_producao' : (tipo === 'MEDICO' ? 'linhas_medico' : 'linhas_repasse');
+        Banco.executar(
+          `DELETE FROM importacoes WHERE tipo = ? AND hospital_id = ? AND id <> ?
+             AND NOT EXISTS (SELECT 1 FROM ${tabela} t WHERE t.importacao_id = importacoes.id)`,
+          [tipo, p.hospitalId, impId]);
+      }
     });
 
-    return { inseridas, competencias: [...compsNoArquivo].sort(), avisos };
+    return { inseridas, competencias: [...compsNoArquivo].sort(), avisos, importacaoId: impId,
+      linhasLidas: Math.max(0, p.matriz.length - p.linhaCab - 1),
+      origem: tipo === 'REPASSE' ? (origem || 'TODAS') : null, divergentes,
+      admissoes: admissoes.size, produzido: Math.round(produzido * 100) / 100,
+      repassado: Math.round(repassado * 100) / 100 };
   }
 
   // ──────────────────────────────────────────────────────────────────────

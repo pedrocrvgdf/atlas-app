@@ -85,6 +85,8 @@
         addCol('linhas_producao', col, `${col} TEXT`);
       }
       addCol('linhas_producao', 'idade_atendimento', 'idade_atendimento REAL');
+      // v0.7: origem do relatório do SISTEMA (Convênio / Particular / os dois)
+      addCol('importacoes', 'origem', 'origem TEXT');
     },
 
     // ──────────────────────────────────────────────────────────────────
