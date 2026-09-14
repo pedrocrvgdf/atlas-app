@@ -45,6 +45,11 @@ window.AtlasInspecao = (function () {
   const FRASE_PAGA = 'Admissão paga no repasse';
   const FRASE_NADA = 'Admissão não encontrada';
   const DICA_PENDENTE = 'O convênio ainda não pagou esta admissão';
+  // confronto SISTEMA × MÉDICO (a terceira base do triângulo)
+  const FRASE_NAO_CHEGOU = 'Consta pago no sistema e NÃO consta no relatório do médico';
+  const FRASE_CONFORME = 'Recebido pelo médico conforme o sistema';
+  const FRASE_DIVERGENTE = 'Divergência entre o sistema e o relatório do médico';
+  const FRASE_SEM_LASTRO = 'Recebido pelo médico sem lastro no sistema';
 
   const PAPEL_ROTULO = {
     EXECUTANTE: 'Executante', AUXILIAR: 'Auxiliar', INDICANTE: 'Indicante',
@@ -129,8 +134,67 @@ window.AtlasInspecao = (function () {
       'SELECT * FROM linhas_repasse WHERE cliente_id = ? ORDER BY id', [clienteId]));
     const r = Motor.auditar({ clienteId, hospitalId: 0, competencia: '' });
     const motorPor = new Map(r.admissoes.map(a => [U().normAdm(a.admissao), a]));
-    _memo = { versao: Banco._versao, cliente: clienteId, prodPor, repPor, motorPor, resultado: r };
+    // relatório do MÉDICO (o que ele de fato recebeu) — só linhas com admissão
+    const medRows = Banco.query('SELECT * FROM linhas_medico WHERE cliente_id = ? ORDER BY id', [clienteId]);
+    const medPor = agrupar(medRows.filter(l => String(l.admissao || '').trim()));
+    const medNaoResolvidas = medRows.filter(l => !String(l.admissao || '').trim()).length;
+    _memo = { versao: Banco._versao, cliente: clienteId, prodPor, repPor, motorPor, resultado: r,
+      medPor, temBaseMedico: medRows.length > 0, medTotal: medRows.length, medNaoResolvidas };
     return _memo;
+  }
+
+  /**
+   * Gen 1 do relatório do médico não traz admissão: casa PACIENTE + DATA
+   * (e, em empate, o procedimento) contra a produção e o sistema. Grava a
+   * admissão resolvida (admissao_origem = RESOLVIDA). Devolve quantas casou.
+   */
+  function resolverAdmissoesMedico() {
+    const cli = (App.clienteAtivo() || {}).id || clienteId;
+    const pend = Banco.query(
+      `SELECT id, paciente_norm, data, procedimento_norm FROM linhas_medico
+        WHERE cliente_id = ? AND TRIM(COALESCE(admissao, '')) = '' AND paciente_norm <> '' AND data <> ''`, [cli]);
+    if (!pend.length) return 0;
+    const chave = (pn, d) => pn + '|' + d;
+    const cand = new Map();   // paciente|data → Map<normAdm, {adm, procs:Set}>
+    const juntar = (rows) => {
+      for (const r of rows) {
+        const k = chave(U().normalizar(r.paciente), r.data);
+        if (!cand.has(k)) cand.set(k, new Map());
+        const m = cand.get(k);
+        const a = U().normAdm(r.admissao);
+        if (!m.has(a)) m.set(a, { adm: String(r.admissao).trim(), procs: new Set() });
+        m.get(a).procs.add(r.procedimento_norm);
+      }
+    };
+    const datas = [...new Set(pend.map(x => x.data))];
+    for (let i = 0; i < datas.length; i += 400) {
+      const lote = datas.slice(i, i + 400);
+      const marcas = lote.map(() => '?').join(',');
+      juntar(Banco.query(`SELECT admissao, paciente, data, procedimento_norm FROM linhas_producao
+        WHERE cliente_id = ? AND data IN (${marcas})`, [cli, ...lote]));
+      juntar(Banco.query(`SELECT admissao, paciente, data, procedimento_norm FROM linhas_repasse
+        WHERE cliente_id = ? AND data IN (${marcas})`, [cli, ...lote]));
+    }
+    let n = 0;
+    Banco.transacao(() => {
+      for (const x of pend) {
+        const m = cand.get(chave(x.paciente_norm, x.data));
+        if (!m || !m.size) continue;
+        let escolhida = null;
+        if (m.size === 1) escolhida = [...m.values()][0];
+        else {
+          // paciente com 2+ admissões no mesmo dia: desempata pelo procedimento
+          const comProc = [...m.values()].filter(c => [...c.procs].some(pr =>
+            pr === x.procedimento_norm || U().similaridade(pr, x.procedimento_norm) >= 0.88));
+          if (comProc.length === 1) escolhida = comProc[0];
+        }
+        if (!escolhida) continue;
+        Banco.executar(`UPDATE linhas_medico SET admissao = ?, admissao_origem = 'RESOLVIDA' WHERE id = ?`,
+          [escolhida.adm, x.id]);
+        n++;
+      }
+    });
+    return n;
   }
 
   /** Tudo de UMA admissão + o diagnóstico pronto. */
@@ -140,6 +204,7 @@ window.AtlasInspecao = (function () {
     const prod = d.prodPor.get(adm) || [];
     const rep = d.repPor.get(adm) || [];
     const mAdm = d.motorPor.get(adm) || null;
+    const med = d.medPor.get(adm) || [];
 
     const totalRepassado = rep.reduce((s, l) =>
       s + (/glosa/i.test(String(l.status || '')) ? 0 : (Number(l.repassado) || 0)), 0);
@@ -154,11 +219,48 @@ window.AtlasInspecao = (function () {
 
     let tom, titulo;
     if (rep.length && totalRepassado > 0) { tom = 'ok'; titulo = FRASE_PAGA; }
-    else if (rep.length) { tom = 'etapa'; titulo = 'Admissão no repasse sem valor repassado'; }
+    else if (rep.length) { tom = 'etapa'; titulo = 'Admissão no sistema sem valor repassado'; }
     else if (prod.length) { tom = 'aviso'; titulo = FRASE_AGUARDANDO; }
     else { tom = 'nada'; titulo = FRASE_NADA; }
 
-    return { adm, prod, rep, mAdm, tom, titulo, totalRepassado, compsPagas, porComp };
+    // ── confronto SISTEMA × MÉDICO (só quando o cliente tem relatório do médico) ──
+    const ehGlosaMed = (l) => /glosa/i.test(String(l.sistema || ''));
+    const totalRecebido = Math.round(med.reduce((s, l) =>
+      s + (ehGlosaMed(l) ? 0 : (Number(l.valor) || 0)), 0) * 100) / 100;
+    const compsRecebidas = [...new Set(med.filter(l => !ehGlosaMed(l) && Number(l.valor) !== 0)
+      .map(l => l.competencia).filter(Boolean))].sort();
+    const TOL = Number(Banco.configLer('tolerancia_centavos', 0.05)) || 0.05;
+    let confronto = { estado: 'sem_base', sistema: totalRepassado, medico: totalRecebido, dif: 0, itens: [] };
+    if (d.temBaseMedico) {
+      const dif = Math.round((totalRepassado - totalRecebido) * 100) / 100;
+      let estado;
+      if (totalRepassado > 0 && totalRecebido <= 0) estado = 'nao_chegou';
+      else if (totalRepassado <= 0 && totalRecebido > 0) estado = 'sem_lastro';
+      else if (totalRepassado <= 0 && totalRecebido <= 0) estado = 'nada';
+      else if (Math.abs(dif) <= TOL) estado = 'conforme';
+      else estado = 'divergente';
+      // item a item: linha paga no sistema sem par (procedimento + papel) no médico
+      const itens = [];
+      if (estado !== 'nada' && estado !== 'sem_lastro') {
+        const usadas = new Set();
+        const equiv = (a, b) => a === b ||
+          (['INDICANTE', 'SOLICITANTE'].includes(a) && ['INDICANTE', 'SOLICITANTE'].includes(b));
+        for (const lr of rep) {
+          if (!(Number(lr.repassado) > 0) || /glosa/i.test(String(lr.status || ''))) continue;
+          const par = med.find((lm, i) => !usadas.has(i) && !ehGlosaMed(lm) &&
+            equiv(lm.papel_canon || '', lr.papel_canon || '') &&
+            (lm.procedimento_norm === lr.procedimento_norm ||
+             U().similaridade(lm.procedimento_norm, lr.procedimento_norm) >= 0.8));
+          if (par) { usadas.add(med.indexOf(par)); continue; }
+          itens.push({ procedimento: lr.procedimento, papel: lr.papel_canon || lr.papel || '—',
+            valor: Number(lr.repassado) || 0 });
+        }
+      }
+      confronto = { estado, sistema: totalRepassado, medico: totalRecebido, dif, itens };
+    }
+
+    return { adm, prod, rep, med, mAdm, tom, titulo, totalRepassado, compsPagas, porComp,
+      totalRecebido, compsRecebidas, confronto };
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -284,12 +386,15 @@ window.AtlasInspecao = (function () {
     const d = dados();
 
     // stats da pauta (referência visual: fileira de cards, o último escuro)
-    let stPagas = 0, stAguard = 0, stFalta = 0;
+    let stPagas = 0, stAguard = 0, stFalta = 0, stNaoChegou = 0, stNaoChegouN = 0;
     for (const p of pauta) {
       const i = inspecionar(p.admissao);
       if (i.tom === 'ok') stPagas++;
       else if (i.tom === 'aviso') stAguard++;
       stFalta += faltanteDe(i, null);
+      if (i.confronto.estado === 'nao_chegou' || i.confronto.estado === 'divergente') {
+        stNaoChegou += Math.max(0, i.confronto.dif); stNaoChegouN++;
+      }
     }
 
     el.innerHTML = `
@@ -339,6 +444,8 @@ window.AtlasInspecao = (function () {
           <div class="insp-stat-rotulo">aguardando convênio / conciliação</div></div>
         <div class="insp-stat escuro"><div class="insp-stat-valor mono">${fmtR(stFalta)}</div>
           <div class="insp-stat-rotulo">repasse faltante na pauta</div></div>
+        ${d.temBaseMedico ? `<div class="insp-stat"><div class="insp-stat-valor mono texto-erro">${fmtR(stNaoChegou)}</div>
+          <div class="insp-stat-rotulo">no sistema e não no médico (${stNaoChegouN} adm.)</div></div>` : ''}
       </div>
 
       <div class="insp-corpo">
@@ -477,12 +584,34 @@ window.AtlasInspecao = (function () {
       }).join('');
     }
 
+    // ── bloco SISTEMA × MÉDICO ──
+    const c = insp.confronto;
+    let confrontoHTML = '';
+    if (c.estado !== 'sem_base') {
+      const linha = (cls, txt) => `<div class="${cls}">${txt}</div>`;
+      let corpo = '';
+      if (c.estado === 'conforme') corpo = linha('diag-neutro', `✔ ${FRASE_CONFORME} — ${fmtR(c.medico)}.`);
+      else if (c.estado === 'nao_chegou') corpo = linha('diag-alerta', `⚠ ${FRASE_NAO_CHEGOU} — sistema ${fmtR(c.sistema)}, médico R$ 0,00.`);
+      else if (c.estado === 'divergente') corpo = linha('diag-alerta', `⚠ ${FRASE_DIVERGENTE}: sistema ${fmtR(c.sistema)} · médico ${fmtR(c.medico)} · diferença ${fmtR(c.dif)}.`);
+      else if (c.estado === 'sem_lastro') corpo = linha('diag-neutro', `${FRASE_SEM_LASTRO} — ${fmtR(c.medico)} (conferir).`);
+      else corpo = linha('diag-neutro', 'Nada no sistema nem no relatório do médico para esta admissão.');
+      if (c.itens.length) {
+        corpo += c.itens.map(i => linha('diag-alerta',
+          `• ${esc(i.procedimento)} · ${PAPEL_ROTULO[i.papel] || esc(i.papel)} · ${fmtR(i.valor)} — pago no sistema e não recebido pelo médico`)).join('');
+      }
+      confrontoHTML = `<div class="diag-secao"><div class="diag-secao-titulo">Sistema × relatório do médico</div>${corpo}</div>`;
+    }
+    const chipConfronto = c.estado === 'sem_base' ? '' :
+      `<span class="badge badge-${c.estado === 'conforme' ? 'OK' : (c.estado === 'nao_chegou' || c.estado === 'divergente') ? 'NAO_PAGO' : 'SEM_REGRA'}"
+        style="margin-left:8px">${c.estado === 'conforme' ? 'conferido com o médico' : c.estado === 'nao_chegou' ? 'não chegou ao médico'
+        : c.estado === 'divergente' ? 'divergente' : c.estado === 'sem_lastro' ? 'sem lastro no sistema' : 'sem recebimento'}</span>`;
+
     box.innerHTML = `
       <div class="diag-card diag-${insp.tom}">
         <div class="diag-cab" id="diag-cab">
           <span class="diag-farol"></span>
           <div>
-            <div class="diag-titulo">${esc(insp.titulo)}</div>
+            <div class="diag-titulo">${esc(insp.titulo)}${chipConfronto}</div>
             <div class="diag-sub">admissão <strong class="mono">${esc(st.admAtualRotulo || insp.adm)}</strong>
               ${pac ? ' · ' + esc(pacEx(pac)) : ''}</div>
           </div>
@@ -492,6 +621,7 @@ window.AtlasInspecao = (function () {
           <div class="diag-lista" style="margin-top:10px">${sub}</div>
           ${analitica ? `<div class="diag-secao"><div class="diag-secao-titulo">O que foi pago (repasse cru)</div>
             <div class="diag-lista">${analitica}</div></div>` : ''}
+          ${confrontoHTML}
           ${alertas.length ? `<div class="diag-secao"><div class="diag-secao-titulo">Alertas</div>
             ${alertas.map(a => `<div class="${a.grave ? 'diag-alerta' : 'diag-neutro'}">${a.grave ? '⚠ ' : ''}${esc(a.texto)}</div>`).join('')}
           </div>` : ''}
@@ -583,10 +713,35 @@ window.AtlasInspecao = (function () {
       </tr>`).join('')}</tbody></table></div>`
       : vazio('Admissão fora da produção importada.');
 
+    // 4 · o que o MÉDICO recebeu (só quando há relatório do médico importado)
+    const d = dados();
+    let p4 = '';
+    if (d.temBaseMedico) {
+      p4 = insp.med.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+          <th>Relatório</th><th>Sistema/Status</th><th>Módulo</th><th>Data</th><th>Paciente</th>
+          <th>Papel</th><th>Procedimento</th><th>Fonte</th><th>Convênio</th><th class="num">Recebido</th>
+        </tr></thead><tbody>
+        ${insp.med.map(l => `<tr>
+          <td>${Utilidades.compExibir(l.competencia)}</td>
+          <td>${/glosa/i.test(String(l.sistema || '')) ? '<span class="badge badge-NAO_PAGO">GLOSA</span>' : esc(l.sistema || '—')}</td>
+          <td>${esc(l.modulo || '—')}</td>
+          <td>${Utilidades.dataExibir(l.data)}</td>
+          <td>${esc(pacEx(l.paciente))}</td>
+          <td>${esc(l.papel || '—')}</td>
+          <td>${esc(l.procedimento)}</td>
+          <td>${tagF(l.fonte)}</td>
+          <td>${esc(l.convenio || '—')}</td>
+          <td class="num ${Number(l.valor) < 0 ? 'texto-erro' : ''}">${fmtR(l.valor)}</td>
+        </tr>`).join('')}</tbody></table></div>`
+        : vazio('Nada no relatório do médico para esta admissão' +
+            (insp.rep.length && insp.totalRepassado > 0 ? ' — o sistema consta pago e o médico não recebeu.' : '.'));
+    }
+
     box.insertAdjacentHTML('beforeend',
-      painel('1 · Repasse cru', `${insp.rep.length} linha(s) — como chegou do pagador`, p1) +
+      painel('1 · Sistema (relatório cru)', `${insp.rep.length} linha(s) — o que o sistema do hospital diz que pagou`, p1) +
       painel('2 · Resultado auditado', m ? `${m.itens.length} item(ns) — quem decide o que foi pago a quem devia` : '—', p2) +
-      painel('3 · Produção analítica', `${insp.prod.length} linha(s) — o que o hospital produziu`, p3));
+      painel('3 · Produção analítica', `${insp.prod.length} linha(s) — o que o hospital produziu`, p3) +
+      (d.temBaseMedico ? painel('4 · Recebido pelo médico', `${insp.med.length} linha(s) — o relatório que o médico de fato recebeu (${fmtR(insp.totalRecebido)})`, p4) : ''));
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -631,11 +786,16 @@ window.AtlasInspecao = (function () {
       <div class="lat-titulo">🗂 Planilha do médico
         <button class="fechar" id="lat-fechar" title="recolher">✕</button></div>
       <div class="lat-acoes">
-        <label class="botao botao-mini" style="cursor:pointer">📥 Importar
+        <label class="botao botao-mini" style="cursor:pointer" title="Relatório que o médico recebeu (3 gerações) ou lista de admissões">📥 Importar
           <input type="file" id="lat-importar" accept=".xlsx,.xls,.csv" style="display:none"></label>
         <button class="botao botao-mini botao-ouro" id="lat-exportar" ${st.exportando ? 'disabled' : ''}>📤 Exportar</button>
         <button class="botao botao-mini botao-perigo" id="lat-limpar">Limpar</button>
       </div>
+      ${d.temBaseMedico ? `<div class="info-caixa" style="margin-bottom:10px;padding:8px 10px;font-size:11.5px">
+        🧾 Relatório do médico: <strong>${d.medTotal.toLocaleString('pt-BR')}</strong> linha(s)
+        ${d.medNaoResolvidas ? ` · <span class="texto-aviso">${d.medNaoResolvidas} sem admissão</span>
+          <button class="botao botao-mini" id="lat-casar" style="margin-left:6px">🔗 casar por paciente+data</button>` : ''}
+      </div>` : ''}
       <label class="lat-item" style="margin-bottom:10px">
         <input type="checkbox" id="lat-flag" ${flagFaltante() ? 'checked' : ''}>
         <span>Adicionar <strong>Repasse faltante</strong> na extração</span></label>
@@ -678,12 +838,27 @@ window.AtlasInspecao = (function () {
 
     // handlers
     lat.querySelector('#lat-fechar').addEventListener('click', () => { st.latAberta = false; render(); });
-    lat.querySelector('#lat-importar').addEventListener('change', importarPauta);
+    lat.querySelector('#lat-importar').addEventListener('change', importarPlanilhaLateral);
+    const btnCasar = lat.querySelector('#lat-casar');
+    if (btnCasar) btnCasar.addEventListener('click', () => {
+      const n = resolverAdmissoesMedico();
+      Banco.salvarDebounced();
+      Utilidades.toast(n ? `${n} linha(s) casaram com admissões da produção/sistema.` : 'Nenhuma linha casou — confira paciente e data.', n ? 'ok' : 'aviso');
+      render();
+    });
     lat.querySelector('#lat-exportar').addEventListener('click', exportarExtracao);
     lat.querySelector('#lat-limpar').addEventListener('click', () => {
-      if (!lerPauta().length) return;
-      if (!confirm('Limpar a pauta importada?')) return;
+      const temMed = dados().temBaseMedico;
+      if (!lerPauta().length && !temMed) return;
+      if (!confirm(temMed ? 'Limpar a pauta E o relatório do médico importado?' : 'Limpar a pauta importada?')) return;
       cfgGravar(CFG.pauta, []);
+      if (temMed) {
+        Banco.transacao(() => {
+          Banco.executar('DELETE FROM linhas_medico WHERE cliente_id = ?', [clienteId]);
+          Banco.executar(`DELETE FROM importacoes WHERE cliente_id = ? AND tipo = 'MEDICO'`, [clienteId]);
+        });
+        Banco.salvarDebounced();
+      }
       render();
     });
     lat.querySelector('#lat-flag').addEventListener('change', (e) => {
@@ -735,13 +910,112 @@ window.AtlasInspecao = (function () {
   // ────────────────────────────────────────────────────────────────────
   // IMPORTAÇÃO DA PLANILHA DO MÉDICO — 3 formatos (spec §6)
   // ────────────────────────────────────────────────────────────────────
-  async function importarPauta(e) {
+  async function importarPlanilhaLateral(e) {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     e.target.value = '';
+    let matriz;
     try {
       Utilidades.loading.mostrar('Lendo a planilha do médico…');
-      const { matriz } = Importador.lerPlanilha(await f.arrayBuffer());
+      matriz = Importador.lerPlanilha(await f.arrayBuffer()).matriz;
+    } catch (err) {
+      Utilidades.loading.esconder();
+      Utilidades.toast('Não consegui ler o arquivo: ' + (err.message || err), 'erro', 5000);
+      return;
+    }
+    Utilidades.loading.esconder();
+    const det = Importador.pareceRelatorioMedico(matriz);
+    if (det.ok) { confirmarRelatorioMedico(matriz, det, f.name); return; }
+    importarPauta(matriz);
+  }
+
+  /** Modal curto: hospital do relatório + competência (lida do cabeçalho). */
+  function confirmarRelatorioMedico(matriz, det, nomeArquivo) {
+    const hospitais = App.listarHospitais(clienteId);
+    if (!hospitais.length) { Utilidades.toast('Cadastre um hospital para este cliente antes.', 'aviso'); return; }
+    const compDet = Importador.detectarCompetenciaRelatorio(matriz);
+    const nLinhas = Math.max(0, matriz.length - det.linhaCab - 1);
+    const campos = Importador.CAMPOS.MEDICO.filter(c => det.map[c.campo] != null)
+      .map(c => c.rotulo.split(' (')[0]).join(' · ');
+    const ov = document.createElement('div');
+    ov.className = 'modal-fundo';
+    ov.innerHTML = `
+      <div class="modal">
+        <div class="modal-cabecalho"><span class="modal-titulo">🧾 Relatório do médico reconhecido</span>
+          <button class="modal-fechar">✕</button></div>
+        <div class="modal-corpo">
+          <div class="info-caixa">Arquivo <strong>${esc(nomeArquivo)}</strong> · cabeçalho na linha ${det.linhaCab + 1}
+            · ~${nLinhas.toLocaleString('pt-BR')} linhas.<br>Colunas reconhecidas: ${esc(campos)}.
+            ${det.map.admissao == null ? '<br><strong>Sem coluna de admissão</strong> — as linhas serão casadas por paciente + data contra a produção/sistema.' : ''}</div>
+          <div class="linha-campos">
+            <div class="campo"><span class="campo-rotulo">Hospital do relatório</span>
+              <select id="rm-hosp">${hospitais.map(h => `<option value="${h.id}">${esc(h.nome)}</option>`).join('')}</select></div>
+            <div class="campo" style="max-width:180px"><span class="campo-rotulo">Mês do pagamento</span>
+              <input type="month" id="rm-comp" value="${esc(compDet)}"></div>
+          </div>
+          <label class="lat-item" style="margin-top:12px"><input type="checkbox" id="rm-subst" checked>
+            <span>Substituir o que já foi importado deste hospital para esta competência</span></label>
+          <label class="lat-item"><input type="checkbox" id="rm-pauta" checked>
+            <span>Montar a pauta com as admissões deste relatório</span></label>
+        </div>
+        <div class="modal-rodape">
+          <button class="botao" id="rm-cancelar">Cancelar</button>
+          <button class="botao botao-ouro" id="rm-ok">📥 Importar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
+    ov.querySelector('#rm-cancelar').addEventListener('click', fechar);
+    ov.querySelector('#rm-ok').addEventListener('click', () => {
+      const comp = ov.querySelector('#rm-comp').value;
+      if (!comp) { Utilidades.toast('Informe o mês do pagamento.', 'aviso'); return; }
+      const opts = { hospitalId: Number(ov.querySelector('#rm-hosp').value), competencia: comp,
+        arquivo: nomeArquivo, substituir: ov.querySelector('#rm-subst').checked,
+        montarPauta: ov.querySelector('#rm-pauta').checked };
+      fechar();
+      try {
+        Utilidades.loading.mostrar('Importando o relatório do médico…');
+        const r = importarRelatorioMedico(matriz, opts);
+        Utilidades.toast(`${r.inseridas.toLocaleString('pt-BR')} linha(s) do relatório do médico` +
+          (r.casadas ? ` · ${r.casadas} admissões casadas por paciente+data` : '') +
+          (r.semAdmissao ? ` · ${r.semAdmissao} sem admissão` : ''), 'ok', 6000);
+        render();
+      } catch (err) {
+        console.error(err);
+        Utilidades.toast('Importação falhou: ' + (err.message || err), 'erro', 6000);
+      } finally { Utilidades.loading.esconder(); }
+    });
+  }
+
+  /**
+   * Importa o relatório do médico (qualquer geração) a partir da matriz.
+   * opts: { hospitalId, competencia, arquivo, substituir, montarPauta }
+   */
+  function importarRelatorioMedico(matriz, opts) {
+    const det = Importador.pareceRelatorioMedico(matriz);
+    if (!det.ok) throw new Error('A planilha não tem papel + valor + procedimento — não parece um relatório do médico.');
+    const cli = (App.clienteAtivo() || {}).id || clienteId;
+    const r = Importador.aplicar({
+      tipo: 'MEDICO', matriz, linhaCab: det.linhaCab, map: det.map,
+      clienteId: cli, hospitalId: opts.hospitalId, arquivo: opts.arquivo || '',
+      competencia: opts.competencia, substituir: opts.substituir !== false,
+    });
+    const casadas = resolverAdmissoesMedico();
+    const semAdmissao = Banco.escalar(
+      `SELECT COUNT(*) FROM linhas_medico WHERE cliente_id = ? AND TRIM(COALESCE(admissao,'')) = ''`, [cli]) || 0;
+    if (opts.montarPauta !== false) {
+      const rows = Banco.query(
+        `SELECT admissao, MIN(paciente) AS paciente, MIN(data) AS data FROM linhas_medico
+          WHERE cliente_id = ? AND TRIM(COALESCE(admissao,'')) <> '' GROUP BY admissao ORDER BY MIN(data)`, [cli]);
+      cfgGravar(CFG.pauta, rows.map(x => ({ admissao: String(x.admissao).trim(), paciente: x.paciente || '', data: x.data || '' })));
+    }
+    Banco.salvarDebounced();
+    return { inseridas: r.inseridas, casadas, semAdmissao };
+  }
+
+  function importarPauta(matriz) {
+    try {
       const pauta = detectarPauta(matriz);
       if (!pauta.length) throw new Error('Nenhuma admissão reconhecida na planilha.');
       cfgGravar(CFG.pauta, pauta);
@@ -750,8 +1024,6 @@ window.AtlasInspecao = (function () {
     } catch (err) {
       console.error(err);
       Utilidades.toast('Importação falhou: ' + (err.message || err), 'erro', 5000);
-    } finally {
-      Utilidades.loading.esconder();
     }
   }
 
@@ -879,12 +1151,20 @@ window.AtlasInspecao = (function () {
     for (const p of prodSel) cols.push({ header: ('PRODUTO · ' + p).slice(0, 60).toUpperCase(), key: 'p_' + p, width: 26 });
     if (vigias.length) cols.push({ header: 'PRODUÇÃO', key: 'temProd', width: 11 });
     if (comFaltante) cols.push({ header: 'REPASSE FALTANTE', key: 'falt', width: 18 });
+    const comMedico = dados().temBaseMedico;
+    if (comMedico) {
+      cols.push({ header: 'PAGO NO SISTEMA', key: 'sis', width: 16 });
+      cols.push({ header: 'RECEBIDO PELO MÉDICO', key: 'med', width: 20 });
+      cols.push({ header: 'SISTEMA × MÉDICO', key: 'conf', width: 26 });
+    }
     ws.columns = cols;
     estilizarCabecalho(ws, AZUL, BRANCO);
 
     const confirmacoes = [];   // aba Resumo: uma linha por admissão × alerta
     const valorRepassar = []; // aba Valor a Repassar
-    let nPagas = 0, nAguard = 0, nComAlerta = 0, zebra = false;
+    let nPagas = 0, nAguard = 0, nComAlerta = 0, nNaoChegou = 0, zebra = false;
+    const ROTULO_CONF = { conforme: 'conforme', nao_chegou: 'NÃO CHEGOU AO MÉDICO', divergente: 'DIVERGENTE',
+      sem_lastro: 'sem lastro no sistema', nada: '—' };
 
     const LOTE = 40;
     for (let i = 0; i < pauta.length; i += LOTE) {
@@ -916,7 +1196,17 @@ window.AtlasInspecao = (function () {
               U().normalizar(l.procedimento).includes(U().normalizar(v.produto)))) ? 'Sim' : 'Não';
           }
           if (comFaltante) linha.falt = falt;
+          if (comMedico) {
+            linha.sis = insp.totalRepassado; linha.med = insp.totalRecebido;
+            linha.conf = ROTULO_CONF[insp.confronto.estado] || '';
+          }
           const row = ws.addRow(linha);
+          if (comMedico) {
+            row.getCell('sis').numFmt = '"R$" #,##0.00'; row.getCell('med').numFmt = '"R$" #,##0.00';
+            if (insp.confronto.estado === 'nao_chegou' || insp.confronto.estado === 'divergente') {
+              row.getCell('conf').font = { bold: true, color: { argb: VERM } };
+            }
+          }
           row.alignment = { vertical: 'middle' };
           row.getCell('sit').alignment = { vertical: 'top', wrapText: true };
           const nLinhasTxt = linha.sit.richText.reduce((s, seg) => s + (String(seg.text).match(/\n/g) || []).length, 1);
@@ -953,6 +1243,7 @@ window.AtlasInspecao = (function () {
           }
         }
         if (admTemAlerta) nComAlerta++;
+        if (insp.confronto.estado === 'nao_chegou' || insp.confronto.estado === 'divergente') nNaoChegou++;
       }
       if (progresso) progresso(Math.min(i + LOTE, pauta.length), pauta.length);
       await new Promise(r => setTimeout(r, 0));   // cede a thread entre lotes
@@ -967,6 +1258,7 @@ window.AtlasInspecao = (function () {
     wr.addRow(['Pagas no repasse', nPagas]);
     wr.addRow(['Aguardando pagamento do convênio ou conciliação', nAguard]);
     wr.addRow(['Admissões com algum papel não pago', nComAlerta]);
+    if (comMedico) wr.addRow(['Constam pagas no sistema e não chegaram ao médico (ou divergentes)', nNaoChegou]);
     wr.addRow([]);
     tit('COMO LER O PANORAMA');
     wr.addRow(['As linhas medem conjuntos diferentes — elas não se somam para fechar o total.']);
@@ -1025,6 +1317,11 @@ window.AtlasInspecao = (function () {
     } else {
       seg.push({ font: azul, text: FRASE_NADA + '.' });
     }
+    const c = insp.confronto;
+    if (c.estado === 'nao_chegou') seg.push({ font: { bold: true, color: { argb: 'FFA33C3C' } }, text: `\n⚠ ${FRASE_NAO_CHEGOU} — sistema ${fmtR(c.sistema)}.` });
+    else if (c.estado === 'divergente') seg.push({ font: { bold: true, color: { argb: 'FFA33C3C' } }, text: `\n⚠ ${FRASE_DIVERGENTE}: sistema ${fmtR(c.sistema)} · médico ${fmtR(c.medico)}.` });
+    else if (c.estado === 'conforme') seg.push({ font: { color: { argb: 'FF2E7D5B' } }, text: `\n✔ ${FRASE_CONFORME} (${fmtR(c.medico)}).` });
+    else if (c.estado === 'sem_lastro') seg.push({ font: {}, text: `\n${FRASE_SEM_LASTRO} (${fmtR(c.medico)}).` });
     for (const a of alertas) {
       seg.push({ font: a.grave ? { bold: true, color: { argb: 'FFA33C3C' } } : {},
         text: '\n' + (a.grave ? '⚠ ' : '') + a.texto });
@@ -1055,5 +1352,6 @@ window.AtlasInspecao = (function () {
     return papeis.length ? papeis.join(' · ') : '—';
   }
 
-  return { montar, inspecionar, gerarExtracao, detectarPauta, _st: st };
+  return { montar, inspecionar, gerarExtracao, detectarPauta, importarRelatorioMedico,
+    resolverAdmissoesMedico, _st: st };
 })();

@@ -153,6 +153,41 @@ CREATE INDEX IF NOT EXISTS idx_rep_proc     ON linhas_repasse(procedimento_norm)
 CREATE INDEX IF NOT EXISTS idx_rep_medico   ON linhas_repasse(medico_norm);
 
 -- ====================================================================
+-- RELATÓRIO DO MÉDICO — o que ele DE FATO recebeu (demonstrativo usado
+-- para emitir a nota). Terceira base do triângulo da auditoria:
+-- PRODUÇÃO (feito) × SISTEMA (o hospital diz que pagou) × MÉDICO (recebeu).
+-- Importado pelo módulo Inspeção; aceita as três gerações de layout.
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS linhas_medico (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id    INTEGER NOT NULL,
+  hospital_id   INTEGER NOT NULL,
+  importacao_id INTEGER,
+  competencia   TEXT,                       -- YYYY-MM do relatório (mês do pagamento)
+  sistema       TEXT,                       -- QVIS / Medical / Ajustes / Desempenho / GLOSA…
+  modulo        TEXT,                       -- Repasse / LIO / OPME… (gen 3)
+  admissao      TEXT,                       -- vazia na gen 1 (resolvida por paciente+data)
+  admissao_origem TEXT,                     -- RELATORIO | RESOLVIDA | ''
+  data          TEXT,                       -- YYYY-MM-DD
+  paciente      TEXT,
+  paciente_norm TEXT,
+  medico        TEXT,
+  medico_norm   TEXT,
+  papel         TEXT,
+  papel_canon   TEXT,
+  fonte         TEXT DEFAULT 'CONVENIO',
+  convenio      TEXT,
+  procedimento  TEXT,
+  procedimento_norm TEXT,
+  valor         REAL DEFAULT 0,             -- pode ser negativo (estorno)
+  linha_origem  INTEGER,
+  FOREIGN KEY (importacao_id) REFERENCES importacoes(id)
+);
+CREATE INDEX IF NOT EXISTS idx_med_cli_adm  ON linhas_medico(cliente_id, admissao);
+CREATE INDEX IF NOT EXISTS idx_med_cli_comp ON linhas_medico(cliente_id, competencia);
+CREATE INDEX IF NOT EXISTS idx_med_pac_data ON linhas_medico(cliente_id, paciente_norm, data);
+
+-- ====================================================================
 -- BASE TABELA — regras de repasse (quando o hospital/clínica fornece)
 -- valor OU percentual: valor fixo em R$ (convênio/SUS, tipicamente) ou
 -- % sobre o valor produzido (particular, tipicamente).

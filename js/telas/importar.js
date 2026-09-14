@@ -22,11 +22,16 @@ App.telas['importar'] = function () {
   if (!window.__imp) window.__imp = { etapa: 1, hospitalId: 0, tipo: 'PRODUCAO', competencia: '', arq: null };
   const st = window.__imp;
 
+  // Os ids internos ficam (perfis e histórico já gravados); os NOMES são os
+  // do produto: SISTEMA (relatório cru do sistema do hospital), PRODUÇÃO
+  // (tudo que foi produzido) e MÉDICO (o que ele de fato recebeu).
   const TIPOS = [
-    ['PRODUCAO', 'Produção — o que foi feito'],
-    ['REPASSE', 'Repasse — o que foi pago'],
+    ['REPASSE', 'Sistema — relatório cru do sistema do hospital'],
+    ['PRODUCAO', 'Produção — tudo que foi produzido na competência'],
+    ['MEDICO', 'Médico — o relatório que o médico de fato recebeu'],
     ['BASE_TABELA', 'Base Tabela — regras de repasse'],
   ];
+  const TIPO_ROTULO = { REPASSE: 'SISTEMA', PRODUCAO: 'PRODUÇÃO', MEDICO: 'MÉDICO', BASE_TABELA: 'BASE TABELA' };
 
   function render() {
     const hospitais = App.listarHospitais(cliente.id);
@@ -70,16 +75,19 @@ App.telas['importar'] = function () {
               <select id="imp-tipo">${TIPOS.map(([v, r]) =>
                 `<option value="${v}" ${v === st.tipo ? 'selected' : ''}>${r}</option>`).join('')}
               </select></div>
-            <div class="campo" id="imp-comp-box" style="max-width:170px; ${st.tipo === 'REPASSE' ? '' : 'display:none'}">
+            <div class="campo" id="imp-comp-box" style="max-width:170px; ${st.tipo === 'REPASSE' || st.tipo === 'MEDICO' ? '' : 'display:none'}">
               <span class="campo-rotulo">Mês do pagamento</span>
               <input type="month" id="imp-comp" value="${esc(st.competencia)}"></div>
             <div class="campo"><span class="campo-rotulo">Arquivo (.xlsx / .xls / .csv)</span>
               <input type="file" id="imp-arquivo" accept=".xlsx,.xls,.csv"></div>
           </div>
           <div class="info-caixa" style="margin-top:12px">
-            <strong>Produção</strong> = relatório do que foi realizado (admissão, procedimento, valores,
-            profissionais). <strong>Repasse</strong> = relatório do que foi pago ao médico.
-            <strong>Base Tabela</strong> = tabela de regras de repasse do hospital (quando ele fornece).
+            <strong>Sistema</strong> = o relatório cru que sai do sistema do hospital (o que ele diz
+            que processou/pagou — não necessariamente o que chegou ao médico).
+            <strong>Produção</strong> = tudo que foi produzido na competência (admissão, procedimentos,
+            profissionais por papel, valores). <strong>Médico</strong> = o demonstrativo que o médico de
+            fato recebeu (também importável direto na Inspeção). <strong>Base Tabela</strong> = regras de
+            repasse do hospital, quando ele fornece.
           </div>
         </div>
       </div>`;
@@ -87,7 +95,7 @@ App.telas['importar'] = function () {
     area.querySelector('#imp-hosp').addEventListener('change', e => { st.hospitalId = Number(e.target.value); });
     area.querySelector('#imp-tipo').addEventListener('change', e => {
       st.tipo = e.target.value;
-      area.querySelector('#imp-comp-box').style.display = st.tipo === 'REPASSE' ? '' : 'none';
+      area.querySelector('#imp-comp-box').style.display = (st.tipo === 'REPASSE' || st.tipo === 'MEDICO') ? '' : 'none';
     });
     area.querySelector('#imp-comp').addEventListener('change', e => { st.competencia = e.target.value; });
 
@@ -95,7 +103,7 @@ App.telas['importar'] = function () {
       const f = e.target.files && e.target.files[0];
       if (!f) return;
       if (st.tipo === 'REPASSE' && !area.querySelector('#imp-comp').value) {
-        Utilidades.toast('Informe o MÊS DO PAGAMENTO antes de escolher o arquivo do repasse.', 'aviso', 4200);
+        Utilidades.toast('Informe o MÊS DO PAGAMENTO antes de escolher o arquivo do sistema.', 'aviso', 4200);
         e.target.value = '';
         return;
       }
@@ -104,6 +112,14 @@ App.telas['importar'] = function () {
         Utilidades.loading.mostrar('Lendo a planilha…');
         const buf = await f.arrayBuffer();
         const { matriz, nomeAba } = Importador.lerPlanilha(buf);
+        if (st.tipo === 'MEDICO' && !st.competencia) {
+          st.competencia = Importador.detectarCompetenciaRelatorio(matriz);
+          if (!st.competencia) {
+            Utilidades.toast('Não achei a competência no cabeçalho — informe o MÊS DO PAGAMENTO e escolha o arquivo de novo.', 'aviso', 5000);
+            e.target.value = '';
+            return;
+          }
+        }
         const linhaCab = Importador.detectarCabecalho(matriz, st.tipo);
         const cab = (matriz[linhaCab] || []).map(c => String(c));
 
@@ -157,8 +173,8 @@ App.telas['importar'] = function () {
       <div class="painel">
         <div class="painel-cabecalho">
           <span class="painel-titulo">Mapeamento de colunas — ${esc(a.nome)}</span>
-          <span class="painel-conta">${esc(hosp ? hosp.nome : '')} · ${esc(st.tipo)}
-            ${st.tipo === 'REPASSE' ? '· pagamento ' + esc(Utilidades.compExibir(st.competencia)) : ''}
+          <span class="painel-conta">${esc(hosp ? hosp.nome : '')} · ${esc(TIPO_ROTULO[st.tipo] || st.tipo)}
+            ${(st.tipo === 'REPASSE' || st.tipo === 'MEDICO') ? '· pagamento ' + esc(Utilidades.compExibir(st.competencia)) : ''}
             · aba "${esc(a.nomeAba)}" · ${a.matriz.length} linhas</span>
           <div class="painel-acoes">
             <button class="botao" id="map-voltar">← Trocar arquivo</button>
@@ -281,7 +297,7 @@ App.telas['importar'] = function () {
           </tr></thead><tbody>
           ${imps.map(i => `<tr>
             <td>${esc((i.importada_em || '').slice(0, 16).replace('T', ' '))}</td>
-            <td>${esc(i.hospital)}</td><td>${esc(i.tipo)}</td><td>${esc(i.arquivo || '—')}</td>
+            <td>${esc(i.hospital)}</td><td>${esc(TIPO_ROTULO[i.tipo] || i.tipo)}</td><td>${esc(i.arquivo || '—')}</td>
             <td>${esc(i.competencia ? Utilidades.compExibir(i.competencia) : '—')}</td>
             <td class="num">${(i.n_linhas || 0).toLocaleString('pt-BR')}</td>
             <td style="text-align:right"><button class="botao botao-mini botao-perigo" data-del="${i.id}" data-tipo="${esc(i.tipo)}">excluir</button></td>
@@ -297,6 +313,7 @@ App.telas['importar'] = function () {
         Banco.transacao(() => {
           Banco.executar('DELETE FROM linhas_producao WHERE importacao_id = ?', [id]);
           Banco.executar('DELETE FROM linhas_repasse WHERE importacao_id = ?', [id]);
+          Banco.executar('DELETE FROM linhas_medico WHERE importacao_id = ?', [id]);
           Banco.executar('DELETE FROM importacoes WHERE id = ?', [id]);
         });
         Banco.salvarDebounced();

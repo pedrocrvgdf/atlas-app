@@ -52,7 +52,7 @@ App.telas['visao'] = function () {
           <div class="card-valor mono">${Utilidades.moeda(r.kpis.produzido)}</div></div>
         <div class="card"><div class="card-rotulo">Esperado (regras)</div>
           <div class="card-valor mono">${Utilidades.moeda(r.kpis.esperado)}</div></div>
-        <div class="card"><div class="card-rotulo">Pago ao médico</div>
+        <div class="card"><div class="card-rotulo">Pago (sistema)</div>
           <div class="card-valor mono">${Utilidades.moeda(r.kpis.pago)}</div></div>
         <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
           <div class="card-valor mono">${Utilidades.moeda(r.kpis.falta)}</div>
@@ -62,10 +62,10 @@ App.telas['visao'] = function () {
 
   const passos = [
     { n: 1, titulo: 'Cadastrar cliente e hospitais', desc: 'Quem contratou a auditoria e as instituições que emitem os relatórios.', tela: 'clientes', feito: hosp > 0 },
-    { n: 2, titulo: 'Importar produção e repasse', desc: 'As planilhas do hospital — a ATLAS aprende o formato de cada um.', tela: 'importar', feito: nProd > 0 && nRep > 0 },
+    { n: 2, titulo: 'Importar sistema e produção', desc: 'O relatório cru do sistema do hospital e a produção da competência — a ATLAS aprende o formato de cada um.', tela: 'importar', feito: nProd > 0 && nRep > 0 },
     { n: 3, titulo: 'Base Tabela (opcional)', desc: 'Regras contratuais quando existem; sem elas, o motor infere o padrão pago.', tela: 'base', feito: nBase > 0 },
     { n: 4, titulo: 'Auditar admissões', desc: 'A matriz do cruzamento: esperado × pago, admissão por admissão, com pauta de cobrança.', tela: 'auditoria', feito: nPauta > 0 },
-    { n: 5, titulo: 'Inspecionar e extrair', desc: 'Rastrear admissões uma a uma e gerar a planilha do médico (situação + repasse faltante).', tela: 'inspecao', feito: false },
+    { n: 5, titulo: 'Inspecionar com o relatório do médico', desc: 'Importar o que o médico de fato recebeu, confrontar com o sistema e extrair a planilha (situação + repasse faltante).', tela: 'inspecao', feito: false },
   ];
 
   const imps = Banco.query(
@@ -84,7 +84,7 @@ App.telas['visao'] = function () {
     <div class="cards">
       <div class="card"><div class="card-rotulo">Hospitais</div><div class="card-valor">${hosp}</div></div>
       <div class="card"><div class="card-rotulo">Linhas de produção</div><div class="card-valor">${nProd.toLocaleString('pt-BR')}</div></div>
-      <div class="card"><div class="card-rotulo">Linhas de repasse</div><div class="card-valor">${nRep.toLocaleString('pt-BR')}</div></div>
+      <div class="card"><div class="card-rotulo">Linhas do sistema</div><div class="card-valor">${nRep.toLocaleString('pt-BR')}</div></div>
       <div class="card"><div class="card-rotulo">Regras na Base</div><div class="card-valor">${nBase.toLocaleString('pt-BR')}</div></div>
       <div class="card"><div class="card-rotulo">Pauta em aberto</div><div class="card-valor">${nPauta}</div></div>
     </div>
@@ -112,7 +112,7 @@ App.telas['visao'] = function () {
           <td>${esc(i.arquivo || '—')}</td>
           <td class="num">${(i.n_linhas || 0).toLocaleString('pt-BR')}</td></tr>`).join('')}
         </tbody></table></div>` :
-      `<div class="tabela-vazia">Nenhuma importação ainda — comece em <strong>Importações</strong>.</div>`}
+      `<div class="tabela-vazia">Nenhuma importação ainda — comece em <strong>Cadastros › Importações</strong>.</div>`}
     </div>`;
 
   el.querySelectorAll('.passo').forEach(p =>

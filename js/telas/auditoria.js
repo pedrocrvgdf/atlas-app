@@ -207,7 +207,7 @@ App.telas['auditoria'] = function () {
           ${filtrado ? `<div class="card-extra">${lista.length.toLocaleString('pt-BR')} admissão(ões) no filtro${st.medico ? ' · ' + esc(nomeMed) : ''}</div>` : ''}</div>
         <div class="card"><div class="card-rotulo">Esperado (regras)</div>
           <div class="card-valor mono">${fmtR(soma('esperado'))}</div></div>
-        <div class="card"><div class="card-rotulo">Pago ao médico</div>
+        <div class="card"><div class="card-rotulo">Pago (sistema)</div>
           <div class="card-valor mono">${fmtR(soma('pago'))}</div></div>
         <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
           <div class="card-valor mono">${fmtR(soma('falta'))}</div>

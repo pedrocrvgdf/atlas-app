@@ -46,7 +46,7 @@
       { campo: 'quantidade',   rotulo: 'Quantidade', obrig: false,
         aliases: ['QUANTIDADE', 'QTD', 'QTDE', 'QTE'] },
       { campo: 'valor',        rotulo: 'Valor produzido (R$)', obrig: true,
-        aliases: ['VALOR', 'VALOR TOTAL', 'VALOR PRODUZIDO', 'VALOR PRODUCAO', 'VALOR FATURADO', 'FATURADO', 'VLR', 'VLR TOTAL', 'PRODUZIDO', 'VALOR BRUTO'] },
+        aliases: ['VALOR', 'VALOR R', 'VALOR TOTAL', 'VALOR PRODUZIDO', 'VALOR PRODUCAO', 'VALOR FATURADO', 'FATURADO', 'VLR', 'VLR TOTAL', 'PRODUZIDO', 'VALOR BRUTO'] },
       { campo: 'executante',   rotulo: 'Executante / Cirurgião', obrig: false,
         aliases: ['CIRURGIAO', 'EXECUTANTE', 'MEDICO EXECUTANTE', 'PROFISSIONAL EXECUTANTE'] },
       { campo: 'executante_alt', rotulo: 'Executante — 2ª opção (usada se a 1ª vier vazia)', obrig: false,
@@ -73,11 +73,11 @@
       { campo: 'convenio',     rotulo: 'Convênio / Plano', obrig: false,
         aliases: ['CONVENIO', 'PLANO', 'OPERADORA'] },
       { campo: 'fonte',        rotulo: 'Fonte (Convênio/Particular/SUS)', obrig: false,
-        aliases: ['TIPO RECEBIMENTO', 'ORIGEM', 'FONTE', 'NATUREZA'] },
+        aliases: ['TIPO RECEBIMENTO', 'TIPO DE RECEBIMENTO', 'FONTE PAGADORA', 'ORIGEM', 'FONTE', 'NATUREZA', 'TIPO PAGAMENTO'] },
       { campo: 'papel',        rotulo: 'Papel (Cirurgião/Auxiliar/…)', obrig: false,
         aliases: ['PAPEL', 'FUNCAO', 'TIPO PROFISSIONAL', 'CATEGORIA PROFISSIONAL', 'VINCULO'] },
       { campo: 'medico',       rotulo: 'Médico / Profissional', obrig: false,
-        aliases: ['MEDICO', 'PROFISSIONAL', 'NOME PROFISSIONAL', 'NOME DO PROFISSIONAL', 'PRESTADOR'] },
+        aliases: ['NOME PROFISSIONAL', 'NOME DO PROFISSIONAL', 'PROFISSIONAL', 'MEDICO', 'NOME MEDICO', 'PRESTADOR'] },
       { campo: 'quantidade',   rotulo: 'Quantidade', obrig: false,
         aliases: ['QUANTIDADE', 'QTD', 'QTDE'] },
       { campo: 'produzido',    rotulo: 'Valor produzido (R$)', obrig: false,
@@ -85,7 +85,36 @@
       { campo: 'repassado',    rotulo: 'Valor repassado / pago (R$)', obrig: true,
         aliases: ['REPASSADO', 'REPASSE', 'VALOR REPASSADO', 'VALOR REPASSE', 'VALOR PAGO', 'PAGO', 'VALOR MEDICO', 'HONORARIO', 'HONORARIO PAGO', 'VALOR LIQUIDO', 'RECEBIDO'] },
       { campo: 'status',       rotulo: 'Status / ocorrência (detecta GLOSA)', obrig: false,
-        aliases: ['STATUS', 'SITUACAO', 'GLOSA', 'STATUS PAGAMENTO', 'SITUACAO PAGAMENTO', 'OCORRENCIA', 'MOTIVO'] },
+        aliases: ['STATUS', 'ESTADO', 'SITUACAO', 'GLOSA', 'STATUS PAGAMENTO', 'SITUACAO PAGAMENTO', 'OCORRENCIA', 'MOTIVO'] },
+    ],
+
+    // Relatório do MÉDICO — o que ele de fato recebeu. Três gerações de layout:
+    //   gen 1: Sistema | Médico | CONVENIO | PAPEL | PROCEDIMENTO | DATA | PACIENTE | REPASSADO  (sem admissão)
+    //   gen 2: Sistema | Médico | Recebimento | Admissão/ CPS | Papel | Procedimento | Data | Paciente | Repassado
+    //   gen 3: STATUS | MÓDULO | ADMISSÃO | DATA | PAPEL | PROFISSIONAL | ORIGEM | CONVÊNIO | PACIENTE | DESCRIÇÃO | REPASSE
+    MEDICO: [
+      { campo: 'procedimento', rotulo: 'Procedimento / Descrição', obrig: true,
+        aliases: ['PROCEDIMENTO', 'DESCRICAO', 'DESCRICAO PROCEDIMENTO', 'PRODUTO', 'ITEM', 'SERVICO'] },
+      { campo: 'papel',        rotulo: 'Papel', obrig: true,
+        aliases: ['PAPEL', 'FUNCAO', 'TIPO PROFISSIONAL'] },
+      { campo: 'valor',        rotulo: 'Valor recebido (R$)', obrig: true,
+        aliases: ['REPASSADO', 'REPASSE', 'VALOR REPASSADO', 'VALOR REPASSE', 'VALOR RECEBIDO', 'RECEBIDO', 'VALOR PAGO', 'VALOR', 'VALOR LIQUIDO'] },
+      { campo: 'admissao',     rotulo: 'Admissão (opcional — gen 1 não tem)', obrig: false,
+        aliases: ['ADMISSAO', 'ADMISSAO CPS', 'COD ADMISSAO', 'CODIGO ADMISSAO', 'N ADMISSAO', 'NUM ADMISSAO', 'ATENDIMENTO', 'CPS'] },
+      { campo: 'data',         rotulo: 'Data', obrig: false,
+        aliases: ['DATA', 'DATA ADMISSAO', 'DT ADMISSAO', 'DATA ATENDIMENTO'] },
+      { campo: 'paciente',     rotulo: 'Paciente', obrig: false,
+        aliases: ['PACIENTE', 'NOME PACIENTE', 'NOME DO PACIENTE'] },
+      { campo: 'medico',       rotulo: 'Médico / Profissional', obrig: false,
+        aliases: ['MEDICO', 'PROFISSIONAL', 'NOME PROFISSIONAL', 'NOME DO PROFISSIONAL'] },
+      { campo: 'sistema',      rotulo: 'Sistema / Status (QVIS, Medical, Ajustes, GLOSA…)', obrig: false,
+        aliases: ['SISTEMA', 'STATUS', 'ESTADO', 'SITUACAO'] },
+      { campo: 'modulo',       rotulo: 'Módulo (Repasse, LIO, OPME…)', obrig: false,
+        aliases: ['MODULO', 'FICHARIO', 'ORIGEM DO REPASSE'] },
+      { campo: 'fonte',        rotulo: 'Fonte / Origem (Convênio/Particular)', obrig: false,
+        aliases: ['ORIGEM', 'RECEBIMENTO', 'TIPO RECEBIMENTO', 'TIPO DE RECEBIMENTO', 'FONTE', 'FONTE PAGADORA', 'CONVENIO'] },
+      { campo: 'convenio',     rotulo: 'Convênio (nome do pagador)', obrig: false,
+        aliases: ['CONVENIO', 'PLANO', 'OPERADORA', 'RECEBIMENTO'] },
     ],
 
     BASE_TABELA: [
@@ -107,6 +136,29 @@
   // ──────────────────────────────────────────────────────────────────────
 
   /** ArrayBuffer (.xlsx/.xls/.csv) → { matriz, nomeAba, abas } (1ª aba com dados). */
+  /**
+   * Relatórios exportados de sistemas hospitalares costumam declarar um
+   * intervalo de 1 milhão de linhas com ~800 preenchidas; converter o
+   * intervalo inteiro custa ~10 s. Encolhe o "!ref" para o maior endereço
+   * que de fato existe na aba (custa milissegundos).
+   */
+  function podarIntervalo(ws) {
+    if (!ws || !ws['!ref']) return;
+    let maxR = -1, maxC = -1;
+    for (const k of Object.keys(ws)) {
+      if (k[0] === '!') continue;
+      const c = XLSX.utils.decode_cell(k);
+      if (c.r > maxR) maxR = c.r;
+      if (c.c > maxC) maxC = c.c;
+    }
+    if (maxR < 0) return;
+    const atual = XLSX.utils.decode_range(ws['!ref']);
+    if (maxR < atual.e.r || maxC < atual.e.c) {
+      ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 },
+        e: { r: Math.min(maxR, atual.e.r), c: Math.min(maxC, atual.e.c) } });
+    }
+  }
+
   function lerPlanilha(arrayBuffer) {
     if (typeof XLSX === 'undefined') {
       throw new Error('Biblioteca de planilha ainda carregando — tente novamente em instantes.');
@@ -115,6 +167,7 @@
     let melhor = null;
     for (const nome of wb.SheetNames) {
       const ws = wb.Sheets[nome];
+      podarIntervalo(ws);
       const matriz = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false });
       if (!melhor || matriz.length > melhor.matriz.length) melhor = { matriz, nomeAba: nome };
       if (matriz.length >= 2) { melhor = { matriz, nomeAba: nome }; break; }
@@ -262,6 +315,40 @@
         continue;
       }
 
+      if (tipo === 'MEDICO') {
+        const proc = String(celula(raw, p.map, 'procedimento')).trim();
+        const papel = String(celula(raw, p.map, 'papel')).trim();
+        const valorCel = celula(raw, p.map, 'valor');
+        if (!proc && !papel && valorCel === '') continue;
+        if (!papel && !proc) { avisos.push(`Linha ${i + 1}: sem papel/procedimento — ignorada.`); continue; }
+        const fonteTxt = String(celula(raw, p.map, 'fonte')).trim();
+        const fonte = fonteTxt ? U_.classificarFonte(fonteTxt) : 'CONVENIO';
+        // gen 2 traz o NOME do convênio na mesma coluna de "recebimento":
+        // quando o texto não é só Convênio/Particular, ele é o pagador
+        let convenio = String(celula(raw, p.map, 'convenio')).trim();
+        const fonteN = U_.normalizar(fonteTxt);
+        if (!convenio && fonteTxt && !['CONVENIO', 'PARTICULAR', 'SUS'].includes(fonteN)) convenio = fonteTxt;
+        const adm = String(celula(raw, p.map, 'admissao')).trim().replace(/\.0+$/, '');
+        const dataISO = U_.paraDataISO(celula(raw, p.map, 'data'));
+        const paciente = String(celula(raw, p.map, 'paciente')).trim();
+        const l = {
+          competencia: p.competencia || '',
+          sistema: String(celula(raw, p.map, 'sistema')).trim(),
+          modulo: String(celula(raw, p.map, 'modulo')).trim(),
+          admissao: adm, admissao_origem: adm ? 'RELATORIO' : '',
+          data: dataISO, paciente, paciente_norm: U_.normalizar(paciente),
+          medico: String(celula(raw, p.map, 'medico')).trim(),
+          papel, papel_canon: U_.papelCanonico(papel),
+          fonte, convenio,
+          procedimento: proc, procedimento_norm: U_.normalizar(proc),
+          valor: U_.paraNumero(valorCel),
+          linha_origem: i + 1,
+        };
+        if (l.competencia) compsNoArquivo.add(l.competencia);
+        linhas.push(l);
+        continue;
+      }
+
       const adm = String(celula(raw, p.map, 'admissao')).trim();
       const proc = String(celula(raw, p.map, 'procedimento')).trim();
       if (!adm && !proc) continue;
@@ -326,7 +413,8 @@
         if (tipo === 'BASE_TABELA') {
           Banco.executar('DELETE FROM base_tabela WHERE hospital_id = ?', [p.hospitalId]);
         } else {
-          const tabela = tipo === 'PRODUCAO' ? 'linhas_producao' : 'linhas_repasse';
+          const tabela = tipo === 'PRODUCAO' ? 'linhas_producao'
+            : (tipo === 'MEDICO' ? 'linhas_medico' : 'linhas_repasse');
           const comps = [...compsNoArquivo];
           if (comps.length) {
             const marcas = comps.map(() => '?').join(',');
@@ -349,6 +437,17 @@
             `INSERT INTO base_tabela (hospital_id, procedimento, procedimento_norm, papel, fonte, valor, percentual, origem)
              VALUES (?, ?, ?, ?, ?, ?, ?, 'IMPORTADA')`,
             [p.hospitalId, l.procedimento, l.procedimento_norm, l.papel, l.fonte, l.valor, l.percentual]);
+        } else if (tipo === 'MEDICO') {
+          Banco.executar(
+            `INSERT INTO linhas_medico
+               (cliente_id, hospital_id, importacao_id, competencia, sistema, modulo, admissao,
+                admissao_origem, data, paciente, paciente_norm, medico, medico_norm, papel,
+                papel_canon, fonte, convenio, procedimento, procedimento_norm, valor, linha_origem)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [p.clienteId, p.hospitalId, impId, l.competencia, l.sistema, l.modulo, l.admissao,
+              l.admissao_origem, l.data, l.paciente, l.paciente_norm, l.medico, U_.normalizar(l.medico),
+              l.papel, l.papel_canon, l.fonte, l.convenio, l.procedimento, l.procedimento_norm,
+              l.valor, l.linha_origem]);
         } else if (tipo === 'PRODUCAO') {
           Banco.executar(
             `INSERT INTO linhas_producao
@@ -381,8 +480,42 @@
     return { inseridas, competencias: [...compsNoArquivo].sort(), avisos };
   }
 
+  const MESES = { JANEIRO: '01', FEVEREIRO: '02', MARCO: '03', ABRIL: '04', MAIO: '05', JUNHO: '06',
+    JULHO: '07', AGOSTO: '08', SETEMBRO: '09', OUTUBRO: '10', NOVEMBRO: '11', DEZEMBRO: '12' };
+
+  /**
+   * Competência (YYYY-MM) escrita no cabeçalho informativo do relatório do
+   * médico: "Pagamentos liberados entre dd/mm/aaaa e dd/mm/aaaa" (gens 1-2 →
+   * mês da data final) ou "Competência: ABRIL / 2026" (gen 3). '' se não achar.
+   */
+  function detectarCompetenciaRelatorio(matriz) {
+    const ate = Math.min(matriz.length, 12);
+    for (let i = 0; i < ate; i++) {
+      for (const cel of (matriz[i] || [])) {
+        const txt = String(cel == null ? '' : cel);
+        let m = txt.match(/liberados\s+entre\s+(\d{2})\/(\d{2})\/(\d{4})\s+e\s+(\d{2})\/(\d{2})\/(\d{4})/i);
+        if (m) return m[6] + '-' + m[5];
+        m = U().normalizar(txt).match(/COMPETENCIA\s+([A-Z]+)\s*(\d{4})/);
+        if (m && MESES[m[1]]) return m[2] + '-' + MESES[m[1]];
+        m = txt.match(/compet[êe]ncia:?\s*(\d{2})\/(\d{4})/i);
+        if (m) return m[2] + '-' + m[1];
+      }
+    }
+    return '';
+  }
+
+  /** É um relatório do médico? (tem papel + valor + procedimento no cabeçalho) */
+  function pareceRelatorioMedico(matriz) {
+    const linhaCab = detectarCabecalho(matriz, 'MEDICO');
+    const cab = (matriz[linhaCab] || []).map(String);
+    const map = sugerirMapeamento(cab, 'MEDICO');
+    const ok = map.papel != null && map.valor != null && map.procedimento != null;
+    return { ok, linhaCab, map, cab };
+  }
+
   window.Importador = {
     CAMPOS, lerPlanilha, detectarCabecalho, sugerirMapeamento,
     perfilLer, perfilGravar, aplicarPerfil, aplicar,
+    detectarCompetenciaRelatorio, pareceRelatorioMedico,
   };
 })();

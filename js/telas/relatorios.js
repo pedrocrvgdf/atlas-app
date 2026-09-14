@@ -62,7 +62,7 @@ App.telas['relatorios'] = function () {
       <div class="cards">
         <div class="card"><div class="card-rotulo">Esperado (regras)</div>
           <div class="card-valor mono">${fmtR(r.kpis.esperado)}</div></div>
-        <div class="card"><div class="card-rotulo">Pago</div>
+        <div class="card"><div class="card-rotulo">Pago (sistema)</div>
           <div class="card-valor mono">${fmtR(r.kpis.pago)}</div></div>
         <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
           <div class="card-valor mono">${fmtR(r.kpis.falta)}</div>
