@@ -64,8 +64,8 @@ App.telas['visao'] = function () {
     { n: 1, titulo: 'Cadastrar cliente e hospitais', desc: 'Quem contratou a auditoria e as instituições que emitem os relatórios.', tela: 'clientes', feito: hosp > 0 },
     { n: 2, titulo: 'Importar produção e repasse', desc: 'As planilhas do hospital — a ATLAS aprende o formato de cada um.', tela: 'importar', feito: nProd > 0 && nRep > 0 },
     { n: 3, titulo: 'Base Tabela (opcional)', desc: 'Regras contratuais quando existem; sem elas, o motor infere o padrão pago.', tela: 'base', feito: nBase > 0 },
-    { n: 4, titulo: 'Inspecionar admissões', desc: 'O cruzamento: o que era esperado × o que foi pago, admissão por admissão.', tela: 'inspecao', feito: nPauta > 0 },
-    { n: 5, titulo: 'Relatório para o cliente', desc: 'Consolidado por médico com o valor a cobrar, exportável em Excel.', tela: 'relatorios', feito: false },
+    { n: 4, titulo: 'Auditar admissões', desc: 'A matriz do cruzamento: esperado × pago, admissão por admissão, com pauta de cobrança.', tela: 'auditoria', feito: nPauta > 0 },
+    { n: 5, titulo: 'Inspecionar e extrair', desc: 'Rastrear admissões uma a uma e gerar a planilha do médico (situação + repasse faltante).', tela: 'inspecao', feito: false },
   ];
 
   const imps = Banco.query(

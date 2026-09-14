@@ -1,473 +1,1059 @@
 /**
  * ============================================================================
- * TELA: Inspeção (🔎) — o coração do produto
+ * TELA: Inspeção da Admissão (🔎) — o módulo de rastreio
  *
- * Cruza PRODUÇÃO × REPASSE via Motor.auditar() e mostra, admissão por
- * admissão, o que era esperado, o que foi pago e O QUE FALTA RECEBER.
+ * Rastreia UMA admissão pelas três bases, na ordem em que o dinheiro caminha,
+ * e diz ONDE ELA PAROU (metodologia §1):
  *
- * FILTROS E CARDS: os cards respeitam TODOS os filtros (hospital,
- * competência, status, busca e MÉDICO). O filtro de médico aplica o
- * RECORTE da metodologia: a admissão passa a ser lida pelo que é DELE —
- * produzido = itens em que ele é o executante; esperado/pago/falta = só os
- * papéis dele. O raio-x continua mostrando a admissão inteira.
+ *   Painel 1 · REPASSE CRU      o que chegou do pagador (linhas_repasse)
+ *   Painel 2 · RESULTADO AUDITADO  o motor papel a papel: quem devia receber,
+ *                               regra, esperado × pago, status e motivo
+ *   Painel 3 · PRODUÇÃO ANALÍTICA  o que o hospital produziu (linhas_producao)
  *
- * Três abas:
- *   • Admissões — a matriz do cruzamento; clique abre o RAIO-X da admissão
- *   • Pauta — admissões marcadas para acompanhamento/cobrança
- *   • Sem lastro — pagamentos de admissões que não existem na produção
+ * Diagnóstico em 4 tons:
+ *   ok    há valor repassado — "Admissão paga no repasse" + competências,
+ *         total, lista analítica, alertas e o "não pago"
+ *   etapa está no repasse cru mas nada foi repassado (sem ser glosa total)
+ *   aviso fora do repasse e dentro da produção — frase fixa de AGUARDANDO
+ *   nada  "Admissão não encontrada"
  *
- * Filtro de competência = mês da PRODUÇÃO; o pagamento é procurado em todo
- * o histórico (produção de abril paga em junho conta como paga).
+ * Lateral "Planilha do médico": importa a lista de admissões do cliente
+ * (3 formatos), guarda a PAUTA no banco (viaja com o .db), aplica vigias
+ * (produto × papel) e recortes (médicos, participação, produtos) e EXPORTA
+ * a planilha Excel com a situação de cada admissão e o repasse faltante.
+ *
+ * Config por CLIENTE na tabela config (sufixo _c<id>): pauta, vigias,
+ * produtos da coluna, produtos da situação, médicos, participação, flag.
+ * Frases fixas da metodologia — NÃO alterar os textos.
  * ============================================================================
  */
 App.telas['inspecao'] = function () {
+  window.AtlasInspecao.montar();
+};
+
+window.AtlasInspecao = (function () {
   'use strict';
-  const el = document.getElementById('conteudo');
-  const esc = Utilidades.esc;
-  const fmtR = Utilidades.moeda;
-  const cliente = App.clienteAtivo();
-  if (!cliente) { App.avisoSemCliente(el); return; }
+  const U = () => window.Utilidades;
+  const esc = (s) => Utilidades.esc(s);
+  const fmtR = (n) => Utilidades.moeda(n);
 
-  if (!window.__insp) {
-    window.__insp = { hospitalId: 0, competencia: '', status: 'todos', medico: '', busca: '', aba: 'admissoes' };
-  }
-  const st = window.__insp;
-  if (st.medico === undefined) st.medico = '';   // state de versão antiga
+  // frases fixas (metodologia / spec — não alterar)
+  const FRASE_AGUARDANDO = 'Aguardando pagamento do convênio ou aguardando conciliação para efetuar o repasse';
+  const FRASE_PARTICULAR = 'Particular — sem repasse lançado nesta competência';
+  const FRASE_SEM_REGRA = 'Sem regra de repasse';
+  const FRASE_SEM_EXECUCAO = 'procedimento recebido do convênio sem repasse executado';
+  const FRASE_PAGA = 'Admissão paga no repasse';
+  const FRASE_NADA = 'Admissão não encontrada';
+  const DICA_PENDENTE = 'O convênio ainda não pagou esta admissão';
 
-  const TOL = Number(Banco.configLer('tolerancia_centavos', 0.05)) || 0.05;
-
-  const STATUS_ROTULO = {
-    NAO_PAGO: 'NÃO PAGO', PAGO_A_OUTRO: 'PAGO A OUTRO', A_MENOR: 'PAGO A MENOR',
-    SEM_REGRA: 'SEM REGRA', A_MAIOR: 'PAGO A MAIOR', NAO_PAREADO: 'SEM PAREAMENTO',
-    GLOSA: 'GLOSA', OK: 'OK',
+  const PAPEL_ROTULO = {
+    EXECUTANTE: 'Executante', AUXILIAR: 'Auxiliar', INDICANTE: 'Indicante',
+    SOLICITANTE: 'Solicitante', LAUDO: 'Médico Laudo', ANESTESISTA: 'Anestesista', TODOS: 'Todos',
   };
-  const MOTIVO_ROTULO = {
-    pago_a_outro: 'pago ao médico errado — a dívida continua',
-    sem_medico: 'papel remunerado sem profissional em base nenhuma',
-    glosa: 'procedimento glosado pelo pagador',
-    glosa_do_procedimento: 'herda a glosa do procedimento',
-    fora_da_base: 'produto fora da cobrança papel-a-papel (informativo)',
+  const QUEM_DO_PAPEL = {
+    EXECUTANTE: 'médico executante', AUXILIAR: 'auxiliar', INDICANTE: 'médico indicante',
+    SOLICITANTE: 'médico solicitante', LAUDO: 'médico laudista', ANESTESISTA: 'anestesista',
   };
-  const badge = (s) => `<span class="badge badge-${s}">${STATUS_ROTULO[s] || s}</span>`;
+  const AZUL_SPEC = '107DAC';   // azul das frases/estados herdado da spec
 
-  const temDados = (Banco.escalar('SELECT COUNT(*) FROM linhas_producao WHERE cliente_id=?', [cliente.id]) || 0) > 0;
+  // ── estado de tela (sobrevive à navegação; não viaja no banco) ─────────
+  const st = {
+    modo: 'admissao',            // 'admissao' | 'paciente'
+    qAdm: '', qNome: '', qData: '',
+    admAtual: null,              // normAdm inspecionada
+    admAtualRotulo: '',          // como o usuário digitou/escolheu
+    candidatas: null,
+    ocultar: false,
+    diagAberto: true,
+    latAberta: true,
+    buscas: {},                  // busca "contém" de cada bloco da lateral
+    exportando: false,
+  };
 
-  function pautaSet() {
-    return new Map(Banco.query(
-      'SELECT admissao, situacao FROM pauta_inspecao WHERE cliente_id=?', [cliente.id])
-      .map(r => [String(r.admissao), r.situacao]));
-  }
-
-  function render() {
-    if (!temDados) {
-      el.innerHTML = `
-        <div class="tela-cabecalho"><h1 class="tela-titulo">Inspeção</h1>
-          <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span></div>
-        <div class="aviso-caixa">Ainda não há <strong>produção importada</strong> deste cliente.
-          Importe os relatórios em <strong>Importações</strong> e volte aqui.</div>`;
-      return;
-    }
-
-    const hospitais = App.listarHospitais(cliente.id);
-    const comps = Motor.listarCompetencias(cliente.id, st.hospitalId);
-    const r = Motor.auditar({ clienteId: cliente.id, hospitalId: st.hospitalId, competencia: st.competencia });
-
-    // médicos do resultado (nomes já resolvidos pelo De-Para), ordenados
-    const medicos = [...r.porMedico.entries()]
-      .filter(([k]) => k !== 'SEM PROFISSIONAL')
-      .map(([k, reg]) => ({ chave: k, nome: reg.medico }))
-      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    if (st.medico && !medicos.some(m => m.chave === st.medico)) st.medico = '';
-
-    el.innerHTML = `
-      <div class="tela-cabecalho">
-        <h1 class="tela-titulo">Inspeção</h1>
-        <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span>
-        <div class="tela-acoes">
-          <button class="botao" id="insp-exportar">📤 Exportar pendências</button>
-        </div>
-      </div>
-
-      <div class="filtros">
-        <div class="campo"><span class="campo-rotulo">Hospital</span>
-          <select class="entrada" id="f-hosp">
-            <option value="0">— todos —</option>
-            ${hospitais.map(h => `<option value="${h.id}" ${h.id === st.hospitalId ? 'selected' : ''}>${esc(h.nome)}</option>`).join('')}
-          </select></div>
-        <div class="campo"><span class="campo-rotulo">Competência (produção)</span>
-          <select class="entrada" id="f-comp">
-            <option value="">— todas —</option>
-            ${comps.map(c => `<option value="${c}" ${c === st.competencia ? 'selected' : ''}>${Utilidades.compExibir(c)}</option>`).join('')}
-          </select></div>
-        <div class="campo"><span class="campo-rotulo">Médico</span>
-          <select class="entrada" id="f-medico">
-            <option value="">— todos —</option>
-            ${medicos.map(m => `<option value="${esc(m.chave)}" ${m.chave === st.medico ? 'selected' : ''}>${esc(m.nome)}</option>`).join('')}
-          </select></div>
-        <div class="campo"><span class="campo-rotulo">Status</span>
-          <select class="entrada" id="f-status">
-            <option value="todos">— todos —</option>
-            ${Object.keys(STATUS_ROTULO).map(s =>
-              `<option value="${s}" ${s === st.status ? 'selected' : ''}>${STATUS_ROTULO[s]}</option>`).join('')}
-          </select></div>
-        <div class="campo" style="flex:1"><span class="campo-rotulo">Busca</span>
-          <input class="entrada" id="f-busca" placeholder="admissão, paciente, médico ou procedimento" value="${esc(st.busca)}"></div>
-      </div>
-
-      <div id="insp-cards"></div>
-
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button class="botao ${st.aba === 'admissoes' ? 'botao-marinho' : ''}" data-aba="admissoes">Admissões</button>
-        <button class="botao ${st.aba === 'pauta' ? 'botao-marinho' : ''}" data-aba="pauta">📌 Pauta</button>
-        <button class="botao ${st.aba === 'semlastro' ? 'botao-marinho' : ''}" data-aba="semlastro">Sem lastro</button>
-      </div>
-      <div id="insp-corpo"></div>`;
-
-    el.querySelector('#f-hosp').addEventListener('change', e => { st.hospitalId = Number(e.target.value); render(); });
-    el.querySelector('#f-comp').addEventListener('change', e => { st.competencia = e.target.value; render(); });
-    el.querySelector('#f-medico').addEventListener('change', e => { st.medico = e.target.value; renderCorpo(r); });
-    el.querySelector('#f-status').addEventListener('change', e => { st.status = e.target.value; renderCorpo(r); });
-    el.querySelector('#f-busca').addEventListener('input', e => {
-      st.busca = e.target.value;
-      clearTimeout(st._t); st._t = setTimeout(() => renderCorpo(r), 250);
-    });
-    el.querySelectorAll('[data-aba]').forEach(b =>
-      b.addEventListener('click', () => { st.aba = b.dataset.aba; render(); }));
-    el.querySelector('#insp-exportar').addEventListener('click', () => exportarPendencias(r));
-
-    renderCorpo(r);
-  }
+  let el = null;
+  let clienteId = 0;
 
   // ────────────────────────────────────────────────────────────────────
-  // RECORTE E FILTROS
+  // CONFIG POR CLIENTE (viaja com o banco; metodologia §9)
   // ────────────────────────────────────────────────────────────────────
+  const CFG = {
+    pauta: 'insp_pauta_v1', vigias: 'insp_vigias_v1',
+    prodSel: 'insp_prod_sel_v1', prodSit: 'insp_prod_sit_v1',
+    medSel: 'insp_med_sel_v1', papelSel: 'insp_papel_sel_v1',
+    flagFaltante: 'insp_rep_faltante_v1',
+  };
+  const VIGIAS_PADRAO = [{ produto: 'TOMOGRAFIA DE COERENCIA OPTICA OCT', papel: 'LAUDO' }];
 
-  /**
-   * A "visão" da admissão sob o filtro de médico. Sem médico = a admissão
-   * inteira. Com médico = só os papéis DELE: produzido conta os itens em
-   * que ele é o EXECUTANTE (o dono da produção da linha); esperado, pago e
-   * falta somam todos os papéis dele; status = o pior status dos itens dele.
-   * Devolve null quando o médico não participa da admissão.
-   */
-  function recorte(a) {
-    if (!st.medico) {
-      return { itens: a.itens, produzido: a.produzido, esperado: a.esperado,
-               pago: a.pago, falta: a.falta, status: a.status };
-    }
-    const itens = a.itens.filter(i => Utilidades.normalizar(i.medico) === st.medico);
-    if (!itens.length) return null;
-    const v = {
-      itens,
-      produzido: itens.filter(i => i.papel === 'EXECUTANTE')
-        .reduce((s, i) => s + (Number(i.valorProducao) || 0), 0),
-      esperado: itens.reduce((s, i) => s + (i.esperado || 0), 0),
-      pago: itens.reduce((s, i) => s + (i.pago || 0), 0),
-      falta: itens.reduce((s, i) => s + (i.falta || 0), 0),
+  function cfgLer(chave, padrao) {
+    const v = Banco.configLer(chave + '_c' + clienteId, null);
+    return v == null ? padrao : v;
+  }
+  function cfgGravar(chave, valor) {
+    Banco.configGravar(chave + '_c' + clienteId, valor);
+    Banco.salvarDebounced();
+  }
+  const lerPauta = () => cfgLer(CFG.pauta, []);
+  const lerVigias = () => {
+    const v = Banco.configLer(CFG.vigias + '_c' + clienteId, null);
+    return v == null ? VIGIAS_PADRAO.slice() : v;   // 1ª vez: OCT + Médico Laudo
+  };
+  const lerSet = (chave) => new Set(cfgLer(chave, []));
+  const gravarSet = (chave, set) => cfgGravar(chave, [...set]);
+  const flagFaltante = () => String(cfgLer(CFG.flagFaltante, '1')) === '1';
+
+  // ────────────────────────────────────────────────────────────────────
+  // DADOS (memoizados por Banco._versao — convenção da casa)
+  // ────────────────────────────────────────────────────────────────────
+  let _memo = { versao: -1, cliente: 0 };
+
+  /** Mapas por admissão NORMALIZADA das três bases + resultado do motor. */
+  function dados() {
+    // robustez: quem chamar o módulo por fora da tela ainda resolve o cliente
+    const ativo = App.clienteAtivo && App.clienteAtivo();
+    if (ativo) clienteId = ativo.id;
+    if (_memo.versao === Banco._versao && _memo.cliente === clienteId) return _memo;
+    const norm = U().normAdm;
+    const agrupar = (rows) => {
+      const m = new Map();
+      for (const r of rows) {
+        const k = norm(r.admissao);
+        if (!k) continue;
+        if (!m.has(k)) m.set(k, []);
+        m.get(k).push(r);
+      }
+      return m;
     };
-    v.status = itens.reduce((pior, i) =>
-      ((Motor.SEVERIDADE[i.status] || 0) > (Motor.SEVERIDADE[pior] || 0) ? i.status : pior), 'OK');
-    return v;
+    const prodPor = agrupar(Banco.query(
+      'SELECT * FROM linhas_producao WHERE cliente_id = ? ORDER BY id', [clienteId]));
+    const repPor = agrupar(Banco.query(
+      'SELECT * FROM linhas_repasse WHERE cliente_id = ? ORDER BY id', [clienteId]));
+    const r = Motor.auditar({ clienteId, hospitalId: 0, competencia: '' });
+    const motorPor = new Map(r.admissoes.map(a => [U().normAdm(a.admissao), a]));
+    _memo = { versao: Banco._versao, cliente: clienteId, prodPor, repPor, motorPor, resultado: r };
+    return _memo;
   }
 
-  /** Aplica médico + status + busca; devolve [{ a, v }]. */
-  function filtrarAdmissoes(r) {
-    const buscaN = Utilidades.normalizar(st.busca);
+  /** Tudo de UMA admissão + o diagnóstico pronto. */
+  function inspecionar(admInput) {
+    const d = dados();
+    const adm = U().normAdm(admInput);
+    const prod = d.prodPor.get(adm) || [];
+    const rep = d.repPor.get(adm) || [];
+    const mAdm = d.motorPor.get(adm) || null;
+
+    const totalRepassado = rep.reduce((s, l) =>
+      s + (/glosa/i.test(String(l.status || '')) ? 0 : (Number(l.repassado) || 0)), 0);
+    const compsPagas = [...new Set(rep.filter(l => Number(l.repassado) > 0)
+      .map(l => l.competencia).filter(Boolean))].sort();
+    const porComp = new Map();
+    for (const l of rep) {
+      if (!(Number(l.repassado) > 0)) continue;
+      const c = l.competencia || '?';
+      porComp.set(c, (porComp.get(c) || 0) + Number(l.repassado));
+    }
+
+    let tom, titulo;
+    if (rep.length && totalRepassado > 0) { tom = 'ok'; titulo = FRASE_PAGA; }
+    else if (rep.length) { tom = 'etapa'; titulo = 'Admissão no repasse sem valor repassado'; }
+    else if (prod.length) { tom = 'aviso'; titulo = FRASE_AGUARDANDO; }
+    else { tom = 'nada'; titulo = FRASE_NADA; }
+
+    return { adm, prod, rep, mAdm, tom, titulo, totalRepassado, compsPagas, porComp };
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // ALERTAS — o motor decide; as vigias individualizam (metodologia §9)
+  // itens faltantes = NAO_PAGO / PAGO_A_OUTRO / SEM_REGRA do resultado
+  // ────────────────────────────────────────────────────────────────────
+  function alertasDe(insp, opts) {
+    if (!insp.mAdm) return [];
+    const o = opts || {};
+    const vigias = lerVigias();
+    const norm = (s) => U().normalizar(s);
+    const casaVigia = (item) => vigias.some(v =>
+      (norm(item.procedimento).includes(norm(v.produto)) ||
+       U().similaridade(norm(item.procedimento), norm(v.produto)) >= 0.88) &&
+      (v.papel === 'TODOS' || v.papel === item.papel));
+
+    const medSel = lerSet(CFG.medSel), papelSel = lerSet(CFG.papelSel), prodSit = lerSet(CFG.prodSit);
     const out = [];
-    for (const a of r.admissoes) {
-      const v = recorte(a);
-      if (!v) continue;
-      if (st.status !== 'todos') {
-        if (st.status === 'OK' ? v.status !== 'OK' : !v.itens.some(i => i.status === st.status)) continue;
+    for (const i of insp.mAdm.itens) {
+      if (!['NAO_PAGO', 'PAGO_A_OUTRO', 'SEM_REGRA'].includes(i.status)) continue;
+      if (o.fonte && i.fonte !== o.fonte) continue;
+      // recortes ativos (metodologia: o escopo segue o recorte)
+      if (medSel.size && i.medico && !medSel.has(norm(i.medico))) continue;
+      if (papelSel.size && !papelSel.has(i.papel)) continue;
+      if (prodSit.size && ![...prodSit].some(p => norm(i.procedimento).includes(p))) continue;
+      // com vigia marcada, o motor geral fica individualizado nos vigiados
+      if (vigias.length && !casaVigia(i)) continue;
+
+      const rotProc = i.procedimento;
+      if (i.status === 'SEM_REGRA') {
+        out.push({ item: i, grave: false, texto: `${rotProc} - ${FRASE_SEM_REGRA}` });
+      } else if (insp.totalRepassado <= 0) {
+        out.push({ item: i, grave: true, texto: `${rotProc} - ${FRASE_SEM_EXECUCAO}` });
+      } else {
+        const quem = QUEM_DO_PAPEL[i.papel] || i.papel.toLowerCase();
+        out.push({
+          item: i, grave: true,
+          texto: `${rotProc} - ${PAPEL_ROTULO[i.papel] || i.papel} não encontrado para pagamento` +
+            ` / sem informação de ${quem} no sistema` +
+            (i.motivo === 'pago_a_outro' && i.pagoA ? ` (pago a ${i.pagoA})` : ''),
+        });
       }
-      if (buscaN) {
-        const alvo = Utilidades.normalizar(
-          a.admissao + ' ' + (a.paciente || '') + ' ' + a.medicos.join(' ') + ' ' +
-          a.itens.map(i => i.procedimento).join(' '));
-        if (!alvo.includes(buscaN)) continue;
-      }
-      out.push({ a, v });
     }
     return out;
   }
 
-  /** Cards calculados sobre a LISTA FILTRADA — os números seguem os filtros. */
-  function renderCards(lista) {
-    const box = el.querySelector('#insp-cards');
-    if (!box) return;
-    const soma = (campo) => lista.reduce((s, x) => s + (x.v[campo] || 0), 0);
-    const nPend = lista.filter(x => x.v.falta > TOL).length;
-    const filtrado = !!(st.medico || st.status !== 'todos' || st.busca.trim());
-    const nomeMed = st.medico
-      ? (el.querySelector('#f-medico option:checked') || {}).textContent : '';
+  /** Faltante da admissão no recorte ativo (para stats/extração). */
+  function faltanteDe(insp, fonte) {
+    if (!insp.mAdm) return 0;
+    const norm = (s) => U().normalizar(s);
+    const medSel = lerSet(CFG.medSel), papelSel = lerSet(CFG.papelSel), prodSit = lerSet(CFG.prodSit);
+    let total = 0;
+    for (const i of insp.mAdm.itens) {
+      if (!(i.falta > 0)) continue;
+      if (fonte && i.fonte !== fonte) continue;
+      if (medSel.size && i.medico && !medSel.has(norm(i.medico))) continue;
+      if (papelSel.size && !papelSel.has(i.papel)) continue;
+      if (prodSit.size && ![...prodSit].some(p => norm(i.procedimento).includes(p))) continue;
+      total += i.falta;
+    }
+    return Math.round(total * 100) / 100;
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // OCULTAR NOMES (só na tela — a extração sempre sai com nomes reais)
+  // ────────────────────────────────────────────────────────────────────
+  const _codigos = new Map();
+  function medEx(nome) {
+    const n = String(nome || '').trim();
+    if (!n || !st.ocultar) return n;
+    const k = U().normalizar(n);
+    if (!_codigos.has(k)) _codigos.set(k, 'MÉDICO ' + String(_codigos.size + 1).padStart(2, '0'));
+    return _codigos.get(k);
+  }
+  function pacEx(nome) {
+    const n = String(nome || '').trim();
+    if (!n || !st.ocultar) return n;
+    return n.split(/\s+/).map(p => p[0] ? p[0].toUpperCase() + '.' : '').join(' ');
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // BUSCA
+  // ────────────────────────────────────────────────────────────────────
+  function buscarPorNome(nome, dataISO) {
+    const palavras = U().normalizar(nome).split(' ').filter(Boolean);
+    if (!palavras.length) return [];
+    // LIKE largo pela 1ª palavra (barato) + refino JS com TODAS as palavras
+    const rows = Banco.query(
+      `SELECT admissao, data, paciente, procedimento, classificacao FROM linhas_producao
+        WHERE cliente_id = ? AND paciente LIKE ? LIMIT 8000`,
+      [clienteId, '%' + palavras[0] + '%']);
+    const porAdm = new Map();
+    for (const r of rows) {
+      const pn = U().normalizar(r.paciente);
+      if (!palavras.every(p => pn.includes(p))) continue;
+      if (dataISO && r.data !== dataISO) continue;
+      const k = U().normAdm(r.admissao);
+      if (!porAdm.has(k)) {
+        porAdm.set(k, { adm: k, admRotulo: String(r.admissao).trim(), data: r.data,
+          paciente: r.paciente, proc: '' });
+      }
+      const reg = porAdm.get(k);
+      if (!reg.proc && U().normalizar(r.classificacao) === 'PROCEDIMENTO') reg.proc = r.procedimento;
+      if (!reg.proc) reg.proc = reg.proc || r.procedimento;
+    }
+    return [...porAdm.values()].sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ────────────────────────────────────────────────────────────────────
+  function montar() {
+    el = document.getElementById('conteudo');
+    const cliente = App.clienteAtivo();
+    if (!cliente) { App.avisoSemCliente(el); return; }
+    clienteId = cliente.id;
+    render();
+  }
+
+  function render() {
+    const cliente = App.clienteAtivo();
+    const pauta = lerPauta();
+    const d = dados();
+
+    // stats da pauta (referência visual: fileira de cards, o último escuro)
+    let stPagas = 0, stAguard = 0, stFalta = 0;
+    for (const p of pauta) {
+      const i = inspecionar(p.admissao);
+      if (i.tom === 'ok') stPagas++;
+      else if (i.tom === 'aviso') stAguard++;
+      stFalta += faltanteDe(i, null);
+    }
+
+    el.innerHTML = `
+      <div class="insp-hero">
+        <div class="insp-hero-acoes">
+          <button class="botao botao-mini" id="insp-ocultar">${st.ocultar ? '👁 mostrar nomes' : '🕶 ocultar nomes'}</button>
+          ${st.latAberta ? '' : '<button class="botao botao-mini" id="insp-abrir-lat">🗂 planilha do médico</button>'}
+        </div>
+        <h1>Inspeção da Admissão</h1>
+        <p>Rastreie a admissão pelas três bases, na ordem em que o dinheiro caminha —
+        repasse cru, resultado auditado e produção — e veja onde ela parou.
+        Cliente: <strong>${esc(cliente.nome)}</strong></p>
+      </div>
+
+      <div class="insp-busca">
+        <div class="insp-busca-abas">
+          <button class="insp-busca-aba ${st.modo === 'admissao' ? 'ativa' : ''}" data-modo="admissao">Admissão</button>
+          <button class="insp-busca-aba ${st.modo === 'paciente' ? 'ativa' : ''}" data-modo="paciente">Paciente</button>
+        </div>
+        <div class="insp-busca-campos">
+          ${st.modo === 'admissao' ? `
+            <div class="insp-busca-campo" style="max-width:280px">
+              <span class="insp-busca-rotulo">Código da admissão</span>
+              <input id="q-adm" placeholder="ex.: 39476901" value="${esc(st.qAdm)}">
+            </div>` : `
+            <div class="insp-busca-campo">
+              <span class="insp-busca-rotulo">Nome do paciente</span>
+              <input id="q-nome" placeholder="todas as palavras contam" value="${esc(st.qNome)}">
+            </div>
+            <div class="insp-busca-campo" style="max-width:190px">
+              <span class="insp-busca-rotulo">Data da admissão</span>
+              <input id="q-data" type="date" value="${esc(st.qData)}">
+            </div>`}
+          <div class="insp-busca-botoes">
+            <button class="insp-btn-buscar" id="insp-buscar">🔎 Buscar</button>
+            <button class="insp-btn-limpar" id="insp-limpar">Limpar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="insp-stats">
+        <div class="insp-stat"><div class="insp-stat-valor">${pauta.length.toLocaleString('pt-BR')}</div>
+          <div class="insp-stat-rotulo">admissões na planilha do médico</div></div>
+        <div class="insp-stat"><div class="insp-stat-valor texto-ok">${stPagas.toLocaleString('pt-BR')}</div>
+          <div class="insp-stat-rotulo">pagas no repasse</div></div>
+        <div class="insp-stat suave"><div class="insp-stat-valor texto-aviso">${stAguard.toLocaleString('pt-BR')}</div>
+          <div class="insp-stat-rotulo">aguardando convênio / conciliação</div></div>
+        <div class="insp-stat escuro"><div class="insp-stat-valor mono">${fmtR(stFalta)}</div>
+          <div class="insp-stat-rotulo">repasse faltante na pauta</div></div>
+      </div>
+
+      <div class="insp-corpo">
+        <div class="insp-principal" id="insp-principal"></div>
+        <aside class="insp-lateral ${st.latAberta ? '' : 'fechada'}" id="insp-lateral"></aside>
+      </div>`;
+
+    // handlers do topo
+    el.querySelectorAll('[data-modo]').forEach(b => b.addEventListener('click', () => {
+      st.modo = b.dataset.modo; st.candidatas = null; render();
+    }));
+    el.querySelector('#insp-buscar').addEventListener('click', buscar);
+    el.querySelector('#insp-limpar').addEventListener('click', () => {
+      st.qAdm = st.qNome = st.qData = ''; st.admAtual = null; st.candidatas = null; render();
+    });
+    const qa = el.querySelector('#q-adm');
+    if (qa) { qa.addEventListener('input', e => st.qAdm = e.target.value);
+      qa.addEventListener('keydown', e => { if (e.key === 'Enter') buscar(); }); }
+    const qn = el.querySelector('#q-nome');
+    if (qn) { qn.addEventListener('input', e => st.qNome = e.target.value);
+      qn.addEventListener('keydown', e => { if (e.key === 'Enter') buscar(); }); }
+    const qd = el.querySelector('#q-data');
+    if (qd) qd.addEventListener('change', e => st.qData = e.target.value);
+    el.querySelector('#insp-ocultar').addEventListener('click', () => { st.ocultar = !st.ocultar; render(); });
+    const abrirLat = el.querySelector('#insp-abrir-lat');
+    if (abrirLat) abrirLat.addEventListener('click', () => { st.latAberta = true; render(); });
+
+    renderPrincipal(d);
+    renderLateral();
+  }
+
+  function buscar() {
+    st.candidatas = null;
+    if (st.modo === 'admissao') {
+      if (!st.qAdm.trim()) { Utilidades.toast('Informe o código da admissão.', 'aviso'); return; }
+      st.admAtual = U().normAdm(st.qAdm);
+      st.admAtualRotulo = st.qAdm.trim();
+    } else {
+      if (!st.qNome.trim()) { Utilidades.toast('Informe o nome do paciente.', 'aviso'); return; }
+      const cand = buscarPorNome(st.qNome, st.qData);
+      if (!cand.length) { st.admAtual = 'SEM_RESULTADO'; st.admAtualRotulo = st.qNome; }
+      else if (cand.length === 1) { st.admAtual = cand[0].adm; st.admAtualRotulo = cand[0].admRotulo; }
+      else { st.candidatas = cand; st.admAtual = null; }
+    }
+    render();
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  function renderPrincipal(d) {
+    const box = el.querySelector('#insp-principal');
+
+    if (st.candidatas) {
+      box.innerHTML = `
+        <div class="insp-candidatas">
+          <div class="diag-secao-titulo" style="padding:6px 10px 2px">
+            ${st.candidatas.length} admissões encontradas — escolha qual inspecionar</div>
+          ${st.candidatas.slice(0, 30).map((c, i) => `
+            <button class="insp-candidata" data-cand="${i}">
+              <span class="cod mono">${esc(c.admRotulo)}</span>
+              <span class="quando">${Utilidades.dataExibir(c.data)}</span>
+              <span>${esc(pacEx(c.paciente))}</span>
+              <span class="proc">${esc(c.proc || '')}</span>
+            </button>`).join('')}
+        </div>`;
+      box.querySelectorAll('[data-cand]').forEach(b => b.addEventListener('click', () => {
+        const c = st.candidatas[Number(b.dataset.cand)];
+        st.admAtual = c.adm; st.admAtualRotulo = c.admRotulo; st.candidatas = null; render();
+      }));
+      return;
+    }
+
+    if (!st.admAtual) {
+      const temDados = d.prodPor.size || d.repPor.size;
+      box.innerHTML = `<div class="painel"><div class="insp-painel-vazio">
+        ${temDados
+          ? 'Busque uma admissão pelo código ou pelo paciente — ou clique numa admissão da <strong>planilha do médico</strong> ao lado.'
+          : 'Importe a produção e o repasse deste cliente em <strong>Importações</strong> para começar a inspecionar.'}
+      </div></div>`;
+      return;
+    }
+
+    const insp = inspecionar(st.admAtual === 'SEM_RESULTADO' ? '≡nada≡' : st.admAtual);
+    renderDiagnostico(box, insp);
+    renderPaineis(box, insp);
+  }
+
+  // ── card de diagnóstico ─────────────────────────────────────────────
+  function renderDiagnostico(box, insp) {
+    const alertas = alertasDe(insp, {});
+    const faltantes = insp.mAdm ? insp.mAdm.itens.filter(i => i.falta > 0) : [];
+    const pac = insp.prod[0] ? insp.prod[0].paciente : (insp.rep[0] ? insp.rep[0].paciente : '');
+    const convs = [...new Set(insp.prod.map(l => l.convenio).concat(insp.rep.map(l => l.convenio)).filter(Boolean))];
+    const fontes = [...new Set(insp.prod.map(l => l.fonte).concat(insp.rep.map(l => l.fonte)).filter(Boolean))];
+
+    let sub = '';
+    if (insp.tom === 'ok') {
+      const comps = insp.compsPagas.map(c => Utilidades.compExibir(c) +
+        (insp.porComp.size > 1 ? ` (${fmtR(insp.porComp.get(c) || 0)})` : '')).join(', ');
+      sub = `Encontrada no repasse de ${comps || '—'} · ${fontes.join('/') || '—'} · ${esc(convs.join(', ') || '—')},
+        com <strong>${fmtR(insp.totalRepassado)}</strong> repassado.`;
+    } else if (insp.tom === 'etapa') {
+      const soGlosa = insp.rep.length && insp.rep.every(l => /glosa/i.test(String(l.status || '')) || !(Number(l.repassado) > 0));
+      sub = soGlosa && insp.rep.some(l => /glosa/i.test(String(l.status || '')))
+        ? 'As linhas desta admissão constam como <span class="glosa">GLOSA</span> — não há repasse a executar.'
+        : 'A admissão chegou no repasse cru, mas nenhum valor foi repassado — confira o processamento.';
+    } else if (insp.tom === 'aviso') {
+      sub = 'A admissão existe na produção e ainda não apareceu no repasse.';
+    } else {
+      sub = 'Nenhuma das três bases contém esta admissão — confira o código ou as importações.';
+    }
+
+    // lista analítica do CRU: procedimento → médico → papéis e valores (×N; glosa em vermelho)
+    let analitica = '';
+    if (insp.rep.length) {
+      const grupos = new Map();
+      for (const l of insp.rep) {
+        const k = l.procedimento_norm;
+        if (!grupos.has(k)) grupos.set(k, { nome: l.procedimento, linhas: [] });
+        grupos.get(k).linhas.push(l);
+      }
+      analitica = [...grupos.values()].map(g => {
+        const porPapel = new Map();
+        for (const l of g.linhas) {
+          const glosa = /glosa/i.test(String(l.status || ''));
+          const k = (l.papel_canon || l.papel || '—') + '|' + U().normalizar(l.medico) + '|' +
+            (glosa ? 'G' : Number(l.repassado) || 0);
+          if (!porPapel.has(k)) porPapel.set(k, { papel: l.papel_canon || l.papel || '—',
+            medico: l.medico, valor: Number(l.repassado) || 0, glosa, n: 0 });
+          porPapel.get(k).n++;
+        }
+        const partes = [...porPapel.values()].map(p =>
+          `${PAPEL_ROTULO[p.papel] || esc(p.papel)} ${p.glosa
+            ? '<span class="glosa">glosa</span>'
+            : fmtR(p.valor)}${p.n > 1 ? ' ×' + p.n : ''}${p.medico ? ' · ' + esc(medEx(p.medico)) : ''}`);
+        return `<div>• <strong>${esc(g.nome)}</strong> — ${partes.join(' · ')}</div>`;
+      }).join('');
+    }
 
     box.innerHTML = `
-      <div class="cards">
-        <div class="card"><div class="card-rotulo">Produzido${st.medico ? ' (como executante)' : ''}</div>
-          <div class="card-valor mono">${fmtR(soma('produzido'))}</div>
-          ${filtrado ? `<div class="card-extra">${lista.length.toLocaleString('pt-BR')} admissão(ões) no filtro${st.medico ? ' · ' + esc(nomeMed) : ''}</div>` : ''}</div>
-        <div class="card"><div class="card-rotulo">Esperado (regras)</div>
-          <div class="card-valor mono">${fmtR(soma('esperado'))}</div></div>
-        <div class="card"><div class="card-rotulo">Pago ao médico</div>
-          <div class="card-valor mono">${fmtR(soma('pago'))}</div></div>
-        <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
-          <div class="card-valor mono">${fmtR(soma('falta'))}</div>
-          <div class="card-extra">${nPend.toLocaleString('pt-BR')} de ${lista.length.toLocaleString('pt-BR')} admissões com pendência</div></div>
-      </div>`;
-  }
-
-  function renderCorpo(r) {
-    const corpo = el.querySelector('#insp-corpo');
-    const lista = filtrarAdmissoes(r);
-    renderCards(lista);
-
-    if (st.aba === 'pauta') { renderPauta(corpo, r); return; }
-    if (st.aba === 'semlastro') { renderSemLastro(corpo, r); return; }
-
-    const pauta = pautaSet();
-    const LIMITE = 400;
-
-    corpo.innerHTML = `
-      <div class="painel">
-        <div class="painel-cabecalho">
-          <span class="painel-titulo">Admissões</span>
-          <span class="painel-conta">${lista.length.toLocaleString('pt-BR')} admissão(ões)${lista.length > LIMITE ? ' — mostrando as ' + LIMITE + ' primeiras' : ''}${st.medico ? ' · valores no recorte do médico' : ''}</span>
+      <div class="diag-card diag-${insp.tom}">
+        <div class="diag-cab" id="diag-cab">
+          <span class="diag-farol"></span>
+          <div>
+            <div class="diag-titulo">${esc(insp.titulo)}</div>
+            <div class="diag-sub">admissão <strong class="mono">${esc(st.admAtualRotulo || insp.adm)}</strong>
+              ${pac ? ' · ' + esc(pacEx(pac)) : ''}</div>
+          </div>
+          <span class="diag-seta">${st.diagAberto ? '▲ recolher' : '▼ expandir'}</span>
         </div>
-        ${lista.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
-            <th>Admissão</th><th>Data</th><th>Paciente</th><th>Médico(s)</th>
-            <th class="num">Produzido</th><th class="num">Esperado</th>
-            <th class="num">Pago</th><th class="num">Falta</th><th>Status</th><th></th>
-          </tr></thead><tbody>
-          ${lista.slice(0, LIMITE).map((x, i) => `
-            <tr class="clique" data-adm="${i}">
-              <td class="mono"><strong>${esc(x.a.admissao)}</strong></td>
-              <td>${Utilidades.dataExibir(x.a.data)}</td>
-              <td>${esc(x.a.paciente || '—')}</td>
-              <td>${esc(x.a.medicos.slice(0, 2).join(', ') || '—')}${x.a.medicos.length > 2 ? ' <span class="texto-cinza">+' + (x.a.medicos.length - 2) + '</span>' : ''}</td>
-              <td class="num">${fmtR(x.v.produzido)}</td>
-              <td class="num">${fmtR(x.v.esperado)}</td>
-              <td class="num">${fmtR(x.v.pago)}</td>
-              <td class="num ${x.v.falta > 0 ? 'texto-erro' : ''}">${x.v.falta > 0 ? fmtR(x.v.falta) : '—'}</td>
-              <td>${badge(x.v.status)}</td>
-              <td>${pauta.has(String(x.a.admissao)) ? `<span class="badge badge-${esc(pauta.get(String(x.a.admissao)))}">📌 ${esc(pauta.get(String(x.a.admissao)))}</span>` : ''}</td>
-            </tr>`).join('')}
-          </tbody></table></div>` :
-        `<div class="tabela-vazia">Nada encontrado com os filtros atuais.</div>`}
+        ${st.diagAberto ? `<div class="diag-corpo">
+          <div class="diag-lista" style="margin-top:10px">${sub}</div>
+          ${analitica ? `<div class="diag-secao"><div class="diag-secao-titulo">O que foi pago (repasse cru)</div>
+            <div class="diag-lista">${analitica}</div></div>` : ''}
+          ${alertas.length ? `<div class="diag-secao"><div class="diag-secao-titulo">Alertas</div>
+            ${alertas.map(a => `<div class="${a.grave ? 'diag-alerta' : 'diag-neutro'}">${a.grave ? '⚠ ' : ''}${esc(a.texto)}</div>`).join('')}
+          </div>` : ''}
+          ${faltantes.length ? `<div class="diag-secao">
+            <div class="diag-secao-titulo">⚠ Com regra de repasse e NÃO pago nesta admissão</div>
+            ${faltantes.map(i => `<div class="diag-alerta">• ${esc(i.procedimento)} · ${PAPEL_ROTULO[i.papel] || esc(i.papel)}
+              · ${fmtR(i.falta)}${i.medico ? ' · ' + esc(medEx(i.medico)) : ' · Médico não informado'}${i.motivo === 'pago_a_outro' && i.pagoA ? ' · pago a ' + esc(medEx(i.pagoA)) : ''}</div>`).join('')}
+          </div>` : ''}
+        </div>` : ''}
       </div>`;
 
-    corpo.querySelectorAll('[data-adm]').forEach(tr =>
-      tr.addEventListener('click', () => abrirRaioX(lista[Number(tr.dataset.adm)].a, r)));
+    box.querySelector('#diag-cab').addEventListener('click', () => {
+      st.diagAberto = !st.diagAberto; render();
+    });
+  }
+
+  // ── os três painéis ─────────────────────────────────────────────────
+  function renderPaineis(box, insp) {
+    const painel = (titulo, sub, corpo) => `
+      <div class="painel">
+        <div class="painel-cabecalho"><span class="painel-titulo">${titulo}</span>
+          <span class="painel-conta">${sub}</span></div>
+        ${corpo}
+      </div>`;
+    const vazio = (msg) => `<div class="insp-painel-vazio">${msg}</div>`;
+    const tagF = (f) => `<span class="tag-fonte tag-${esc(f || 'CONVENIO')}">${esc(f || '—')}</span>`;
+
+    // 1 · repasse cru
+    const p1 = insp.rep.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+        <th>Competência</th><th>Data</th><th>Paciente</th><th>Profissional</th><th>Papel</th>
+        <th>Procedimento</th><th>Fonte</th><th>Convênio</th><th class="num">Qtd</th>
+        <th class="num">Produzido</th><th class="num">Repassado</th><th>Status</th>
+      </tr></thead><tbody>
+      ${insp.rep.map(l => `<tr>
+        <td>${Utilidades.compExibir(l.competencia)}</td>
+        <td>${Utilidades.dataExibir(l.data)}</td>
+        <td>${esc(pacEx(l.paciente))}</td>
+        <td>${esc(medEx(l.medico))}</td>
+        <td>${esc(l.papel || '—')}</td>
+        <td>${esc(l.procedimento)}</td>
+        <td>${tagF(l.fonte)}</td>
+        <td>${esc(l.convenio || '—')}</td>
+        <td class="num">${l.quantidade || 1}</td>
+        <td class="num">${fmtR(l.produzido)}</td>
+        <td class="num">${fmtR(l.repassado)}</td>
+        <td>${/glosa/i.test(String(l.status || '')) ? '<span class="badge badge-NAO_PAGO">GLOSA</span>' : esc(l.status || '—')}</td>
+      </tr>`).join('')}</tbody></table></div>`
+      : vazio('Nada no repasse cru — ' + (insp.prod.length ? 'o pagador ainda não pagou esta admissão.' : 'admissão fora desta base.'));
+
+    // 2 · resultado auditado
+    const m = insp.mAdm;
+    const p2 = m ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+        <th>Procedimento</th><th>Papel</th><th>Profissional</th><th>Fonte</th>
+        <th>Regra</th><th class="num">Esperado</th><th class="num">Pago</th>
+        <th class="num">Falta</th><th>Status</th>
+      </tr></thead><tbody>
+      ${m.itens.map(i => `<tr>
+        <td>${esc(i.procedimento)}</td>
+        <td>${PAPEL_ROTULO[i.papel] || esc(i.papel)}</td>
+        <td>${esc(medEx(i.medico)) || '—'}</td>
+        <td>${tagF(i.fonte)}</td>
+        <td>${i.regra ? (i.regra.origem === 'BASE' ? '<span class="badge badge-BASE">BASE</span>' : '<span class="badge badge-INFERIDA">PADRÃO</span>') : '—'}</td>
+        <td class="num">${i.esperado != null ? fmtR(i.esperado) : '—'}</td>
+        <td class="num">${i.pago ? fmtR(i.pago) : '—'}</td>
+        <td class="num ${i.falta > 0 ? 'texto-erro' : ''}">${i.falta > 0 ? fmtR(i.falta) : '—'}</td>
+        <td><span class="badge badge-${i.status}">${esc(i.status.replace(/_/g, ' '))}</span></td>
+      </tr>`).join('')}</tbody></table></div>`
+      : vazio('Sem produção desta admissão, o motor não tem o que auditar.');
+
+    // 3 · produção analítica
+    const p3 = insp.prod.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+        <th>Admissão</th><th>Data</th><th>Paciente</th><th>Convênio</th><th>Fonte</th>
+        <th>Classificação</th><th>Procedimento</th><th class="num">Qtd</th><th class="num">Valor</th>
+        <th>Executante</th><th>Auxiliar</th><th>Indicante</th><th>Solicitante</th><th>Laudo</th>
+      </tr></thead><tbody>
+      ${insp.prod.map(l => `<tr>
+        <td class="mono">${esc(l.admissao)}</td>
+        <td>${Utilidades.dataExibir(l.data)}</td>
+        <td>${esc(pacEx(l.paciente))}</td>
+        <td>${esc(l.convenio || '—')}</td>
+        <td>${tagF(l.fonte)}</td>
+        <td>${esc(l.classificacao || '—')}</td>
+        <td>${esc(l.procedimento)}</td>
+        <td class="num">${l.quantidade || 1}</td>
+        <td class="num">${fmtR(l.valor)}</td>
+        <td>${esc(medEx(l.executante))}</td><td>${esc(medEx(l.auxiliar))}</td>
+        <td>${esc(medEx(l.indicante))}</td><td>${esc(medEx(l.solicitante))}</td>
+        <td>${esc(medEx(l.laudo))}</td>
+      </tr>`).join('')}</tbody></table></div>`
+      : vazio('Admissão fora da produção importada.');
+
+    box.insertAdjacentHTML('beforeend',
+      painel('1 · Repasse cru', `${insp.rep.length} linha(s) — como chegou do pagador`, p1) +
+      painel('2 · Resultado auditado', m ? `${m.itens.length} item(ns) — quem decide o que foi pago a quem devia` : '—', p2) +
+      painel('3 · Produção analítica', `${insp.prod.length} linha(s) — o que o hospital produziu`, p3));
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // RAIO-X DA ADMISSÃO (sempre a admissão INTEIRA)
+  // LATERAL — planilha do médico, vigias e recortes
   // ────────────────────────────────────────────────────────────────────
-  function abrirRaioX(a, r) {
-    if (!a) return;
-    const pauta = pautaSet();
-    const naPauta = pauta.has(String(a.admissao));
+  function renderLateral() {
+    const lat = el.querySelector('#insp-lateral');
+    if (!st.latAberta) { lat.innerHTML = ''; return; }
+    const d = dados();
+    const pauta = lerPauta();
+    const vigias = lerVigias();
+    const medSel = lerSet(CFG.medSel), papelSel = lerSet(CFG.papelSel);
+    const prodSel = lerSet(CFG.prodSel), prodSit = lerSet(CFG.prodSit);
 
-    const regraTxt = (i) => {
-      if (!i.regra) return '<span class="texto-cinza">—</span>';
-      const v = i.regra.valor != null && i.regra.valor !== 0 ? fmtR(i.regra.valor) + ' fixo'
-        : Utilidades.formatarNumero(i.regra.percentual, 1) + '% do produzido';
-      const orig = i.regra.origem === 'BASE'
-        ? '<span class="badge badge-BASE">BASE</span>'
-        : `<span class="badge badge-INFERIDA">PADRÃO</span> <span class="regra-origem">conf. ${Math.round((i.regra.confianca || 0) * 100)}% · ${i.regra.amostras || 0} am.</span>`;
-      return `${v}<br>${orig}`;
+    // produtos repassáveis do cliente (para vigias/coluna/situação)
+    const produtos = produtosDoCliente();
+    const medicos = [...d.resultado.porMedico.entries()]
+      .filter(([k]) => k !== 'SEM PROFISSIONAL')
+      .map(([k, r]) => ({ k, nome: r.medico })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+    const busca = (id) => st.buscas[id] || '';
+    const filtra = (lista, id, campo) => {
+      const b = U().normalizar(busca(id));
+      return b ? lista.filter(x => U().normalizar(x[campo]).includes(b)) : lista;
     };
 
-    const ov = document.createElement('div');
-    ov.className = 'modal-fundo';
-    ov.innerHTML = `
-      <div class="modal modal-grande">
-        <div class="modal-cabecalho">
-          <span class="modal-titulo">🔎 Raio-x da admissão ${esc(a.admissao)}</span>
-          <span class="texto-cinza" style="font-size:12px">${Utilidades.dataExibir(a.data)} · ${esc(a.paciente || '—')}
-            · ${esc(a.convenios.join(', ') || '—')} · comp. ${Utilidades.compExibir(a.competencia)}</span>
-          <button class="modal-fechar">✕</button>
-        </div>
-        <div class="modal-corpo">
-          ${st.medico ? `<div class="info-caixa">O filtro de médico está ativo, mas o raio-x mostra a admissão <strong>inteira</strong> — os valores do recorte estão na tabela.</div>` : ''}
-          <div class="raiox-kpis">
-            <div class="raiox-kpi">Produzido<strong class="mono">${fmtR(a.produzido)}</strong></div>
-            <div class="raiox-kpi">Esperado<strong class="mono">${fmtR(a.esperado)}</strong></div>
-            <div class="raiox-kpi">Pago<strong class="mono">${fmtR(a.pago)}</strong></div>
-            <div class="raiox-kpi">Falta<strong class="mono ${a.falta > 0 ? 'texto-erro' : 'texto-ok'}">${fmtR(a.falta)}</strong></div>
-            <div class="raiox-kpi">Status<strong>${badge(a.status)}</strong></div>
-          </div>
-          <div class="separador"></div>
-          <div class="raiox-rotulo">Item a item (produção × regra × pagamento)</div>
-          <div class="rolagem-x"><table class="tabela"><thead><tr>
-            <th>Procedimento</th><th>Papel</th><th>Profissional</th><th>Fonte</th>
-            <th class="num">Produzido</th><th>Regra</th>
-            <th class="num">Esperado</th><th class="num">Pago</th><th class="num">Diferença</th><th>Status</th>
-          </tr></thead><tbody>
-            ${a.itens.map(i => `<tr>
-              <td>${esc(i.procedimento)}${i.quantidade > 1 ? ' <span class="texto-cinza">×' + i.quantidade + '</span>' : ''}</td>
-              <td>${esc(i.papel)}</td>
-              <td>${esc(i.medico || '—')}${!i.medico && i.regra && i.status !== 'GLOSA' ? '<br><span class="texto-aviso" style="font-size:10px">papel exigido sem profissional na produção</span>' : ''}</td>
-              <td>${esc(i.fonte)}</td>
-              <td class="num">${i.valorProducao ? fmtR(i.valorProducao) : '—'}</td>
-              <td>${regraTxt(i)}</td>
-              <td class="num">${i.esperado != null ? fmtR(i.esperado) : '—'}</td>
-              <td class="num">${i.pago ? fmtR(i.pago) : (i.pagoOutro ? '<span class="texto-aviso">' + fmtR(i.pagoOutro) + '*</span>' : '—')}</td>
-              <td class="num ${i.diferenca > 0 ? 'texto-erro' : (i.diferenca < 0 ? 'texto-aviso' : '')}">${i.diferenca != null && Math.abs(i.diferenca) > 0.009 ? fmtR(i.diferenca) : '—'}</td>
-              <td>${badge(i.status)}${i.motivo && MOTIVO_ROTULO[i.motivo]
-                ? `<br><span class="texto-cinza" style="font-size:10px">${esc(MOTIVO_ROTULO[i.motivo])}${i.pagoA ? ' (' + esc(i.pagoA) + ')' : ''}</span>` : ''}</td>
-            </tr>`).join('')}
-          </tbody></table></div>
-        </div>
-        <div class="modal-rodape">
-          ${naPauta
-            ? `<span class="badge badge-${esc(pauta.get(String(a.admissao)))}" style="align-self:center">📌 já na pauta — ${esc(pauta.get(String(a.admissao)))}</span>`
-            : `<button class="botao" id="rx-pauta">📌 Adicionar à pauta de cobrança</button>`}
-          <button class="botao botao-marinho" id="rx-fechar">Fechar</button>
+    const blocoCheck = (id, titulo, itens, campo, chaveCfg, selecionados, chaveDoItem) => `
+      <div class="lat-bloco">
+        <div class="lat-bloco-titulo">${titulo}<span class="n">${selecionados.size ? selecionados.size + ' filtrado(s)' : 'todos'}</span></div>
+        <input class="lat-busca" data-busca="${id}" placeholder="buscar…" value="${esc(busca(id))}">
+        <div class="lat-lista">
+          ${filtra(itens, id, campo).slice(0, 80).map(x => {
+            const chave = chaveDoItem(x);
+            return `<label class="lat-item"><input type="checkbox" data-cfg="${chaveCfg}" value="${esc(chave)}"
+              ${selecionados.has(chave) ? 'checked' : ''}> <span>${esc(x[campo])}</span>
+              ${x.n ? `<span class="conta">×${x.n}</span>` : ''}</label>`;
+          }).join('') || '<div class="texto-cinza" style="font-size:11px">nada encontrado</div>'}
         </div>
       </div>`;
-    document.body.appendChild(ov);
 
-    const fechar = () => ov.remove();
-    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
-    ov.querySelector('#rx-fechar').addEventListener('click', fechar);
-    ov.addEventListener('click', (e) => { if (e.target === ov) fechar(); });
+    lat.innerHTML = `
+      <div class="lat-titulo">🗂 Planilha do médico
+        <button class="fechar" id="lat-fechar" title="recolher">✕</button></div>
+      <div class="lat-acoes">
+        <label class="botao botao-mini" style="cursor:pointer">📥 Importar
+          <input type="file" id="lat-importar" accept=".xlsx,.xls,.csv" style="display:none"></label>
+        <button class="botao botao-mini botao-ouro" id="lat-exportar" ${st.exportando ? 'disabled' : ''}>📤 Exportar</button>
+        <button class="botao botao-mini botao-perigo" id="lat-limpar">Limpar</button>
+      </div>
+      <label class="lat-item" style="margin-bottom:10px">
+        <input type="checkbox" id="lat-flag" ${flagFaltante() ? 'checked' : ''}>
+        <span>Adicionar <strong>Repasse faltante</strong> na extração</span></label>
 
-    const btnPauta = ov.querySelector('#rx-pauta');
-    if (btnPauta) btnPauta.addEventListener('click', () => {
-      Banco.executar(
-        `INSERT INTO pauta_inspecao (cliente_id, hospital_id, admissao, situacao, valor_apurado, anotacao)
-         VALUES (?, ?, ?, 'PENDENTE', ?, ?)
-         ON CONFLICT(cliente_id, admissao) DO UPDATE SET
-           valor_apurado = excluded.valor_apurado, atualizado_em = CURRENT_TIMESTAMP`,
-        [cliente.id, a.hospital_id, String(a.admissao), a.falta,
-          a.itens.filter(i => i.falta > 0).map(i => `${i.papel} · ${i.procedimento} · falta ${fmtR(i.falta)}`).join(' | ')]);
-      Banco.salvarDebounced();
-      Utilidades.toast('Admissão adicionada à pauta.', 'ok');
-      fechar();
-      void r;
+      <div class="lat-bloco">
+        <div class="lat-bloco-titulo">⚡ Alertas de papel (vigias)<span class="n">${vigias.length}</span></div>
+        ${vigias.map((v, i) => `<div class="lat-vigia">👁 <strong>${esc(v.produto)}</strong>
+          · ${PAPEL_ROTULO[v.papel] || esc(v.papel)}
+          <button class="x" data-vigia-rem="${i}" title="remover">✕</button></div>`).join('')}
+        <div style="display:flex;gap:5px;margin-top:6px">
+          <input class="lat-busca" id="vigia-prod" list="lista-produtos" placeholder="produto…" style="margin:0;flex:1">
+          <select class="entrada" id="vigia-papel" style="font-size:11px;padding:4px">
+            ${['TODOS', ...U().PAPEIS].map(p => `<option value="${p}">${PAPEL_ROTULO[p] || p}</option>`).join('')}
+          </select>
+          <button class="botao botao-mini" id="vigia-add">＋</button>
+        </div>
+        <datalist id="lista-produtos">${produtos.slice(0, 400).map(p => `<option value="${esc(p.produto)}">`).join('')}</datalist>
+      </div>
+
+      ${blocoCheck('med', '🩺 Médicos (recorte)', medicos, 'nome', CFG.medSel, medSel, x => x.k)}
+      ${blocoCheck('papel', '🎭 Participação (recorte)',
+        U().PAPEIS.map(p => ({ papel: p, nome: PAPEL_ROTULO[p] || p })), 'nome', CFG.papelSel, papelSel, x => x.papel)}
+      ${blocoCheck('psit', '📌 Produtos na Situação', produtos, 'produto', CFG.prodSit, prodSit, x => U().normalizar(x.produto))}
+      ${blocoCheck('pcol', '🧾 Coluna de produtos (extração)', produtos, 'produto', CFG.prodSel, prodSel, x => U().normalizar(x.produto))}
+
+      <div class="lat-bloco">
+        <div class="lat-bloco-titulo">Admissões da pauta<span class="n">${pauta.length}</span></div>
+        <div class="lat-lista" style="max-height:320px">
+          ${pauta.length ? pauta.map((p, i) => {
+            const pend = !d.repPor.has(U().normAdm(p.admissao));
+            return `<button class="lat-pauta-item ${pend ? 'pendente' : ''} ${st.admAtual === U().normAdm(p.admissao) ? 'ativa' : ''}"
+              data-pauta="${i}" ${pend ? `title="${DICA_PENDENTE}"` : ''}>
+              <span class="cod mono">${esc(p.admissao)}</span>
+              <span class="quem">${esc(pacEx(p.paciente || ''))}</span>
+              <span class="quando">${p.data ? Utilidades.dataExibir(p.data) : ''}</span>
+            </button>`;
+          }).join('') : '<div class="texto-cinza" style="font-size:11px">Importe a planilha do médico — a lista de admissões aparece aqui e viaja no banco.</div>'}
+        </div>
+      </div>`;
+
+    // handlers
+    lat.querySelector('#lat-fechar').addEventListener('click', () => { st.latAberta = false; render(); });
+    lat.querySelector('#lat-importar').addEventListener('change', importarPauta);
+    lat.querySelector('#lat-exportar').addEventListener('click', exportarExtracao);
+    lat.querySelector('#lat-limpar').addEventListener('click', () => {
+      if (!lerPauta().length) return;
+      if (!confirm('Limpar a pauta importada?')) return;
+      cfgGravar(CFG.pauta, []);
       render();
+    });
+    lat.querySelector('#lat-flag').addEventListener('change', (e) => {
+      cfgGravar(CFG.flagFaltante, e.target.checked ? '1' : '0');
+    });
+    lat.querySelectorAll('[data-busca]').forEach(inp => inp.addEventListener('input', (e) => {
+      st.buscas[inp.dataset.busca] = e.target.value;
+      clearTimeout(st._tl); st._tl = setTimeout(renderLateral, 250);
+    }));
+    lat.querySelectorAll('[data-cfg]').forEach(cb => cb.addEventListener('change', () => {
+      const chave = cb.dataset.cfg;
+      const set = lerSet(chave);
+      if (cb.checked) set.add(cb.value); else set.delete(cb.value);
+      gravarSet(chave, set);
+      render();   // recortes mudam stats/diagnóstico
+    }));
+    lat.querySelectorAll('[data-vigia-rem]').forEach(b => b.addEventListener('click', () => {
+      const v = lerVigias(); v.splice(Number(b.dataset.vigiaRem), 1);
+      cfgGravar(CFG.vigias, v); render();
+    }));
+    lat.querySelector('#vigia-add').addEventListener('click', () => {
+      const prod = lat.querySelector('#vigia-prod').value.trim();
+      const papel = lat.querySelector('#vigia-papel').value;
+      if (!prod) { Utilidades.toast('Informe o produto a vigiar.', 'aviso'); return; }
+      const v = lerVigias(); v.push({ produto: prod, papel });
+      cfgGravar(CFG.vigias, v); render();
+    });
+    lat.querySelectorAll('[data-pauta]').forEach(b => b.addEventListener('click', () => {
+      const p = lerPauta()[Number(b.dataset.pauta)];
+      if (!p) return;
+      st.admAtual = U().normAdm(p.admissao); st.admAtualRotulo = String(p.admissao);
+      st.candidatas = null; render();
+    }));
+  }
+
+  let _prodMemo = { versao: -1, lista: null };
+  function produtosDoCliente() {
+    if (_prodMemo.versao === Banco._versao && _prodMemo.lista) return _prodMemo.lista;
+    const NAO = new Set(['MATERIAL', 'MEDICAMENTO', 'MAT MED', 'MATMED', 'MAT/MED', 'TAXA', 'OPME', 'GAS', 'DIARIA']);
+    const rows = Banco.query(
+      `SELECT procedimento AS produto, classificacao, COUNT(*) AS n FROM linhas_producao
+        WHERE cliente_id = ? GROUP BY procedimento_norm ORDER BY n DESC LIMIT 2000`, [clienteId]);
+    _prodMemo = { versao: Banco._versao, lista: rows
+      .filter(r => !NAO.has(U().normalizar(r.classificacao)))
+      .map(r => ({ produto: String(r.produto).trim(), n: r.n })) };
+    return _prodMemo.lista;
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // IMPORTAÇÃO DA PLANILHA DO MÉDICO — 3 formatos (spec §6)
+  // ────────────────────────────────────────────────────────────────────
+  async function importarPauta(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    e.target.value = '';
+    try {
+      Utilidades.loading.mostrar('Lendo a planilha do médico…');
+      const { matriz } = Importador.lerPlanilha(await f.arrayBuffer());
+      const pauta = detectarPauta(matriz);
+      if (!pauta.length) throw new Error('Nenhuma admissão reconhecida na planilha.');
+      cfgGravar(CFG.pauta, pauta);
+      Utilidades.toast(`${pauta.length} admissão(ões) na pauta.`, 'ok');
+      render();
+    } catch (err) {
+      console.error(err);
+      Utilidades.toast('Importação falhou: ' + (err.message || err), 'erro', 5000);
+    } finally {
+      Utilidades.loading.esconder();
+    }
+  }
+
+  function detectarPauta(matriz) {
+    const norm = (s) => U().normalizar(s);
+    const ATE = Math.min(matriz.length, 15);
+
+    // formato 1: colunas NOME + DATA · formato 2: coluna ADMISSÃO
+    for (let i = 0; i < ATE; i++) {
+      const linha = (matriz[i] || []).map(c => norm(c));
+      const colNome = linha.findIndex(c => /\b(PACIENTE|NOME)\b/.test(c));
+      const colData = linha.findIndex(c => /\b(DATA|ATENDIMENTO)\b/.test(c) && !/NASC/.test(c));
+      if (colNome >= 0 && colData >= 0) return pautaPorNomeData(matriz, i, colNome, colData);
+      const colAdm = linha.findIndex(c => (/ADMISS/.test(c) || /^COD/.test(c) || /^N /.test(c)) && !/DATA/.test(c));
+      if (colAdm >= 0) return pautaPorAdmissao(matriz, i, colAdm);
+    }
+    // formato 3: sem cabeçalho — toda célula com 5+ dígitos é admissão
+    const achadas = new Set();
+    for (const linha of matriz) {
+      for (const cel of (linha || [])) {
+        const dig = String(cel == null ? '' : cel).replace(/\.0+$/, '').replace(/\D/g, '');
+        if (dig.length >= 5) achadas.add(dig.replace(/^0+/, '') || dig);
+      }
+    }
+    return resolverPelaProducao([...achadas].map(a => ({ admissao: a })));
+  }
+
+  function pautaPorNomeData(matriz, linhaCab, colNome, colData) {
+    const alvo = [];
+    for (let i = linhaCab + 1; i < matriz.length; i++) {
+      const nome = String((matriz[i] || [])[colNome] || '').trim();
+      const data = U().paraDataISO((matriz[i] || [])[colData]);
+      if (nome) alvo.push({ nomeN: U().normalizar(nome), nome, data });
+    }
+    if (!alvo.length) return [];
+    const datas = [...new Set(alvo.map(a => a.data).filter(Boolean))];
+    const marcas = datas.map(() => '?').join(',');
+    const rows = datas.length ? Banco.query(
+      `SELECT admissao, paciente, data FROM linhas_producao
+        WHERE cliente_id = ? AND data IN (${marcas}) GROUP BY admissao, paciente, data`,
+      [clienteId, ...datas]) : [];
+    const pauta = [];
+    const vistos = new Set();
+    for (const a of alvo) {
+      const hit = rows.find(r => r.data === a.data && (() => {
+        const pn = U().normalizar(r.paciente);
+        return pn.includes(a.nomeN) || a.nomeN.includes(pn);
+      })());
+      const item = hit
+        ? { admissao: String(hit.admissao).trim(), paciente: hit.paciente, data: hit.data }
+        : { admissao: '', paciente: a.nome, data: a.data, naoEncontrada: true };
+      const k = item.admissao || (a.nomeN + '|' + a.data);
+      if (item.admissao && !vistos.has(k)) { vistos.add(k); pauta.push(item); }
+    }
+    return pauta;
+  }
+
+  function pautaPorAdmissao(matriz, linhaCab, colAdm) {
+    const adms = [];
+    const vistos = new Set();
+    for (let i = linhaCab + 1; i < matriz.length; i++) {
+      const bruto = String((matriz[i] || [])[colAdm] || '').trim();
+      const k = U().normAdm(bruto);
+      if (!k || vistos.has(k)) continue;
+      vistos.add(k);
+      adms.push({ admissao: bruto });
+    }
+    return resolverPelaProducao(adms);
+  }
+
+  /** paciente/data resolvidos pela produção (ou repasse). */
+  function resolverPelaProducao(adms) {
+    const d = dados();
+    return adms.map(a => {
+      const k = U().normAdm(a.admissao);
+      const p = (d.prodPor.get(k) || [])[0] || (d.repPor.get(k) || [])[0] || {};
+      return { admissao: String(a.admissao).trim(), paciente: p.paciente || '', data: p.data || '' };
     });
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // PAUTA (vigias)
+  // EXTRAÇÃO — Inspecao_planilha_medico.xlsx (ExcelJS, spec §5)
   // ────────────────────────────────────────────────────────────────────
-  function renderPauta(corpo, r) {
-    const itens = Banco.query(
-      `SELECT p.*, h.nome AS hospital FROM pauta_inspecao p
-       LEFT JOIN hospitais h ON h.id = p.hospital_id
-       WHERE p.cliente_id = ?
-       ORDER BY CASE p.situacao WHEN 'PENDENTE' THEN 0 WHEN 'COBRADO' THEN 1
-                WHEN 'RESOLVIDO' THEN 2 ELSE 3 END, p.criado_em DESC`, [cliente.id]);
-    const porAdm = new Map(r.admissoes.map(a => [String(a.admissao), a]));
-    const SITUACOES = ['PENDENTE', 'COBRADO', 'RESOLVIDO', 'DESCARTADO'];
-
-    corpo.innerHTML = `
-      <div class="painel">
-        <div class="painel-cabecalho">
-          <span class="painel-titulo">📌 Pauta de cobrança</span>
-          <span class="painel-conta">${itens.length} admissão(ões) em acompanhamento</span>
-        </div>
-        ${itens.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
-            <th>Admissão</th><th>Hospital</th><th class="num">Falta apurada</th>
-            <th class="num">Falta atual</th><th>Situação</th><th>Anotação</th><th></th>
-          </tr></thead><tbody>
-          ${itens.map(p => {
-            const atual = porAdm.get(String(p.admissao));
-            return `<tr>
-              <td class="mono"><strong>${esc(p.admissao)}</strong></td>
-              <td>${esc(p.hospital || '—')}</td>
-              <td class="num">${fmtR(p.valor_apurado || 0)}</td>
-              <td class="num ${atual && atual.falta > 0 ? 'texto-erro' : 'texto-ok'}">${atual ? fmtR(atual.falta) : '<span class="texto-cinza">fora do filtro</span>'}</td>
-              <td><select class="entrada" data-sit="${p.id}">
-                ${SITUACOES.map(s => `<option ${s === p.situacao ? 'selected' : ''}>${s}</option>`).join('')}
-              </select></td>
-              <td><input class="entrada" style="width:100%" data-nota="${p.id}" value="${esc(p.anotacao || '')}" placeholder="anotação"></td>
-              <td style="text-align:right"><button class="botao botao-mini botao-perigo" data-rem="${p.id}">remover</button></td>
-            </tr>`;
-          }).join('')}
-          </tbody></table></div>` :
-        `<div class="tabela-vazia">Pauta vazia — abra o raio-x de uma admissão com pendência e
-          use <strong>“Adicionar à pauta de cobrança”</strong>.</div>`}
-      </div>`;
-
-    corpo.querySelectorAll('[data-sit]').forEach(s => s.addEventListener('change', () => {
-      Banco.executar('UPDATE pauta_inspecao SET situacao=?, atualizado_em=CURRENT_TIMESTAMP WHERE id=?',
-        [s.value, Number(s.dataset.sit)]);
-      Banco.salvarDebounced();
-    }));
-    corpo.querySelectorAll('[data-nota]').forEach(n => n.addEventListener('change', () => {
-      Banco.executar('UPDATE pauta_inspecao SET anotacao=?, atualizado_em=CURRENT_TIMESTAMP WHERE id=?',
-        [n.value, Number(n.dataset.nota)]);
-      Banco.salvarDebounced();
-    }));
-    corpo.querySelectorAll('[data-rem]').forEach(b => b.addEventListener('click', () => {
-      if (!confirm('Remover esta admissão da pauta?')) return;
-      Banco.executar('DELETE FROM pauta_inspecao WHERE id=?', [Number(b.dataset.rem)]);
-      Banco.salvarDebounced();
-      renderPauta(corpo, r);
-    }));
-  }
-
-  // ────────────────────────────────────────────────────────────────────
-  function renderSemLastro(corpo, r) {
-    corpo.innerHTML = `
-      <div class="info-caixa">Pagamentos de admissões que <strong>não existem na produção
-      importada</strong> do cliente. Ou a produção correspondente ainda não foi importada,
-      ou o pagamento é de outro contexto — vale conferir. (Os filtros de médico/status/busca
-      não se aplicam aqui: sem produção, não há recorte.)</div>
-      <div class="painel">
-        <div class="painel-cabecalho"><span class="painel-titulo">Repasses sem lastro na produção</span>
-          <span class="painel-conta">${r.semProducao.length} admissão(ões)</span></div>
-        ${r.semProducao.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
-            <th>Admissão</th><th class="num">Linhas de repasse</th><th class="num">Total pago</th>
-          </tr></thead><tbody>
-          ${r.semProducao.map(sp => `<tr>
-            <td class="mono"><strong>${esc(sp.admissao)}</strong></td>
-            <td class="num">${sp.nLinhas}</td>
-            <td class="num">${fmtR(sp.pago)}</td></tr>`).join('')}
-          </tbody></table></div>` :
-        `<div class="tabela-vazia">Nenhum — todo pagamento tem produção correspondente. ✓</div>`}
-      </div>`;
-  }
-
-  // ────────────────────────────────────────────────────────────────────
-  function exportarPendencias(r) {
-    const lista = filtrarAdmissoes(r);
-    const linhas = [[
-      'ADMISSÃO', 'DATA', 'PACIENTE', 'HOSPITAL', 'COMPETÊNCIA', 'PROCEDIMENTO', 'PAPEL',
-      'PROFISSIONAL', 'FONTE', 'VALOR PRODUÇÃO', 'REGRA', 'ESPERADO', 'PAGO', 'FALTA', 'STATUS',
-    ]];
-    const hospNome = new Map(App.listarHospitais(cliente.id).map(h => [h.id, h.nome]));
-    for (const x of lista) {
-      for (const i of x.v.itens) {
-        if (!(i.status === 'NAO_PAGO' || i.status === 'PAGO_A_OUTRO' ||
-              i.status === 'A_MENOR' || i.status === 'SEM_REGRA')) continue;
-        linhas.push([
-          String(x.a.admissao), Utilidades.dataExibir(i.data), i.paciente || '',
-          hospNome.get(i.hospital_id) || '', Utilidades.compExibir(i.competencia),
-          i.procedimento, i.papel, i.medico || '', i.fonte,
-          i.valorProducao || 0,
-          i.regra ? (i.regra.origem === 'BASE' ? 'BASE TABELA' : `PADRÃO INFERIDO (${Math.round((i.regra.confianca || 0) * 100)}%)`) : 'SEM REGRA',
-          i.esperado != null ? i.esperado : '', i.pago || 0, i.falta || 0,
-          (STATUS_ROTULO[i.status] || i.status) +
-            (i.motivo === 'pago_a_outro' && i.pagoA ? ' — pago a ' + i.pagoA : ''),
-        ]);
-      }
+  async function exportarExtracao() {
+    if (st.exportando) return;
+    const pauta = lerPauta();
+    if (!pauta.length) { Utilidades.toast('Importe a planilha do médico primeiro — a pauta está vazia.', 'aviso'); return; }
+    if (typeof ExcelJS === 'undefined') { Utilidades.toast('Gerador de planilha ainda carregando — tente em 2s.', 'aviso'); return; }
+    st.exportando = true;
+    try {
+      const wb = await gerarExtracao(pauta, (feitas, total) =>
+        Utilidades.loading.mostrar(`Analisando… ${feitas}/${total}`));
+      Utilidades.loading.mostrar('Montando planilha…');
+      const buf = await wb.xlsx.writeBuffer();
+      Utilidades.baixarArquivo('Inspecao_planilha_medico.xlsx', buf,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      Utilidades.toast('Extração gerada.', 'ok');
+    } catch (err) {
+      console.error(err);
+      Utilidades.toast('Extração falhou: ' + (err.message || err), 'erro', 6000);
+    } finally {
+      st.exportando = false;
+      Utilidades.loading.esconder();
+      renderLateral();
     }
-    if (linhas.length === 1) { Utilidades.toast('Nenhuma pendência nos filtros atuais.', 'info'); return; }
-    linhas.push([]);
-    linhas.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL FALTA:',
-      '', '', lista.reduce((s, x) => s + x.v.falta, 0), '']);
-    const sufMed = st.medico ? '_' + st.medico.replace(/ /g, '_') : '';
-    Utilidades.exportarXLSX(
-      `ATLAS_pendencias_${Utilidades.normalizar(cliente.nome).replace(/ /g, '_')}${sufMed}_${st.competencia || 'todas'}.xlsx`,
-      [{
-        nome: 'Pendências', linhas,
-        formatos: { moeda: [9, 11, 12, 13] },
-        larguras: [12, 11, 26, 20, 11, 38, 12, 26, 11, 13, 22, 12, 12, 12, 14],
-      }]);
-    Utilidades.toast('Planilha de pendências exportada.', 'ok');
   }
 
-  render();
-};
+  /** Monta o Workbook (separado do download para os testes conferirem). */
+  async function gerarExtracao(pauta, progresso) {
+    const comFaltante = flagFaltante();
+    const vigias = lerVigias();
+    const prodSel = [...lerSet(CFG.prodSel)];
+    const AZUL = 'FF' + AZUL_SPEC, BRANCO = 'FFFFFFFF', ZEBRA = 'FFF2F0EA', VERM = 'FFA33C3C';
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Inspeção', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+    const cols = [
+      { header: 'ADMISSÃO', key: 'adm', width: 14 },
+      { header: 'NOME DO PACIENTE', key: 'pac', width: 30 },
+      { header: 'DATA', key: 'data', width: 12 },
+      { header: 'TIPO DE RECEBIMENTO', key: 'fonte', width: 16 },
+      { header: 'CONVÊNIO', key: 'conv', width: 20 },
+      { header: 'SITUAÇÃO', key: 'sit', width: 90 },
+    ];
+    for (const p of prodSel) cols.push({ header: ('PRODUTO · ' + p).slice(0, 60).toUpperCase(), key: 'p_' + p, width: 26 });
+    if (vigias.length) cols.push({ header: 'PRODUÇÃO', key: 'temProd', width: 11 });
+    if (comFaltante) cols.push({ header: 'REPASSE FALTANTE', key: 'falt', width: 18 });
+    ws.columns = cols;
+    estilizarCabecalho(ws, AZUL, BRANCO);
+
+    const confirmacoes = [];   // aba Resumo: uma linha por admissão × alerta
+    const valorRepassar = []; // aba Valor a Repassar
+    let nPagas = 0, nAguard = 0, nComAlerta = 0, zebra = false;
+
+    const LOTE = 40;
+    for (let i = 0; i < pauta.length; i += LOTE) {
+      for (const p of pauta.slice(i, i + LOTE)) {
+        const insp = inspecionar(p.admissao);
+        if (insp.tom === 'ok') nPagas++;
+        if (insp.tom === 'aviso') nAguard++;
+
+        const fontes = [...new Set(insp.prod.map(l => l.fonte).filter(Boolean))];
+        if (!fontes.length) fontes.push(...new Set(insp.rep.map(l => l.fonte).filter(Boolean)));
+        if (!fontes.length) fontes.push('CONVENIO');
+
+        let admTemAlerta = false;
+        for (const fonte of fontes) {
+          const alertas = alertasDe(insp, { fonte });
+          if (alertas.some(a => a.grave)) admTemAlerta = true;
+          const falt = faltanteDe(insp, fonte);
+          const linha = {
+            adm: String(p.admissao),
+            pac: p.paciente || (insp.prod[0] ? insp.prod[0].paciente : ''),
+            data: p.data ? Utilidades.dataExibir(p.data) : (insp.prod[0] ? Utilidades.dataExibir(insp.prod[0].data) : ''),
+            fonte,
+            conv: [...new Set(insp.prod.filter(l => l.fonte === fonte).map(l => l.convenio).filter(Boolean))].join(', '),
+            sit: { richText: situacaoRich(insp, fonte, alertas) },
+          };
+          for (const ps of prodSel) linha['p_' + ps] = papeisDoProduto(insp, ps, fonte);
+          if (vigias.length) {
+            linha.temProd = vigias.some(v => insp.prod.some(l => l.fonte === fonte &&
+              U().normalizar(l.procedimento).includes(U().normalizar(v.produto)))) ? 'Sim' : 'Não';
+          }
+          if (comFaltante) linha.falt = falt;
+          const row = ws.addRow(linha);
+          row.alignment = { vertical: 'middle' };
+          row.getCell('sit').alignment = { vertical: 'top', wrapText: true };
+          const nLinhasTxt = linha.sit.richText.reduce((s, seg) => s + (String(seg.text).match(/\n/g) || []).length, 1);
+          row.height = Math.min(180, Math.max(20, nLinhasTxt * 13));
+          if (comFaltante) {
+            const c = row.getCell('falt');
+            c.numFmt = '"R$" #,##0.00';
+            if (falt > 0) c.font = { bold: true, color: { argb: VERM } };
+            else c.font = { color: { argb: 'FF8A8A8A' } };
+          }
+          if (zebra) row.eachCell({ includeEmpty: true }, (c) =>
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } });
+          zebra = !zebra;
+
+          for (const a of alertas.filter(x => x.grave)) {
+            confirmacoes.push([String(p.admissao), linha.pac, linha.data,
+              a.item.procedimento, PAPEL_ROTULO[a.item.papel] || a.item.papel, a.texto]);
+          }
+          if (comFaltante && insp.mAdm) {
+            const grupos = new Map();
+            for (const it of insp.mAdm.itens) {
+              if (!(it.falta > 0) || it.fonte !== fonte) continue;
+              if (!grupos.has(it.procedimento)) grupos.set(it.procedimento, []);
+              grupos.get(it.procedimento).push(it);
+            }
+            for (const [proc, itens] of grupos) {
+              valorRepassar.push([String(p.admissao), linha.pac, linha.data, proc,
+                itens.map(it => `${PAPEL_ROTULO[it.papel] || it.papel} ${fmtR(it.falta)}` +
+                  ` · ${it.medico || 'Médico não informado'}` +
+                  (it.motivo === 'pago_a_outro' && it.pagoA ? ` · pago a ${it.pagoA}` : '')).join('  |  '),
+                itens[0].regra && itens[0].regra.origem === 'INFERIDA' ? 'padrão inferido' : 'tabela atual',
+                itens.reduce((s, it) => s + it.falta, 0)]);
+            }
+          }
+        }
+        if (admTemAlerta) nComAlerta++;
+      }
+      if (progresso) progresso(Math.min(i + LOTE, pauta.length), pauta.length);
+      await new Promise(r => setTimeout(r, 0));   // cede a thread entre lotes
+    }
+
+    // ── aba Resumo ──
+    const wr = wb.addWorksheet('Resumo');
+    wr.columns = [{ width: 16 }, { width: 34 }, { width: 12 }, { width: 40 }, { width: 18 }, { width: 70 }];
+    const tit = (txt) => { const r = wr.addRow([txt]); r.font = { bold: true, size: 12, color: { argb: AZUL } }; };
+    tit('PANORAMA DA LISTA');
+    wr.addRow(['Admissões analisadas', pauta.length]);
+    wr.addRow(['Pagas no repasse', nPagas]);
+    wr.addRow(['Aguardando pagamento do convênio ou conciliação', nAguard]);
+    wr.addRow(['Admissões com algum papel não pago', nComAlerta]);
+    wr.addRow([]);
+    tit('COMO LER O PANORAMA');
+    wr.addRow(['As linhas medem conjuntos diferentes — elas não se somam para fechar o total.']);
+    wr.addRow([]);
+    tit('CONFIRMAÇÕES SOBRE PAPÉIS NÃO PAGOS');
+    const cab = wr.addRow(['ADMISSÃO', 'NOME DO PACIENTE', 'DATA', 'PROCEDIMENTO', 'PAPEL EXIGIDO', 'DIAGNÓSTICO']);
+    cab.font = { bold: true, color: { argb: BRANCO } };
+    cab.eachCell(c => c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL } });
+    for (const c of confirmacoes) wr.addRow(c);
+
+    // ── aba Valor a Repassar (só com a flag) ──
+    if (comFaltante) {
+      const wv = wb.addWorksheet('Valor a Repassar', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+      wv.columns = [
+        { header: 'ADMISSÃO', width: 14 }, { header: 'NOME DO PACIENTE', width: 32 },
+        { header: 'DATA', width: 12 }, { header: 'PROCEDIMENTO', width: 40 },
+        { header: 'PAPÉIS FALTANTES', width: 60 }, { header: 'VERSÃO DA TABELA', width: 18 },
+        { header: 'VALOR A REPASSAR', width: 18 },
+      ];
+      estilizarCabecalho(wv, AZUL, BRANCO);
+      let total = 0;
+      for (const v of valorRepassar) {
+        const r = wv.addRow(v);
+        r.getCell(7).numFmt = '"R$" #,##0.00';
+        total += Number(v[6]) || 0;
+      }
+      const rt = wv.addRow(['', '', '', '', '', 'TOTAL A REPASSAR', total]);
+      rt.font = { bold: true };
+      rt.getCell(7).numFmt = '"R$" #,##0.00';
+      rt.getCell(7).font = { bold: true, color: { argb: VERM } };
+    }
+    return wb;
+  }
+
+  function estilizarCabecalho(ws, azul, branco) {
+    const h = ws.getRow(1);
+    h.height = 22;
+    h.eachCell((c) => {
+      c.font = { bold: true, color: { argb: branco } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: azul } };
+      c.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+  }
+
+  /** SITUAÇÃO em rich text — título azul negrito + corpo (frases fixas). */
+  function situacaoRich(insp, fonte, alertas) {
+    const seg = [];
+    const azul = { bold: true, color: { argb: 'FF' + AZUL_SPEC } };
+    if (insp.tom === 'ok') {
+      const comps = insp.compsPagas.map(Utilidades.compExibir).join(', ');
+      seg.push({ font: azul, text: `Paga no repasse de ${comps || '—'} — ${fmtR(insp.totalRepassado)}.` });
+    } else if (fonte === 'PARTICULAR' && insp.tom !== 'nada') {
+      seg.push({ font: azul, text: FRASE_PARTICULAR + '.' });
+    } else if (insp.tom === 'aviso' || insp.tom === 'etapa') {
+      seg.push({ font: azul, text: FRASE_AGUARDANDO + '.' });
+    } else {
+      seg.push({ font: azul, text: FRASE_NADA + '.' });
+    }
+    for (const a of alertas) {
+      seg.push({ font: a.grave ? { bold: true, color: { argb: 'FFA33C3C' } } : {},
+        text: '\n' + (a.grave ? '⚠ ' : '') + a.texto });
+    }
+    // lista analítica compacta do que foi pago nesta fonte
+    const pagos = insp.rep.filter(l => l.fonte === fonte && Number(l.repassado) > 0);
+    if (pagos.length) {
+      const partes = pagos.slice(0, 12).map(l =>
+        `${l.procedimento} — ${l.papel_canon || l.papel || '—'} ${fmtR(l.repassado)}${l.medico ? ' (' + l.medico + ')' : ''}`);
+      seg.push({ font: { color: { argb: 'FF5D6B7E' } }, text: '\n' + partes.join('\n') });
+    }
+    // sem nada no repasse: a descrição da admissão pela produção
+    if (!insp.rep.length && insp.prod.length) {
+      const classes = [...new Set(insp.prod.filter(l => l.fonte === fonte)
+        .map(l => U().normalizar(l.classificacao)).filter(Boolean))];
+      if (classes.length) seg.push({ font: { color: { argb: 'FF5D6B7E' } },
+        text: '\nProdução da admissão: ' + classes.join(', ') + '.' });
+    }
+    return seg;
+  }
+
+  /** Coluna extra [PRODUTO · PAPÉIS]: os papéis que a regra remunera. */
+  function papeisDoProduto(insp, produtoNorm, fonte) {
+    if (!insp.mAdm) return '—';
+    const papeis = [...new Set(insp.mAdm.itens
+      .filter(i => i.fonte === fonte && U().normalizar(i.procedimento).includes(produtoNorm) && i.esperado != null)
+      .map(i => PAPEL_ROTULO[i.papel] || i.papel))];
+    return papeis.length ? papeis.join(' · ') : '—';
+  }
+
+  return { montar, inspecionar, gerarExtracao, detectarPauta, _st: st };
+})();

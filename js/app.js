@@ -22,6 +22,7 @@
     { id: 'importar',   nome: 'Importações',  icone: '📥' },
     { id: 'base',       nome: 'Base Tabela',  icone: '📚' },
     { id: 'medicos',    nome: 'Médicos',      icone: '🩺' },
+    { id: 'auditoria',  nome: 'Auditoria',    icone: '📋' },
     { id: 'inspecao',   nome: 'Inspeção',     icone: '🔎', destaque: true },
     { id: 'relatorios', nome: 'Relatórios',   icone: '📄' },
     { id: 'sistema',    nome: 'Sistema',      icone: '⚙️' },
