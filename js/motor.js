@@ -40,6 +40,19 @@
  * mas só como SUGESTÃO na tela Base Tabela: entra no cálculo quando (e se) o
  * usuário promover o padrão a regra.
  *
+ * O CAMINHO DA ADMISSÃO (por que nem tudo que falta é dívida): recepção
+ * abre a admissão → faturista fatura → convênio audita → convênio paga (se
+ * não glosar) → a CONCILIAÇÃO quita o pagamento no sistema → só então a
+ * linha aparece no relatório do sistema. Isso leva meses: atendimento em
+ * maio pode ser recebido em outubro. Logo, admissão produzida que ainda NÃO
+ * apareceu em relatório nenhum do sistema não é dívida — está no caminho
+ * (status AGUARDANDO). Dívida é o que o sistema já mostra recebido e não
+ * repassou.
+ *
+ * Cada relatório mensal do sistema é o que será pago NAQUELE mês (o mês da
+ * competência); um mês não sobrepõe o outro, porque a admissão que ainda não
+ * foi quitada simplesmente não está no relatório.
+ *
  * Semântica do filtro de competência: filtra a PRODUÇÃO (mês do
  * atendimento). O repasse é buscado POR ADMISSÃO em todo o histórico —
  * produção de abril paga em junho conta como paga.
@@ -48,6 +61,9 @@
  *   OK            pago (a quem devia) dentro da tolerância
  *   A_MENOR       pago abaixo do esperado
  *   A_MAIOR       pago acima do esperado
+ *   AGUARDANDO    a admissão ainda não apareceu em relatório nenhum do
+ *                 sistema (faturamento/auditoria do convênio/conciliação) —
+ *                 não é dívida, é caminho
  *   NAO_PAGO      esperado > 0 e nada pago (motivo: nao_pago | sem_medico)
  *   PAGO_A_OUTRO  o papel foi pago, mas a outro médico — dívida continua
  *   GLOSA         procedimento glosado (Recebido = 0) — visível, valendo zero
@@ -66,7 +82,7 @@
 
   const SEVERIDADE = {
     NAO_PAGO: 8, PAGO_A_OUTRO: 7, A_MENOR: 6, SEM_REGRA: 5,
-    NAO_PAREADO: 4, A_MAIOR: 3, GLOSA: 2, OK: 0,
+    NAO_PAREADO: 4, A_MAIOR: 3, AGUARDANDO: 2.5, GLOSA: 2, OK: 0,
   };
 
   /** Classificações que NÃO passam pela cobrança papel-a-papel. */
@@ -455,6 +471,10 @@
         if (glosa && !(Number(lr.repassado) > 0)) lr._consumida = true;
       }
 
+      // a admissão nunca apareceu em relatório nenhum do sistema: ainda está
+      // no caminho (faturamento → convênio → conciliação), não é dívida
+      const aguardandoConciliacao = repAdm.length === 0;
+
       for (const lp of itensProd) {
         const base = basePorHosp.get(lp.hospital_id) || new Map();
         const procN = lp.procedimento_norm;
@@ -595,7 +615,7 @@
 
           // ── status (a ordem é a da metodologia — docs/METODOLOGIA.md) ──
           let status, motivo = null, esperado = esperadoBruto, falta = 0, dif = null;
-          let esperadoGlosa = 0;
+          let esperadoGlosa = 0, aguardando = 0;
           if (pago > 0) {
             dif = (esperado != null) ? Math.round((esperado - pago) * 100) / 100 : null;
             // sem regra conhecida, o valor repassado não prova nada: o sistema
@@ -619,6 +639,14 @@
             dif = esperado;
           } else if (esperado == null) {
             status = 'SEM_REGRA';
+          } else if (aguardandoConciliacao) {
+            // produzido, mas a admissão ainda não entrou em relatório nenhum
+            // do sistema — o convênio ainda não pagou ou a conciliação ainda
+            // não quitou. Não é dívida: é o caminho normal da admissão.
+            status = 'AGUARDANDO';
+            motivo = 'nao_conciliado';
+            aguardando = esperado;
+            dif = esperado;
           } else {
             status = 'NAO_PAGO';
             // o pagador pagou o procedimento e o repasse não saiu: é a
@@ -635,7 +663,7 @@
             procedimento: lp.procedimento, quantidade: lp.quantidade,
             valorProducao: lp.valor,
             papel: cand.papel, medico: nomeDono,
-            regra, esperado, esperadoGlosa, pago, pagoOutro, diferenca: dif, falta, status, motivo,
+            regra, esperado, esperadoGlosa, aguardando, pago, pagoOutro, diferenca: dif, falta, status, motivo,
             pagoA: [...nomesOutros].join(', '),
           };
           itens.push(item);
@@ -689,6 +717,9 @@
         // o que as regras pagariam nos itens glosados — não é dívida, é o
         // tamanho do que o pagador recusou
         glosado: itens.reduce((s, i) => s + (i.status === 'GLOSA' ? (i.esperadoGlosa || 0) : 0), 0),
+        // o que ainda está no caminho (admissão fora do sistema) — vira dívida
+        // só depois que o convênio pagar e a conciliação quitar
+        aguardando: itens.reduce((s, i) => s + (i.aguardando || 0), 0),
         // "pago" da admissão = tudo que saiu, inclusive ao médico errado
         pago: itens.reduce((s, i) => s + (i.pago || 0) + (i.pagoOutro || 0), 0),
         falta: itens.reduce((s, i) => s + (i.falta || 0), 0),
@@ -728,10 +759,12 @@
       // o que as regras pagariam nos itens GLOSADOS — não é dívida (o pagador
       // recusou), mas é o tamanho do que a glosa tirou do médico
       glosado: admissoes.reduce((s, a) => s + (a.glosado || 0), 0),
+      aguardando: admissoes.reduce((s, a) => s + (a.aguardando || 0), 0),
       nAdmissoes: admissoes.length,
       nPendencias: admissoes.filter(a => a.falta > tol).length,
       nSemRegra: admissoes.filter(a => a.status === 'SEM_REGRA').length,
       nGlosa: admissoes.filter(a => a.itens.some(i => i.status === 'GLOSA')).length,
+      nAguardando: admissoes.filter(a => a.status === 'AGUARDANDO').length,
     };
 
     const resultado = {

@@ -592,13 +592,47 @@
            AND NOT EXISTS (SELECT 1 FROM ${tabela} t WHERE t.importacao_id = importacoes.id)`,
         [tipo, p.hospitalId, ctx.impId]);
     }
+
+    /**
+     * PAGAMENTO REPETIDO ENTRE MESES. Cada relatório do sistema é o que será
+     * pago NAQUELE mês: um mês não sobrepõe o outro, porque a admissão que a
+     * conciliação ainda não quitou simplesmente não está no arquivo. Então
+     * uma linha igual (mesma admissão × procedimento × papel × origem) em
+     * DOIS meses do mesmo hospital é sinal de arquivo repetido ou exportado
+     * com o filtro errado — e o mesmo pagamento contado duas vezes infla o
+     * "pago" e esconde dívida. A ATLAS não apaga nada: avisa.
+     */
+    if (tipo === 'REPASSE') {
+      const d = Banco.query(
+        `SELECT COUNT(*) AS n, COUNT(DISTINCT a.admissao_norm) AS adms,
+                (SELECT GROUP_CONCAT(x, ', ') FROM (
+                   SELECT DISTINCT b2.competencia AS x FROM linhas_repasse b2
+                    WHERE b2.hospital_id = ? AND b2.importacao_id <> ? AND b2.competencia <> ?
+                    ORDER BY b2.competencia LIMIT 12)) AS meses
+           FROM linhas_repasse a
+          WHERE a.importacao_id = ?
+            AND EXISTS (SELECT 1 FROM linhas_repasse b
+                         WHERE b.hospital_id = a.hospital_id
+                           AND b.importacao_id <> a.importacao_id
+                           AND b.competencia <> a.competencia
+                           AND b.admissao_norm = a.admissao_norm
+                           AND b.procedimento_norm = a.procedimento_norm
+                           AND COALESCE(b.papel_canon, '') = COALESCE(a.papel_canon, '')
+                           AND COALESCE(b.fonte, '') = COALESCE(a.fonte, ''))`,
+        [p.hospitalId, ctx.impId, p.competencia || '', ctx.impId])[0] || {};
+      ctx.repetidas = Number(d.n) || 0;
+      ctx.admissoesRepetidas = Number(d.adms) || 0;
+      ctx.mesesRepetidos = ctx.repetidas ? String(d.meses || '') : '';
+    }
     return { inseridas: ctx.inseridas, competencias: [...ctx.comps].sort(), avisos: ctx.avisos, importacaoId: ctx.impId,
       linhasLidas: ctx.lidas,
       origem: tipo === 'REPASSE' ? (ctx.origem || 'TODAS') : null, divergentes: ctx.divergentes,
       admissoes: ctx.admissoes.size, produzido: Math.round(ctx.produzido * 100) / 100,
       repassado: Math.round(ctx.repassado * 100) / 100,
       temRecebido: ctx.temRecebido, recebido: Math.round(ctx.recebido * 100) / 100,
-      glosadas: ctx.glosadas, admissoesGlosadas: ctx.admGlosa.size };
+      glosadas: ctx.glosadas, admissoesGlosadas: ctx.admGlosa.size,
+      repetidas: ctx.repetidas || 0, admissoesRepetidas: ctx.admissoesRepetidas || 0,
+      mesesRepetidos: ctx.mesesRepetidos || '' };
   }
 
   /** Síncrona: p.matriz inteira em memória (testes, relatório do médico, base tabela). */

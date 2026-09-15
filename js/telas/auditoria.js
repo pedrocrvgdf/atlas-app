@@ -41,7 +41,7 @@ App.telas['auditoria'] = function () {
   const STATUS_ROTULO = {
     NAO_PAGO: 'NÃO PAGO', PAGO_A_OUTRO: 'PAGO A OUTRO', A_MENOR: 'PAGO A MENOR',
     SEM_REGRA: 'SEM REGRA', A_MAIOR: 'PAGO A MAIOR', NAO_PAREADO: 'SEM PAREAMENTO',
-    GLOSA: 'GLOSA', OK: 'OK',
+    AGUARDANDO: 'AGUARDANDO', GLOSA: 'GLOSA', OK: 'OK',
   };
   const SEM_BASE = 'Este hospital não tem <strong>nenhuma regra na Base Tabela</strong>. ' +
     'Sem tabela não há como saber quanto deveria ter sido repassado, então a ATLAS não cobra nada: ' +
@@ -53,6 +53,7 @@ App.telas['auditoria'] = function () {
     pago_a_outro: 'pago ao médico errado — a dívida continua',
     sem_medico: 'papel remunerado sem profissional em base nenhuma',
     recebido_sem_repasse: 'o pagador pagou e o repasse não saiu',
+    nao_conciliado: 'ainda no caminho — o convênio não pagou ou a conciliação não quitou',
     pago_sem_regra: 'o sistema pagou, mas sem regra não dá para conferir o valor',
     glosa: 'procedimento glosado pelo pagador (recebido = 0)',
     glosa_do_procedimento: 'herda a glosa do procedimento',
@@ -222,6 +223,9 @@ App.telas['auditoria'] = function () {
           <div class="card-valor mono">${fmtR(soma('esperado'))}</div></div>
         <div class="card"><div class="card-rotulo">Pago (sistema)</div>
           <div class="card-valor mono">${fmtR(soma('pago'))}</div></div>
+        ${soma('aguardando') > 0 ? `<div class="card"><div class="card-rotulo">Aguardando conciliação</div>
+          <div class="card-valor mono">${fmtR(soma('aguardando'))}</div>
+          <div class="card-extra">admissões que ainda não entraram no sistema — não é dívida</div></div>` : ''}
         ${soma('glosado') > 0 ? `<div class="card"><div class="card-rotulo">Glosado (não devido)</div>
           <div class="card-valor mono">${fmtR(soma('glosado'))}</div>
           <div class="card-extra">o pagador não pagou — não entra na cobrança</div></div>` : ''}

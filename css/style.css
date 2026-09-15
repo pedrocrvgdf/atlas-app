@@ -190,6 +190,7 @@ table.tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .badge-SEM_REGRA   { background: #ebedf0; color: #5a6879; }
 .badge-A_MAIOR     { background: #e3edf5; color: #2f5f83; }
 .badge-NAO_PAREADO { background: #ece7f3; color: #5d4a80; }
+.badge-AGUARDANDO  { background: #e7f0f7; color: #2c5d80; }
 .badge-OK          { background: #e2f2ea; color: #1f6247; }
 .badge-PENDENTE    { background: #fdf0dd; color: #8f5f14; }
 .badge-COBRADO     { background: #e3edf5; color: #2f5f83; }

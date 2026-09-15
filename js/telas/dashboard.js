@@ -58,6 +58,9 @@ App.telas['visao'] = function () {
           <div class="card-valor mono">${Utilidades.moeda(r.kpis.esperado)}</div></div>
         <div class="card"><div class="card-rotulo">Pago (sistema)</div>
           <div class="card-valor mono">${Utilidades.moeda(r.kpis.pago)}</div></div>
+        ${r.kpis.aguardando > 0 ? `<div class="card"><div class="card-rotulo">Aguardando conciliação</div>
+          <div class="card-valor mono">${Utilidades.moeda(r.kpis.aguardando)}</div>
+          <div class="card-extra">ainda no caminho — não é dívida</div></div>` : ''}
         <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
           <div class="card-valor mono">${Utilidades.moeda(r.kpis.falta)}</div>
           <div class="card-extra">${r.kpis.nPendencias} de ${r.kpis.nAdmissoes} admissões com pendência</div></div>

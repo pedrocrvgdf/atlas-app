@@ -355,6 +355,13 @@ App.telas['importar'] = function () {
             <div class="card"><div class="card-rotulo">Repassado pelo sistema</div><div class="card-valor">${fmtR(r.repassado)}</div>
               <div class="card-extra">informativo — o esperado sai da Base Tabela</div></div>
           </div>
+          ${r.repetidas ? `<div class="aviso-caixa" style="margin-bottom:12px;border-color:#e5c4c4;background:#fdf3f3">
+            <strong>⚠ ${n(r.repetidas)} linha(s) deste arquivo já constam em outro mês</strong>
+            (mesma admissão, procedimento, papel e origem — ${n(r.admissoesRepetidas)} admissão(ões)${r.mesesRepetidos ? `, em ${esc(r.mesesRepetidos.split(', ').map(Utilidades.compExibir).join(', '))}` : ''}).
+            Cada relatório do sistema é o que será pago <em>naquele</em> mês, então um mês não repete o outro:
+            o mesmo pagamento contado duas vezes infla o "pago" e <strong>esconde dívida</strong>.
+            Confira se o arquivo é do mês certo — se for, exclua o mês repetido na ilha
+            <strong>Sistema importado</strong>.</div>` : ''}
           ${r.temRecebido
             ? (r.glosadas ? `<div class="info-caixa" style="margin-bottom:12px">As <strong>${n(r.glosadas)}</strong> linhas com
                 <strong>Recebido = R$ 0,00</strong> (convênio/SUS) entram como <strong>GLOSA</strong>: o pagador não pagou, então
