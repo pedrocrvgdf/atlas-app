@@ -99,6 +99,17 @@
   };
 
   /**
+   * Similaridade SEM memória. O casamento de procedimento varre a Base inteira
+   * e cada par aparece UMA vez (ele tem o cache dele, por grafia): memoizar ali
+   * só gastaria tempo montando chaves e lotando o cache dos outros.
+   */
+  Utilidades.similaridadeCrua = function (a, b) {
+    const maior = Math.max(a.length, b.length);
+    if (!maior) return 1;
+    return 1 - levenshtein(a, b) / maior;
+  };
+
+  /**
    * Palavras que não identificam ninguém num nome de médico: preposições e
    * sufixos de geração. "DURVAL JUNIOR" e "DURVAL MORAES DE CARVALHO JUNIOR"
    * são a mesma pessoa, e é o DURVAL que diz isso, não o JUNIOR.

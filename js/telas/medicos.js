@@ -13,7 +13,9 @@
  *      abreviação ("J SILVA" ⊂ "JOAO SILVA"). Unificação em um clique.
  *   2. GRAFIAS SEM VÍNCULO — tudo o que apareceu nos relatórios e ainda não
  *      resolve para um médico oficial; vincular ou criar oficial dali.
- *   3. MÉDICOS OFICIAIS — o cadastro: nome oficial + grafias vinculadas.
+ *   3. MÉDICOS OFICIAIS — o cadastro: nome oficial + grafias vinculadas, e a
+ *      marca de CLIENTE (quem a ATLAS audita; é ela que alimenta o seletor
+ *      do topo, porque os relatórios trazem o hospital inteiro).
  *
  * Todo vínculo vale na hora: o motor resolve nomes via medicos +
  * sinonimos_medico (Motor.auditar → mapaSinonimos) e os caches se
@@ -254,7 +256,7 @@ App.telas['medicos'] = function () {
     el.innerHTML = `
       <div class="tela-cabecalho">
         <h1 class="tela-titulo">Médicos — De-Para</h1>
-        <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong> · toda grafia resolve para um nome oficial</span>
+        <span class="tela-sub">hospital: <strong>${esc(cliente.nome)}</strong> · toda grafia resolve para um nome oficial</span>
       </div>
 
       <div class="cards">
@@ -330,11 +332,15 @@ App.telas['medicos'] = function () {
           </div>
         </div>
         ${d.oficiais.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+            <th title="Cliente da ATLAS: é por ele que a auditoria responde">Cliente</th>
             <th>Nome oficial</th><th>Grafias vinculadas</th><th class="num">Ocorrências</th><th></th>
           </tr></thead><tbody>
           ${d.oficiais.map(m => {
             const reg = d.porOficial.get(m.id);
             return `<tr>
+              <td style="text-align:center"><input type="checkbox" data-cli="${m.id}"
+                ${Number(m.eh_cliente) ? 'checked' : ''}
+                title="Marcar como cliente da ATLAS — só os marcados aparecem no seletor do topo"></td>
               <td><strong>${esc(m.nome_oficial)}</strong></td>
               <td>${reg.sinonimos.length ? reg.sinonimos.map(s =>
                 `<span class="badge badge-OK" style="margin:2px 4px 2px 0">${esc(s.grafia)}
@@ -353,6 +359,19 @@ App.telas['medicos'] = function () {
 
     // ── handlers ──
     const d2 = d;
+    // CLIENTE DA ATLAS — os relatórios trazem o hospital inteiro; cliente é
+    // quem contratou a auditoria, e é essa lista curta que vai para o topo
+    el.querySelectorAll('[data-cli]').forEach(c => c.addEventListener('change', () => {
+      Banco.executar('UPDATE medicos SET eh_cliente = ? WHERE id = ?',
+        [c.checked ? 1 : 0, Number(c.dataset.cli)]);
+      if (!c.checked) {
+        const of = d2.oficiais.find(m => m.id === Number(c.dataset.cli));
+        if (of && App.medicoAtivo() === of.nome_norm) Banco.configGravar('medico_ativo_c' + cliente.id, '');
+      }
+      Banco.salvarDebounced();
+      App.renderShell();
+      App.navegar('medicos');
+    }));
     el.querySelectorAll('[data-sug]').forEach(b => b.addEventListener('click', () => {
       const i = Number(b.dataset.sug);
       const nome = el.querySelector(`[data-sug-nome="${i}"]`).value.trim();

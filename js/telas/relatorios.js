@@ -26,7 +26,7 @@ App.telas['relatorios'] = function () {
     if (!temDados) {
       el.innerHTML = `
         <div class="tela-cabecalho"><h1 class="tela-titulo">Relatórios</h1>
-          <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span></div>
+          <span class="tela-sub">hospital: <strong>${esc(cliente.nome)}</strong></span></div>
         <div class="aviso-caixa">Importe a produção e o repasse em <strong>Importações</strong>
           para gerar o consolidado.</div>`;
       return;
@@ -37,12 +37,18 @@ App.telas['relatorios'] = function () {
     if (st.competencia == null || (st.competencia && !comps.includes(st.competencia))) st.competencia = comps[0] || '';
     const r = Motor.auditar({ clienteId: cliente.id, hospitalId: st.hospitalId, competencia: st.competencia });
 
-    const medicos = [...r.porMedico.values()].sort((a, b) => b.falta - a.falta || b.esperado - a.esperado);
+    // O consolidado é do CLIENTE escolhido no topo. Sem recorte, os relatórios
+    // do hospital trazem centenas de profissionais e a tela vira uma lista
+    // inútil — o entregável é o do médico que contratou a ATLAS.
+    const chaveMed = App.medicoAtivo ? App.medicoAtivo() : '';
+    const nomeMed = App.medicoAtivoNome ? App.medicoAtivoNome() : '';
+    let medicos = [...r.porMedico.values()].sort((a, b) => b.falta - a.falta || b.esperado - a.esperado);
+    if (chaveMed) medicos = medicos.filter(m => Utilidades.normalizar(m.medico) === chaveMed);
 
     el.innerHTML = `
       <div class="tela-cabecalho">
         <h1 class="tela-titulo">Relatórios</h1>
-        <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span>
+        <span class="tela-sub">hospital: <strong>${esc(cliente.nome)}</strong></span>
         <div class="tela-acoes">
           <button class="botao botao-primario" id="rel-exportar">📤 Exportar consolidado (Excel)</button>
         </div>
@@ -85,7 +91,8 @@ App.telas['relatorios'] = function () {
       <div class="painel">
         <div class="painel-cabecalho">
           <span class="painel-titulo">Consolidado por médico</span>
-          <span class="painel-conta">${medicos.length} profissional(is) · clique para ver as pendências</span>
+          <span class="painel-conta">${chaveMed ? `cliente <strong>${esc(nomeMed)}</strong>`
+            : `${medicos.length} profissional(is) do hospital`} · clique para ver as pendências</span>
         </div>
         ${medicos.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
             <th>Médico</th><th class="num">Itens</th><th class="num">Esperado</th>

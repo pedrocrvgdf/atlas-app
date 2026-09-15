@@ -83,7 +83,7 @@ App.telas['visao'] = function () {
   el.innerHTML = `
     <div class="tela-cabecalho">
       <h1 class="tela-titulo">Visão Geral</h1>
-      <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span>
+      <span class="tela-sub">hospital: <strong>${esc(cliente.nome)}</strong></span>
     </div>
 
     ${kpisHTML}

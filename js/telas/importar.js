@@ -85,7 +85,7 @@ App.telas['importar'] = function () {
     el.innerHTML = `
       <div class="tela-cabecalho">
         <h1 class="tela-titulo">Importações</h1>
-        <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span>
+        <span class="tela-sub">hospital: <strong>${esc(cliente.nome)}</strong></span>
       </div>
       <div id="imp-area"></div>
       <div id="imp-acoes"></div>
@@ -276,15 +276,21 @@ App.telas['importar'] = function () {
     let uni = null;
     try { uni = Motor.unificarMedicos(cliente.id); }
     catch (e) { console.warn('[importar] de-para automático falhou:', e); }
-    // médico auditado: se ainda não há um escolhido e o nome do hospital/empresa
-    // casa com um profissional dos relatórios, já deixa ele selecionado
+    // médico-CLIENTE: os relatórios são do hospital inteiro e trazem centenas
+    // de profissionais. Se ainda não há cliente marcado e dá para saber quem é
+    // — o cofre tem o nome dele, ou os relatórios só trouxeram um — ele já
+    // entra marcado e escolhido. Fora isso quem escolhe é o analista (🩺).
     try {
-      if (!App.medicoAtivo()) {
-        const lista = App.listarMedicos();
+      if (!App.medicoAtivo() && !App.listarMedicos().length) {
+        const todos = App.listarMedicosTodos();
         const hosp = (App.listarHospitais(cliente.id).find(h => h.id === st.hospitalId) || {}).nome || '';
-        const alvo = lista.find(m => Utilidades.nomesBatem(m.nome, hosp)) ||
-          (lista.length === 1 ? lista[0] : null);
-        if (alvo) Banco.configGravar('medico_ativo_c' + cliente.id, alvo.chave);
+        const alvo = todos.find(m => Utilidades.nomesBatem(m.nome, cliente.nome)) ||
+          todos.find(m => Utilidades.nomesBatem(m.nome, hosp)) ||
+          (todos.length === 1 ? todos[0] : null);
+        if (alvo) {
+          Motor.marcarClienteMedico(cliente.id, alvo.nome, true);
+          Banco.configGravar('medico_ativo_c' + cliente.id, alvo.chave);
+        }
       }
     } catch (e) { console.warn('[importar] escolha do médico falhou:', e); }
     Banco.salvarDebounced();
@@ -1151,7 +1157,7 @@ App.telas['importar'] = function () {
         </div>
         <div class="modal-corpo">
           <div class="info-caixa">Competência <strong>${esc(Utilidades.compExibir(x.comp))}</strong> (a mais recente das
-            ${x.comps.length} importadas) · ${x.nomeMed ? `médico <strong>${esc(x.nomeMed)}</strong>` : 'todos os médicos da empresa'}
+            ${x.comps.length} importadas) · ${x.nomeMed ? `médico <strong>${esc(x.nomeMed)}</strong>` : 'todos os médicos do hospital'}
             · ${n(x.r.kpis.nAdmissoes)} admissão(ões) auditada(s).</div>
           <div class="cards" style="margin:12px 0">
             <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
@@ -1169,6 +1175,27 @@ App.telas['importar'] = function () {
             Sem isso o cruzamento não fecha — "DURVAL JUNIOR" e "DURVAL MORAES DE CARVALHO JUNIOR" são a mesma pessoa.</div>` : ''}
           ${x.r.hospitaisSemBase && x.r.hospitaisSemBase.length ? `<div class="aviso-caixa">⚠ Há hospital sem
             <strong>nenhuma regra na Base Tabela</strong>: os procedimentos dele saem como SEM REGRA e não são cobrados.</div>` : ''}
+          ${(() => {
+            // TERMÔMETRO DO CASAMENTO — quando o total parece pequeno demais, é
+            // aqui que a resposta aparece: procedimento que não acha a linha da
+            // Base não tem regra, e sem regra não se cobra nada.
+            const c = x.r.casamento;
+            if (!c || !c.distintos) return '';
+            const achou = c.exato + c.sinonimo + c.similar + c.tokens;
+            return `<div class="raiox-rotulo" style="margin-top:14px">Procedimentos × Base Tabela</div>
+              <div class="painel-corpo" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <span class="imp-chip imp-chip-TODAS">${n(achou)} de ${n(c.distintos)} acharam a regra</span>
+                <span class="imp-chip">exato ${n(c.exato)}</span>
+                <span class="imp-chip">sinônimo ${n(c.sinonimo)}</span>
+                <span class="imp-chip">parecido ${n(c.similar)}</span>
+                <span class="imp-chip">palavras ${n(c.tokens)}</span>
+                ${c.nenhum ? `<span class="imp-chip" style="background:#fdecea;color:#8a1c12">fora da Base ${n(c.nenhum)}</span>` : ''}
+              </div>
+              ${c.nenhum ? `<div class="texto-cinza" style="font-size:11.5px;margin-top:6px">
+                ${n(c.nenhum)} grafia(s) da produção não existem na Base Tabela e por isso não são cobradas —
+                por exemplo: ${esc(c.semBase.slice(0, 3).join(' · '))}. Cadastre-as na
+                <strong>Base Tabela</strong> se elas devem ser pagas.</div>` : ''}`;
+          })()}
           <div class="texto-cinza" style="font-size:11.5px;margin-top:10px">A Inspeção abre com esta lista, admissão por
             admissão, e mostra de quem é cada papel que falta.</div>
         </div>
@@ -1194,12 +1221,14 @@ App.telas['importar'] = function () {
       MEDICO: Banco.escalar('SELECT COUNT(*) FROM linhas_medico WHERE cliente_id=?', [cliente.id]) || 0,
       BASE_TABELA: Banco.escalar(
         `SELECT COUNT(*) FROM base_tabela b JOIN hospitais h ON h.id=b.hospital_id WHERE h.cliente_id=?`, [cliente.id]) || 0,
+      CADASTRO_MEDICOS: Banco.escalar('SELECT COUNT(*) FROM medicos WHERE cliente_id=?', [cliente.id]) || 0,
     };
     const TIPOS = [
       ['PRODUCAO', '📋 Produção', 'linhas importadas dos relatórios analíticos'],
       ['REPASSE', '🏥 Sistema', 'o relatório cru do sistema do hospital'],
       ['MEDICO', '🧾 Médico', 'o relatório que o médico recebeu (e a pauta da Inspeção)'],
       ['BASE_TABELA', '📐 Base Tabela', 'as regras de repasse — sem elas nada é cobrado'],
+      ['CADASTRO_MEDICOS', '🩺 Médicos', 'o de-para de grafias e a marca de quem é cliente da ATLAS'],
     ];
     const ov = document.createElement('div');
     ov.className = 'modal-fundo';
@@ -1210,7 +1239,7 @@ App.telas['importar'] = function () {
           <button class="modal-fechar">✕</button>
         </div>
         <div class="modal-corpo">
-          <div class="aviso-caixa">Apaga os dados <strong>importados</strong> — a empresa, os hospitais e os
+          <div class="aviso-caixa">Apaga os dados <strong>importados</strong> — o hospital e os
             clientes continuam cadastrados. Não dá para desfazer: para recuperar, reimporte os arquivos.</div>
           <div class="raiox-rotulo" style="margin-top:14px">O que apagar</div>
           <div class="rolagem-x"><table class="tabela"><tbody>
@@ -1223,7 +1252,7 @@ App.telas['importar'] = function () {
           <div class="linha-campos" style="margin-top:14px">
             <div class="campo"><span class="campo-rotulo">Escopo</span>
               <select id="lim-hosp">
-                <option value="0">Todos os hospitais da empresa</option>
+                <option value="0">Todos os hospitais do cofre</option>
                 ${hospitais.map(h => `<option value="${h.id}" ${h.id === st.hospitalId ? 'selected' : ''}>Só ${esc(h.nome)}</option>`).join('')}
               </select></div>
           </div>
@@ -1265,6 +1294,13 @@ App.telas['importar'] = function () {
         Banco.executar('DELETE FROM linhas_medico WHERE cliente_id = ?' + onde, p([cliente.id]));
         Banco.executar(`DELETE FROM importacoes WHERE cliente_id = ? AND tipo = 'MEDICO'` + onde, p([cliente.id]));
       }
+      if (tipos.includes('CADASTRO_MEDICOS')) {
+        // o de-para inteiro: oficiais, grafias vinculadas e a marca de cliente
+        Banco.executar(
+          'DELETE FROM sinonimos_medico WHERE medico_id IN (SELECT id FROM medicos WHERE cliente_id = ?)',
+          [cliente.id]);
+        Banco.executar('DELETE FROM medicos WHERE cliente_id = ?', [cliente.id]);
+      }
       if (tipos.includes('BASE_TABELA')) {
         Banco.executar(
           `DELETE FROM base_tabela WHERE hospital_id IN (SELECT id FROM hospitais WHERE cliente_id = ?${hospitalId ? ' AND id = ?' : ''})`,
@@ -1275,6 +1311,10 @@ App.telas['importar'] = function () {
     // o que a Inspeção guardava apontava para admissões que não existem mais
     if (tipos.includes('MEDICO') || tipos.includes('PRODUCAO')) {
       Banco.configGravar('insp_pauta_v1_c' + cliente.id, []);
+    }
+    if (tipos.includes('CADASTRO_MEDICOS')) {
+      Banco.configGravar('medico_ativo_c' + cliente.id, '');
+      Banco.configGravar('unificado_c' + cliente.id, '');
     }
     if (tipos.includes('PRODUCAO') || tipos.includes('REPASSE')) {
       Banco.configGravar('insp_med_sel_v1_c' + cliente.id, []);

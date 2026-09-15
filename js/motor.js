@@ -277,8 +277,11 @@
       clusters.get(raiz).push(g);
     }
 
-    let vinculadas = 0, gruposNovos = 0;
-    Banco.transacao(() => {
+    // PLANEJA antes de gravar: rodar a unificação num cofre já unificado não
+    // pode sujar o banco (ela roda no boot e a cada importação; abrir uma
+    // transação à toa marcaria dados sujos e forçaria gravação sem motivo).
+    const planos = [];
+    {
       for (const grupo of clusters.values()) {
         // nome oficial: a grafia MAIS COMPLETA do grupo (mais nomes significativos),
         // desempate pela mais frequente — "DURVAL MORAES DE CARVALHO JUNIOR"
@@ -290,23 +293,36 @@
         const faltando = grupo.filter(g => !jaVinculada.get(g.norm));
         if (!faltando.length) continue;                // grupo já resolvido
         if (grupo.length < 2 && !medicoId) continue;   // grafia única não precisa de de-para
-        if (!medicoId) {
-          const oficial = ordenado[0].grafia;
-          Banco.executar('INSERT INTO medicos (cliente_id, nome_oficial, nome_norm) VALUES (?,?,?)',
-            [clienteId, oficial, U_.normalizar(oficial)]);
-          medicoId = Banco.ultimoId();
-          jaVinculada.set(U_.normalizar(oficial), medicoId);
-          gruposNovos++;
-        }
+        const plano = { medicoId, oficial: medicoId ? null : ordenado[0].grafia, grafias: [] };
         for (const g of grupo) {
           if (jaVinculada.get(g.norm)) continue;
-          Banco.executar('INSERT INTO sinonimos_medico (medico_id, grafia, grafia_norm) VALUES (?,?,?)',
-            [medicoId, g.grafia, g.norm]);
-          jaVinculada.set(g.norm, medicoId);
-          vinculadas++;
+          if (!medicoId && U_.normalizar(plano.oficial) === g.norm) continue;   // é o próprio oficial
+          plano.grafias.push(g);
         }
+        if (!plano.oficial && !plano.grafias.length) continue;
+        planos.push(plano);
       }
-    });
+    }
+
+    let vinculadas = 0, gruposNovos = 0;
+    if (planos.length) {
+      Banco.transacao(() => {
+        for (const plano of planos) {
+          let medicoId = plano.medicoId;
+          if (!medicoId) {
+            Banco.executar('INSERT INTO medicos (cliente_id, nome_oficial, nome_norm) VALUES (?,?,?)',
+              [clienteId, plano.oficial, U_.normalizar(plano.oficial)]);
+            medicoId = Banco.ultimoId();
+            gruposNovos++;
+          }
+          for (const g of plano.grafias) {
+            Banco.executar('INSERT INTO sinonimos_medico (medico_id, grafia, grafia_norm) VALUES (?,?,?)',
+              [medicoId, g.grafia, g.norm]);
+            vinculadas++;
+          }
+        }
+      });
+    }
 
     return {
       grafias: grafias.length,
@@ -449,6 +465,167 @@
   // REGRAS — Base Tabela primeiro, padrão inferido depois
   // ──────────────────────────────────────────────────────────────────────
 
+  // ──────────────────────────────────────────────────────────────────────
+  // CASAMENTO DE PROCEDIMENTO — as quatro camadas da ferramenta de origem
+  //
+  // A Base Tabela guarda UMA grafia por procedimento; o relatório do sistema
+  // escreve a mesma cirurgia de dezenas de formas ("(70%) - CAMPIMETRIA
+  // COMPUTADORIZADA - MONOCULAR" onde a Base diz "CAMPIMETRIA"). Procurar a
+  // regra pelo nome exato faz a maioria dos procedimentos cair em SEM_REGRA,
+  // e SEM_REGRA não cobra nada: é assim que dois anos de auditoria viram
+  // uma dívida ridícula. As camadas são as mesmas da ferramenta
+  // (js/telas/calcular.js → matcharProcedimento), da mais segura à mais
+  // permissiva, e a primeira que responder decide:
+  //
+  //   1) EXATO        nome normalizado igual ao da Base
+  //   2) SINÔNIMO     grafia já resolvida (tabela sinonimos_proc) ou a
+  //                   NOMENCLATURA da Base, quando ela aponta para um só
+  //                   procedimento
+  //   3) SIMILARIDADE Levenshtein ≥ limiar (tolera erro de digitação), com
+  //                   pré-filtro de tamanho — quem tem tamanho muito
+  //                   diferente não passaria do limiar de jeito nenhum
+  //   4) TOKENS       palavras-chave: 75% das da Base dentro do texto do
+  //                   sistema e 40% das do sistema dentro da Base, ambos os
+  //                   lados com pelo menos 2 palavras significativas
+  //
+  // Nada disto inventa regra: só descobre QUAL linha da Base fala daquele
+  // procedimento. O que ela manda pagar continua saindo dela.
+  // ──────────────────────────────────────────────────────────────────────
+
+  // "C" e "S" entram porque "C/" e "S/" (com/sem) são epidemia nos nomes
+  const STOPWORDS_PROC = new Set(['DE', 'DO', 'DA', 'DOS', 'DAS', 'PARA', 'COM', 'SEM', 'POR',
+    'A', 'O', 'AS', 'OS', 'E', 'OU', 'NO', 'NA', 'NOS', 'NAS', 'EM', 'ATE', 'C', 'S']);
+
+  /** Palavras significativas de um nome de procedimento (sem acento, sem ruído). */
+  function tokenizarProc(s) {
+    if (!s) return [];
+    return U().normalizar(s).split(/\s+/)
+      .filter(t => t.length >= 2 && !STOPWORDS_PROC.has(t));
+  }
+
+  /** covA = % dos tokens de A presentes em B; covB = o inverso. */
+  function coberturas(tokensA, tokensB) {
+    if (!tokensA.length || !tokensB.length) return { covA: 0, covB: 0 };
+    const setA = new Set(tokensA), setB = new Set(tokensB);
+    let inter = 0;
+    for (const t of setA) if (setB.has(t)) inter++;
+    return { covA: inter / setA.size, covB: inter / setB.size };
+  }
+
+  const _casadores = new Map();   // hospitalId|versão → casador (o cache de grafias mora dentro)
+
+  /**
+   * Casador de procedimentos do hospital: recebe a grafia do relatório e
+   * devolve { chave, nome, tipo, score } da Base — ou null quando nem as
+   * quatro camadas acharam nada (aí sim o procedimento está fora da Base).
+   * `chave` é o procedimento_norm que indexa base_tabela.
+   */
+  function casadorDoHospital(hospitalId) {
+    const chaveCache = hospitalId + '|' + Banco._versao;
+    const pronto = _casadores.get(chaveCache);
+    if (pronto) return pronto;
+    if (_casadores.size >= MAX_CACHES) _casadores.delete(_casadores.keys().next().value);
+
+    const U_ = U();
+    const limiar = cfgNum('fuzzy_limiar', 0.88);
+    const procs = [];
+    const exato = new Map();
+    const apelidos = new Map();
+
+    const rows = Banco.query(
+      `SELECT procedimento_norm AS chave, MIN(procedimento) AS nome, MIN(nomenclatura) AS nomenclatura
+         FROM base_tabela WHERE hospital_id = ? GROUP BY procedimento_norm`, [hospitalId]);
+    for (const r of rows) {
+      const p = { chave: r.chave, nome: r.nome || r.chave, tokens: tokenizarProc(r.nome || r.chave) };
+      procs.push(p);
+      exato.set(r.chave, p);
+    }
+
+    // NOMENCLATURA como apelido — o nome canônico do exame na Base. Só entra
+    // quando é inequívoca: se a mesma nomenclatura agrupa várias grafias com
+    // regras diferentes, não dá para escolher uma, e as camadas 3 e 4 decidem.
+    const porNomenclatura = new Map();
+    for (const r of rows) {
+      const n = U_.normalizar(r.nomenclatura);
+      if (!n || exato.has(n)) continue;
+      if (!porNomenclatura.has(n)) porNomenclatura.set(n, []);
+      porNomenclatura.get(n).push(exato.get(r.chave));
+    }
+    for (const [n, lista] of porNomenclatura) if (lista.length === 1) apelidos.set(n, lista[0]);
+
+    // sinônimos gravados (o casamento aceito antes, ou corrigido na mão)
+    // vêm por último: decisão humana ganha da nomenclatura
+    let sins = [];
+    try {
+      sins = Banco.query(
+        'SELECT grafia_norm, procedimento_norm FROM sinonimos_proc WHERE hospital_id = ?', [hospitalId]);
+    } catch (e) { /* banco antigo, sem a tabela ainda */ }
+    for (const s of sins) {
+      const p = exato.get(s.procedimento_norm);
+      if (p) apelidos.set(s.grafia_norm, p);
+    }
+
+    const cache = new Map();
+    const contagem = { exato: 0, sinonimo: 0, similar: 0, tokens: 0, nenhum: 0 };
+
+    function casar(texto) {
+      const norm = U_.normalizar(texto);
+      if (!norm) return null;
+      if (cache.has(norm)) return cache.get(norm);
+
+      let r = null;
+
+      // 1) exato
+      const p1 = exato.get(norm);
+      if (p1) r = { chave: p1.chave, nome: p1.nome, tipo: 'exato', score: 1 };
+
+      // 2) sinônimo / nomenclatura
+      if (!r) {
+        const p2 = apelidos.get(norm);
+        if (p2) r = { chave: p2.chave, nome: p2.nome, tipo: 'sinonimo', score: 1 };
+      }
+
+      // 3) similaridade, com o pré-filtro de tamanho da ferramenta
+      if (!r) {
+        let melhor = null, melhorScore = limiar;
+        const len = norm.length;
+        for (const p of procs) {
+          const cand = p.chave;
+          if (!cand) continue;
+          if (Math.abs(cand.length - len) / Math.max(cand.length, len) > 1 - limiar) continue;
+          const s = U_.similaridadeCrua(norm, cand);
+          if (s > melhorScore) { melhorScore = s; melhor = p; }
+        }
+        if (melhor) r = { chave: melhor.chave, nome: melhor.nome, tipo: 'similar', score: melhorScore };
+      }
+
+      // 4) tokens — cobre o texto do sistema com palavras a mais ou a menos
+      if (!r) {
+        const tks = tokenizarProc(texto);
+        if (tks.length >= 2) {
+          let melhor = null, melhorScore = 0;
+          for (const p of procs) {
+            if (p.tokens.length < 2) continue;
+            const { covA: covBase, covB: covSis } = coberturas(p.tokens, tks);
+            if (covBase >= 0.75 && covSis >= 0.40) {
+              const s = (covBase * 0.6) + (covSis * 0.4);   // peso maior em "Base coberta"
+              if (s > melhorScore) { melhorScore = s; melhor = p; }
+            }
+          }
+          if (melhor) r = { chave: melhor.chave, nome: melhor.nome, tipo: 'tokens', score: melhorScore };
+        }
+      }
+
+      contagem[r ? r.tipo : 'nenhum']++;
+      cache.set(norm, r);
+      return r;
+    }
+
+    const casador = { hospitalId, vazio: !procs.length, procedimentos: procs, casar, contagem };
+    _casadores.set(chaveCache, casador);
+    return casador;
+  }
+
   function carregarBase(hospitalId) {
     const regras = new Map();
     const rows = Banco.query(
@@ -578,15 +755,58 @@
     if (f.hospitalId) { sqlRep += ' AND hospital_id = ?'; pRep.push(f.hospitalId); }
     const rep = consultar(sqlRep, pRep, ' ORDER BY admissao, id', admsRep);
 
+    /**
+     * O RELATÓRIO DO MÉDICO É A RÉGUA DO QUE FOI PAGO (docs/METODOLOGIA.md §5.3).
+     *
+     * O relatório do SISTEMA é o CRU: ninguém mexeu nele. Ele passava pela mão
+     * do analista, que aplicava as regras e montava o demonstrativo que o
+     * médico recebeu — esse é o relatório FIM. O que o médico de fato recebeu
+     * é o que está NELE, não a coluna REPASSADO do sistema.
+     *
+     * Então: admissão que aparece no relatório do médico tem o pagamento
+     * medido por ele; admissão que não aparece continua medida pelo sistema
+     * (é o único dado que existe sobre ela). As linhas são somadas por
+     * admissão × procedimento × papel × médico para que um estorno (valor
+     * negativo) desfaça o pagamento que estornou.
+     */
+    let sqlMed = `SELECT hospital_id, admissao, competencia, data, paciente, convenio, fonte,
+        procedimento, procedimento_norm, papel, papel_canon, medico, 1 AS quantidade,
+        SUM(COALESCE(valor, 0)) AS repassado
+      FROM linhas_medico WHERE cliente_id = ?`;
+    const pMed = [f.clienteId];
+    if (f.hospitalId) { sqlMed += ' AND hospital_id = ?'; pMed.push(f.hospitalId); }
+    const med = consultar(sqlMed, pMed,
+      ` GROUP BY admissao_norm, procedimento_norm, COALESCE(papel_canon, papel), medico_norm
+        ORDER BY admissao`, admsRep);
+
     // regras por hospital (pode haver mais de um no filtro "todos"). A
     // inferência NÃO entra aqui: ela é sugestão da tela Base Tabela, não regra.
     const hospitais = new Set(prod.map(l => l.hospital_id).concat(rep.map(l => l.hospital_id)));
     const basePorHosp = new Map();
+    const casadorPorHosp = new Map();
+    // grafia da produção → como ela achou (ou não) a linha da Base. É o que a
+    // tela mostra quando o total parece pequeno demais: procedimento que não
+    // casa não tem regra, e sem regra não se cobra nada.
+    const casamentoProc = new Map();
     const semBase = [];
     for (const h of hospitais) {
       const b = carregarBase(h);
       basePorHosp.set(h, b);
+      casadorPorHosp.set(h, casadorDoHospital(h));
       if (!b.size) semBase.push(h);
+    }
+
+    // relatório do médico indexado por admissão NORMALIZADA, e o conjunto de
+    // médicos que ele cobre — o demonstrativo é de UMA pessoa e só fala dela
+    const medPorAdm = new Map();
+    const medicosDoRelatorio = new Set();
+    for (const l of med) {
+      if (!(Number(l.repassado) > 0)) continue;   // estorno já abatido na soma
+      const adm = U_.normAdm(l.admissao);
+      if (!medPorAdm.has(adm)) medPorAdm.set(adm, []);
+      medPorAdm.get(adm).push(Object.assign({ _consumida: false, _doMedico: true }, l));
+      const n = U_.normalizar(resolverMedico(l.medico, sinonimos));
+      if (n) medicosDoRelatorio.add(n);
     }
 
     // repasse indexado por admissão NORMALIZADA (normAdm)
@@ -634,6 +854,16 @@
 
     for (const [adm, itensProd] of prodPorAdm) {
       const repAdm = repPorAdm.get(adm) || [];
+      // o que o médico DE FATO recebeu (§5.3): para quem TEM demonstrativo, a
+      // régua do pagamento é ele; as linhas do sistema desse médico ficam
+      // superadas — o relatório tratado é a versão final delas.
+      const medAdm = medPorAdm.get(adm) || [];
+      if (medAdm.length) {
+        for (const lr of repAdm) {
+          const n = U_.normalizar(resolverMedico(lr.medico, sinonimos));
+          if (n && medicosDoRelatorio.has(n)) lr._consumida = true;
+        }
+      }
       const itens = [];
 
       // Glosa e recebimento são do PROCEDIMENTO, não da linha:
@@ -661,11 +891,23 @@
 
       // a admissão nunca apareceu em relatório nenhum do sistema: ainda está
       // no caminho (faturamento → convênio → conciliação), não é dívida
-      const aguardandoConciliacao = repAdm.length === 0;
+      // …a menos que o relatório do médico já traga a admissão: se ele recebeu,
+      // ela passou pela conciliação, por mais que o sistema não a mostre aqui
+      const aguardandoConciliacao = repAdm.length === 0 && medAdm.length === 0;
 
       for (const lp of itensProd) {
         const base = basePorHosp.get(lp.hospital_id) || new Map();
         const procN = lp.procedimento_norm;
+        // QUAL linha da Base fala deste procedimento (as quatro camadas).
+        // procN continua sendo a grafia da produção — é por ela que a glosa e
+        // o pareamento com o sistema andam; procBase é a chave da REGRA.
+        const casador = casadorPorHosp.get(lp.hospital_id);
+        const casou = casador ? casador.casar(lp.procedimento) : null;
+        const procBase = casou ? casou.chave : procN;
+        if (procN && !casamentoProc.has(procN)) {
+          casamentoProc.set(procN, { procedimento: lp.procedimento,
+            tipo: casou ? casou.tipo : 'nenhum', base: casou ? casou.nome : '' });
+        }
         const procCasa = (lr) => lr.procedimento_norm === procN ||
           U_.similaridade(lr.procedimento_norm, procN) >= limiarFuzzy;
 
@@ -768,7 +1010,7 @@
          * os que ela remunera para este procedimento × fonte; papel que a
          * tabela não remunera não é divergência, é o desenho dela.
          */
-        const candidatos = papeisDaBase(base, procN, lp.fonte)
+        const candidatos = papeisDaBase(base, procBase, lp.fonte)
           .map(({ papel }) => Object.assign({ papel }, donoDoPapel(papel)));
 
         // procedimento fora da Base: nada a cobrar. O que o sistema pagou
@@ -792,7 +1034,7 @@
         }
 
         for (const cand of candidatos) {
-          const regra = acharRegra(base, procN, cand.papel, lp.fonte);
+          const regra = acharRegra(base, procBase, cand.papel, lp.fonte);
           const esperadoBruto = valorEsperado(regra, lp.valor, lp.quantidade);
           if (esperadoBruto === 0 && regra) continue;   // papel não remunerado
 
@@ -805,6 +1047,16 @@
           if (cand.papel === 'AUXILIAR' && execDaLinha && ehInst(execDaLinha)) continue;
 
           const nomeDonoN = U_.normalizar(nomeDono);
+
+          /**
+           * DE ONDE SAI O "PAGO" DESTE PAPEL. O relatório do SISTEMA é o cru;
+           * o do MÉDICO é o mesmo relatório depois de tratado pelo analista —
+           * é ele que o médico recebeu e é por ele que se mede o pagamento.
+           * Mas o demonstrativo é de UM médico: só vale para os papéis de quem
+           * ele cobre. Para os demais, o sistema segue sendo o único dado.
+           */
+          const reguaMedico = !!nomeDonoN && medAdm.length > 0 && medicosDoRelatorio.has(nomeDonoN);
+          const fonteDoPago = reguaMedico ? medAdm : repAdm;
           const mesmoMedico = (outro) => {
             const o = U_.normalizar(resolverMedico(outro, sinonimos));
             return !!o && !!nomeDonoN &&
@@ -817,7 +1069,7 @@
           let pago = 0, pagoOutro = 0;
           const nomesOutros = new Set();
           const consumir = (predicado, quita) => {
-            for (const lr of repAdm) {
+            for (const lr of fonteDoPago) {
               if (lr._consumida || !(Number(lr.repassado) > 0)) continue;
               if (!predicado(lr)) continue;
               lr._consumida = true;
@@ -833,9 +1085,29 @@
           // (INDICANTE e SOLICITANTE são o mesmo papel: um quita o outro)
           const papelCasa = (lr) => lr.papel_canon === cand.papel ||
             (ehIndSol(cand.papel) && ehIndSol(lr.papel_canon));
-          consumir(
-            lr => procCasa(lr) && lr.papel_canon && papelCasa(lr),
-            lr => !String(lr.medico || '').trim() || !nomeDono || mesmoMedico(lr.medico));
+
+          /**
+           * AUXILIAR COM NOME DIVERGENTE — regra da ferramenta de origem
+           * (js/telas/auditoria.js: "auxiliar presente mas divergente do
+           * cirurgião → renomeia"). Por anos o auxiliar ou não saía no
+           * relatório do sistema, ou saía com um nome que não era o do
+           * executante; o valor do auxiliar, porém, sempre foi do cirurgião
+           * do procedimento. Então o pagamento QUITA a exigência, e a linha
+           * fica marcada com o nome que veio no sistema — sem isso a mesma
+           * verba é cobrada de novo como PAGO A OUTRO.
+           */
+          let auxRenomeado = false, auxNomeOriginal = '';
+          const quitaPapel = (lr) => {
+            if (!String(lr.medico || '').trim() || !nomeDono) return true;
+            if (mesmoMedico(lr.medico)) return true;
+            if (cand.papel === 'AUXILIAR' && lr.papel_canon === 'AUXILIAR') {
+              auxRenomeado = true;
+              auxNomeOriginal = resolverMedico(lr.medico, sinonimos) || String(lr.medico || '').trim();
+              return true;
+            }
+            return false;
+          };
+          consumir(lr => procCasa(lr) && lr.papel_canon && papelCasa(lr), quitaPapel);
           // 2º: procedimento + médico certo (repasse sem coluna de papel)
           if (!pago && !pagoOutro) {
             consumir(lr => procCasa(lr) && !lr.papel_canon && !!String(lr.medico || '').trim()
@@ -843,7 +1115,7 @@
           }
           // 3º: linha única anônima do procedimento — só para EXECUTANTE
           if (!pago && !pagoOutro && cand.papel === 'EXECUTANTE') {
-            const soltas = repAdm.filter(lr => !lr._consumida && Number(lr.repassado) > 0 &&
+            const soltas = fonteDoPago.filter(lr => !lr._consumida && Number(lr.repassado) > 0 &&
               procCasa(lr) && !lr.papel_canon && !String(lr.medico || '').trim());
             if (soltas.length === 1) { soltas[0]._consumida = true; pago = Number(soltas[0].repassado); }
           }
@@ -909,6 +1181,9 @@
             papel: cand.papel, medico: nomeDono,
             regra, esperado, esperadoGlosa, aguardando, pago, pagoOutro, diferenca: dif, falta, status, motivo,
             pagoA: [...nomesOutros].join(', '),
+            procBase: casou ? casou.nome : null, matchProc: casou ? casou.tipo : null,
+            auxRenomeado, auxNomeOriginal,
+            pagoPor: reguaMedico ? 'MEDICO' : 'SISTEMA',
           };
           itens.push(item);
 
@@ -1009,10 +1284,22 @@
       nSemRegra: admissoes.filter(a => a.status === 'SEM_REGRA').length,
       nGlosa: admissoes.filter(a => a.itens.some(i => i.status === 'GLOSA')).length,
       nAguardando: admissoes.filter(a => a.status === 'AGUARDANDO').length,
+      nRenomeados: 0,
     };
 
+    // como as grafias da produção acharam a Base (exato/sinônimo/similar/
+    // tokens/nenhum) — o termômetro do casamento
+    const casamento = { exato: 0, sinonimo: 0, similar: 0, tokens: 0, nenhum: 0,
+      distintos: casamentoProc.size, semBase: [] };
+    for (const [, c] of casamentoProc) {
+      casamento[c.tipo] = (casamento[c.tipo] || 0) + 1;
+      if (c.tipo === 'nenhum' && casamento.semBase.length < 300) casamento.semBase.push(c.procedimento);
+    }
+    kpis.nRenomeados = admissoes.reduce((s, a) =>
+      s + a.itens.filter(i => i.auxRenomeado).length, 0);
+
     const resultado = {
-      kpis, admissoes, porMedico,
+      kpis, admissoes, porMedico, casamento,
       // hospitais do recorte que não têm NENHUMA regra na Base: sem tabela não
       // há o que cobrar, e as telas avisam em vez de mostrar tudo "sem regra"
       hospitaisSemBase: semBase,
@@ -1055,6 +1342,52 @@
     return Banco.query(sql + ' ORDER BY competencia DESC', p).map(r => r.competencia);
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // MÉDICOS CLIENTES — quem a ATLAS audita
+  //
+  // Os relatórios são do HOSPITAL: a produção do CBV traz os 655 profissionais
+  // que passaram por lá. CLIENTE é quem contratou a auditoria — um punhado.
+  // A marca fica em medicos.eh_cliente e é ela que alimenta o seletor do topo.
+  // ──────────────────────────────────────────────────────────────────────
+
+  /** Médicos marcados como clientes da ATLAS neste cofre. */
+  function clientesMedicos(clienteId) {
+    const U_ = U();
+    const rows = Banco.query(
+      `SELECT nome_oficial AS nome, nome_norm AS chave FROM medicos
+        WHERE cliente_id = ? AND COALESCE(eh_cliente, 0) = 1
+        ORDER BY nome_oficial`, [clienteId]);
+    return rows.map(r => ({ nome: r.nome, chave: r.chave || U_.normalizar(r.nome) }));
+  }
+
+  /**
+   * Marca (ou desmarca) um médico como cliente da ATLAS e devolve o OFICIAL
+   * marcado ({ nome, chave }) — escolher alguém no topo é, por si só, dizer
+   * que a auditoria responde por ele. A grafia passada é resolvida pelo
+   * de-para antes: marcar "DR JOAO" marca "JOAO DA SILVA", que é a pessoa.
+   */
+  function marcarClienteMedico(clienteId, nome, marcado) {
+    const U_ = U();
+    const bruto = String(nome || '').trim();
+    if (!bruto) return null;
+    const oficial = resolverMedico(bruto, mapaSinonimos(clienteId)) || bruto;
+    const chave = U_.normalizar(oficial);
+    if (!chave) return null;
+    const id = Banco.escalar(
+      'SELECT id FROM medicos WHERE cliente_id = ? AND nome_norm = ?', [clienteId, chave]);
+    if (id == null) {
+      if (!marcado) return null;
+      Banco.executar(
+        'INSERT INTO medicos (cliente_id, nome_oficial, nome_norm, eh_cliente) VALUES (?, ?, ?, 1)',
+        [clienteId, oficial, chave]);
+    } else {
+      Banco.executar('UPDATE medicos SET eh_cliente = ? WHERE id = ?', [marcado ? 1 : 0, id]);
+    }
+    return { nome: oficial, chave };
+  }
+
   window.Motor = { auditar, inferirPadroes, listarCompetencias, mapaSinonimos,
-    unificarMedicos, medicosDoCliente, grafiasDoCliente, ehGlosa, foiRecebida, SEVERIDADE };
+    unificarMedicos, medicosDoCliente, grafiasDoCliente, clientesMedicos,
+    marcarClienteMedico, casadorDoHospital, tokenizarProc,
+    ehGlosa, foiRecebida, SEVERIDADE };
 })();

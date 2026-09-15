@@ -460,7 +460,7 @@ window.AtlasInspecao = (function () {
     const pauta = lerPauta();
     const d = dados();
 
-    // stats do RECORTE (empresa × médico × mês) — é o que o usuário acabou de
+    // stats do RECORTE (hospital × cliente × mês) — é o que o usuário acabou de
     // importar, não a pauta. O confronto com o relatório do médico continua
     // saindo da pauta, que é justamente a lista de admissões dele.
     let stAdm = 0, stPagas = 0, stAguard = 0, stFalta = 0, stNaoChegou = 0, stNaoChegouN = 0;
@@ -492,9 +492,9 @@ window.AtlasInspecao = (function () {
         <h1>Inspeção da Admissão</h1>
         <p>O que falta o médico receber, admissão por admissão — cruzando produção,
         relatório do sistema e o que ele de fato recebeu.
-        Empresa: <strong>${esc(cliente.nome)}</strong>${App.medicoAtivoNome && App.medicoAtivoNome()
-          ? ` · Médico: <strong>${esc(App.medicoAtivoNome())}</strong>`
-          : ' · <span class="texto-cinza">todos os médicos</span>'}</p>
+        Hospital: <strong>${esc(cliente.nome)}</strong>${App.medicoAtivoNome && App.medicoAtivoNome()
+          ? ` · Cliente: <strong>${esc(App.medicoAtivoNome())}</strong>`
+          : ' · <span class="texto-cinza">todos os médicos do hospital</span>'}</p>
       </div>
 
       <div class="insp-busca">
@@ -621,7 +621,7 @@ window.AtlasInspecao = (function () {
     return Motor.auditar({ clienteId, hospitalId: st.hospitalId, competencia: st.competencia });
   }
 
-  /** A admissão interessa ao médico auditado? (vazio = a empresa inteira) */
+  /** A admissão interessa ao médico-cliente? (vazio = o hospital inteiro) */
   function doMedicoAtivo(agg, chaveMed) {
     if (!chaveMed) return true;
     return agg.itens.some(i => U().normalizar(i.medico) === chaveMed);
@@ -666,7 +666,7 @@ window.AtlasInspecao = (function () {
     const comps = competenciasDoRecorte();
     if (!d.temDados) {
       box.innerHTML = `<div class="painel"><div class="insp-painel-vazio">
-        Importe a <strong>produção</strong> e o <strong>relatório do sistema</strong> da empresa em
+        Importe a <strong>produção</strong> e o <strong>relatório do sistema</strong> do hospital em
         <strong>Importações</strong> — a Inspeção abre com o resultado assim que eles entrarem.
       </div></div>`;
       return;

@@ -245,6 +245,27 @@ CREATE TABLE IF NOT EXISTS base_tabela (
 CREATE INDEX IF NOT EXISTS idx_bt_hosp ON base_tabela(hospital_id, procedimento_norm);
 
 -- ====================================================================
+-- SINÔNIMOS DE PROCEDIMENTO — a mesma cirurgia escrita de outro jeito
+-- A Base Tabela traz UMA grafia por procedimento; o relatório do sistema
+-- escreve a mesma coisa de dezenas de formas ("(70%) - CAMPIMETRIA
+-- COMPUTADORIZADA - MONOCULAR" × "CAMPIMETRIA"). Aqui ficam as grafias já
+-- resolvidas — pelo casamento automático (origem AUTO) ou pela mão do
+-- analista (origem HUMANO, que nunca é reescrita). Sem isto a regra não é
+-- encontrada e o procedimento cai em SEM_REGRA cobrando zero.
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS sinonimos_proc (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  hospital_id   INTEGER NOT NULL,
+  grafia        TEXT NOT NULL,
+  grafia_norm   TEXT NOT NULL,
+  procedimento_norm TEXT NOT NULL,          -- a chave da regra em base_tabela
+  origem        TEXT DEFAULT 'AUTO',        -- AUTO (casado pelo motor) | HUMANO
+  criado_em     TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (hospital_id, grafia_norm)
+);
+CREATE INDEX IF NOT EXISTS idx_sinproc_hosp ON sinonimos_proc(hospital_id);
+
+-- ====================================================================
 -- PAUTA DE INSPEÇÃO — admissões em acompanhamento (vigias)
 -- O produto do serviço: o que a ATLAS está cobrando para o cliente.
 -- ====================================================================
@@ -271,6 +292,10 @@ CREATE TABLE IF NOT EXISTS medicos (
   cliente_id   INTEGER NOT NULL,
   nome_oficial TEXT NOT NULL,
   nome_norm    TEXT NOT NULL,
+  -- 1 = este médico é CLIENTE da ATLAS (é por ele que a auditoria responde).
+  -- Os relatórios são do hospital inteiro e trazem centenas de profissionais;
+  -- cliente é só quem a ATLAS audita, e é essa lista curta que aparece no topo.
+  eh_cliente   INTEGER DEFAULT 0,
   criado_em    TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_med_cli ON medicos(cliente_id, nome_norm);

@@ -74,7 +74,7 @@ App.telas['auditoria'] = function () {
     if (!temDados) {
       el.innerHTML = `
         <div class="tela-cabecalho"><h1 class="tela-titulo">Auditoria</h1>
-          <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span></div>
+          <span class="tela-sub">hospital: <strong>${esc(cliente.nome)}</strong></span></div>
         <div class="aviso-caixa">Ainda não há <strong>produção importada</strong> deste cliente.
           Importe os relatórios em <strong>Importações</strong> e volte aqui.</div>`;
       return;
@@ -95,7 +95,7 @@ App.telas['auditoria'] = function () {
     el.innerHTML = `
       <div class="tela-cabecalho">
         <h1 class="tela-titulo">Auditoria</h1>
-        <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span>
+        <span class="tela-sub">hospital: <strong>${esc(cliente.nome)}</strong></span>
         <div class="tela-acoes">
           <button class="botao" id="insp-exportar">📤 Exportar pendências</button>
         </div>
@@ -324,14 +324,19 @@ App.telas['auditoria'] = function () {
             <th class="num">Esperado</th><th class="num">Pago</th><th class="num">Diferença</th><th>Status</th>
           </tr></thead><tbody>
             ${a.itens.map(i => `<tr>
-              <td>${esc(i.procedimento)}${i.quantidade > 1 ? ' <span class="texto-cinza">×' + i.quantidade + '</span>' : ''}</td>
+              <td>${esc(i.procedimento)}${i.quantidade > 1 ? ' <span class="texto-cinza">×' + i.quantidade + '</span>' : ''}
+                ${i.matchProc && i.matchProc !== 'exato' ? `<br><span class="texto-cinza" style="font-size:10px"
+                  title="A regra veio desta linha da Base Tabela (casamento ${esc(i.matchProc)})">↳ Base: ${esc(i.procBase || '')}</span>` : ''}</td>
               <td>${esc(i.papel)}</td>
-              <td>${esc(i.medico || '—')}${!i.medico && i.regra && i.status !== 'GLOSA' ? '<br><span class="texto-aviso" style="font-size:10px">papel exigido sem profissional na produção</span>' : ''}</td>
+              <td>${esc(i.medico || '—')}${i.auxRenomeado ? `<br><span class="texto-cinza" style="font-size:10px"
+                  title="O auxiliar saiu no sistema com outro nome; o valor do auxiliar é do cirurgião do procedimento">↻ no sistema: ${esc(i.auxNomeOriginal || '')}</span>` : ''}${
+                !i.medico && i.regra && i.status !== 'GLOSA' ? '<br><span class="texto-aviso" style="font-size:10px">papel exigido sem profissional na produção</span>' : ''}</td>
               <td>${esc(i.fonte)}</td>
               <td class="num">${i.valorProducao ? fmtR(i.valorProducao) : '—'}</td>
               <td>${regraTxt(i)}</td>
               <td class="num">${i.esperado != null ? fmtR(i.esperado) : '—'}</td>
-              <td class="num">${i.pago ? fmtR(i.pago) : (i.pagoOutro ? '<span class="texto-aviso">' + fmtR(i.pagoOutro) + '*</span>' : '—')}</td>
+              <td class="num">${i.pago ? fmtR(i.pago) : (i.pagoOutro ? '<span class="texto-aviso">' + fmtR(i.pagoOutro) + '*</span>' : '—')}
+                ${i.pagoPor === 'MEDICO' ? '<br><span class="texto-cinza" style="font-size:10px" title="Medido pelo demonstrativo que o médico recebeu, não pela coluna REPASSADO do sistema">relatório do médico</span>' : ''}</td>
               <td class="num ${i.diferenca > 0 ? 'texto-erro' : (i.diferenca < 0 ? 'texto-aviso' : '')}">${i.diferenca != null && Math.abs(i.diferenca) > 0.009 ? fmtR(i.diferenca) : '—'}</td>
               <td>${badge(i.status)}${i.motivo && MOTIVO_ROTULO[i.motivo]
                 ? `<br><span class="texto-cinza" style="font-size:10px">${esc(MOTIVO_ROTULO[i.motivo])}${i.pagoA ? ' (' + esc(i.pagoA) + ')' : ''}</span>` : ''}</td>

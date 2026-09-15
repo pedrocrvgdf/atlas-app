@@ -374,6 +374,9 @@
       addCol('linhas_repasse', 'honorario', 'honorario REAL');
       // v0.9.1: a Base Tabela exportada pela ferramenta traz o nome canônico do
       // exame e a classificação dele junto com as regras
+      // v0.11.0: o médico auditado é o CLIENTE da ATLAS — marcado à mão ou na
+      // escolha do topo. Sem a marca, o seletor listaria o hospital inteiro.
+      addCol('medicos', 'eh_cliente', 'eh_cliente INTEGER DEFAULT 0');
       addCol('base_tabela', 'nomenclatura', 'nomenclatura TEXT');
       addCol('base_tabela', 'categoria', 'categoria TEXT');
       addCol('base_tabela', 'subespecialidade', 'subespecialidade TEXT');
@@ -714,6 +717,7 @@
           for (const t of TABELAS_CLIENTE) copiar(t, 'WHERE cliente_id = ?', [idOrigem]);
           copiar('base_tabela', 'WHERE hospital_id IN (SELECT id FROM o.hospitais WHERE cliente_id = ?)', [idOrigem]);
           copiar('perfis_importacao', 'WHERE hospital_id IN (SELECT id FROM o.hospitais WHERE cliente_id = ?)', [idOrigem]);
+          copiar('sinonimos_proc', 'WHERE hospital_id IN (SELECT id FROM o.hospitais WHERE cliente_id = ?)', [idOrigem]);
           copiar('sinonimos_medico', 'WHERE medico_id IN (SELECT id FROM o.medicos WHERE cliente_id = ?)', [idOrigem]);
           // config NÃO é copiada: parâmetros e estado das telas são globais (chave 'config' do IndexedDB)
         } finally {
