@@ -345,8 +345,20 @@ App.telas['importar'] = function () {
               ${r.avisos.length ? `<div class="card-extra">${n(r.avisos.length)} ignorada(s) sem admissão/procedimento</div>` : ''}</div>
             <div class="card"><div class="card-rotulo">Admissões únicas</div><div class="card-valor">${n(r.admissoes)}</div></div>
             <div class="card"><div class="card-rotulo">Produzido</div><div class="card-valor">${fmtR(r.produzido)}</div></div>
-            <div class="card card-destaque"><div class="card-rotulo">Repassado</div><div class="card-valor">${fmtR(r.repassado)}</div></div>
+            ${r.temRecebido ? `<div class="card card-destaque"><div class="card-rotulo">Recebido do pagador</div>
+              <div class="card-valor">${fmtR(r.recebido)}</div>
+              <div class="card-extra">${r.glosadas ? `${n(r.glosadas)} linha(s) com recebido 0 = glosa · ${n(r.admissoesGlosadas)} admissão(ões)` : 'nenhuma linha glosada'}</div></div>` : ''}
+            <div class="card"><div class="card-rotulo">Repassado pelo sistema</div><div class="card-valor">${fmtR(r.repassado)}</div>
+              <div class="card-extra">informativo — o esperado sai da Base Tabela</div></div>
           </div>
+          ${r.temRecebido
+            ? (r.glosadas ? `<div class="info-caixa" style="margin-bottom:12px">As <strong>${n(r.glosadas)}</strong> linhas com
+                <strong>Recebido = R$ 0,00</strong> (convênio/SUS) entram como <strong>GLOSA</strong>: o pagador não pagou, então
+                não há repasse devido e elas não viram dívida na auditoria.</div>` : '')
+            : `<div class="aviso-caixa" style="margin-bottom:12px"><strong>⚠ O arquivo não tem a coluna RECEBIDO.</strong>
+                Ela é a que manda na auditoria — <em>recebido = 0</em> em convênio/SUS é glosa, e sem ela a glosa só é
+                detectada quando o relatório traz um status escrito. Exporte o relatório com a coluna
+                <strong>RECEBIDO</strong> e importe de novo.</div>`}
           ${r.divergentes ? `<div class="aviso-caixa" style="margin-bottom:12px${todasDivergem ? ';border-color:#e5c4c4;background:#fdf3f3' : ''}">
             <strong>⚠ ${todasDivergem ? 'TODAS as' : n(r.divergentes)} linha(s)</strong> trazem na coluna do arquivo um tipo de recebimento
             diferente de <strong>${esc(ORIGEM_ROTULO[r.origem])}</strong>${todasDivergem

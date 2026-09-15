@@ -9,6 +9,13 @@
  * As regras de negócio são a METODOLOGIA ATLAS — o detalhamento de cada
  * uma está em docs/METODOLOGIA.md:
  *
+ *   · O RELATÓRIO DO SISTEMA tem duas colunas de peso MUITO diferente:
+ *     RECEBIDO é o que o pagador pagou (0 em convênio/SUS = GLOSA, e glosa
+ *     não é dívida da casa); REPASSADO é só o que o sistema DIZ que passou
+ *     ao médico — nem toda regra está cadastrada lá e ele muitas vezes não
+ *     segue a Base Tabela, então REPASSADO nunca define o esperado nem
+ *     valida sozinho um pagamento (pago sem regra conhecida = SEM REGRA,
+ *     não "OK").
  *   · "Pago a quem devia" é a pergunta certa, não "pago?" — valor pago a
  *     OUTRO médico não quita a dívida.
  *   · O AUXILIAR acompanha o EXECUTANTE: o valor do papel de auxiliar
@@ -39,8 +46,10 @@
  *   A_MAIOR       pago acima do esperado
  *   NAO_PAGO      esperado > 0 e nada pago (motivo: nao_pago | sem_medico)
  *   PAGO_A_OUTRO  o papel foi pago, mas a outro médico — dívida continua
- *   GLOSA         procedimento glosado — visível, valendo zero
+ *   GLOSA         procedimento glosado (Recebido = 0) — visível, valendo zero
  *   SEM_REGRA     sem Base e sem padrão confiável — não dá para avaliar
+ *                 (inclusive quando o sistema pagou: sem regra não se afirma
+ *                  que o valor está certo)
  *   NAO_PAREADO   pagamento que não casou com nenhum item da produção
  *
  * Resultado memoizado por (filtros | Banco._versao) — qualquer gravação no
@@ -79,6 +88,34 @@
     const v = Number(Banco.configLer(chave, padrao));
     return isFinite(v) ? v : padrao;
   }
+
+  /**
+   * GLOSA de uma linha do SISTEMA — a regra da casa (docs/METODOLOGIA.md §5):
+   * o pagador não pagou, então não há repasse devido e não há dívida.
+   *
+   *   RECEBIDO = 0  em convênio/SUS  → glosa (o sinal que MANDA)
+   *   RECEBIDO null                  → o relatório não trouxe a coluna: cai no
+   *                                    texto de status, como antes da v0.8.1
+   *   PARTICULAR                     → não tem glosa (o paciente paga direto);
+   *                                    zero ali não quer dizer recusa
+   */
+  function ehGlosa(lr) {
+    if (!lr) return false;
+    if (/glosa/i.test(String(lr.status || ''))) return true;
+    if (lr.recebido == null) return false;
+    return Number(lr.recebido) <= 0 && U().classificarFonte(lr.fonte) !== 'PARTICULAR';
+  }
+
+  /** O pagador pagou esta linha? (só quando o relatório trouxe a coluna RECEBIDO) */
+  function foiRecebida(lr) {
+    return !!lr && lr.recebido != null && Number(lr.recebido) > 0;
+  }
+
+  // linhas que NÃO servem para aprender padrão: glosadas (pagaram zero) puxariam
+  // a moda para baixo e inventariam uma "regra" que o hospital nunca teve
+  const SQL_SEM_GLOSA =
+    ` AND (recebido IS NULL OR recebido > 0 OR UPPER(TRIM(COALESCE(fonte, ''))) = 'PARTICULAR')
+      AND UPPER(COALESCE(status, '')) NOT LIKE '%GLOSA%'`;
 
   // ──────────────────────────────────────────────────────────────────────
   // DE-PARA DE MÉDICOS — grafia → nome oficial (quando cadastrado)
@@ -131,6 +168,12 @@
    * Varre TODO o histórico de repasses pagos do hospital e devolve
    * Map<`proc|papel|fonte`, padrão>, onde padrão =
    *   { tipo:'FIXO'|'PCT', valor, percentual, amostras, confianca }
+   *
+   * O que se aprende aqui é o COSTUME do sistema, não a regra do contrato: o
+   * REPASSADO nem sempre segue a Base Tabela. Por isso o padrão inferido só
+   * entra quando não há regra na Base, sempre com a origem 'INFERIDA' à
+   * vista, e nunca aprende de linha GLOSADA (pagou zero por recusa do
+   * pagador, não por regra).
    */
   function inferirPadroes(hospitalId) {
     const chave = hospitalId + '|' + Banco._versao;
@@ -146,7 +189,7 @@
     for (const r of Banco.query(
       `SELECT procedimento_norm AS proc, papel_canon AS papel, fonte,
               ROUND(repassado / (CASE WHEN quantidade > 0 THEN quantidade ELSE 1 END), 2) AS unit, COUNT(*) AS f
-         FROM linhas_repasse WHERE hospital_id = ? AND repassado > 0
+         FROM linhas_repasse WHERE hospital_id = ? AND repassado > 0` + SQL_SEM_GLOSA + `
         GROUP BY 1, 2, 3, 4`, [hospitalId])) {
       const g = grupo(chaveDe(r));
       const v = Number(r.unit) || 0, f = Number(r.f) || 0;
@@ -156,7 +199,7 @@
     for (const r of Banco.query(
       `SELECT procedimento_norm AS proc, papel_canon AS papel, fonte,
               ROUND(repassado * 1.0 / produzido, 4) AS razao, COUNT(*) AS f
-         FROM linhas_repasse WHERE hospital_id = ? AND repassado > 0 AND produzido > 0
+         FROM linhas_repasse WHERE hospital_id = ? AND repassado > 0 AND produzido > 0` + SQL_SEM_GLOSA + `
         GROUP BY 1, 2, 3, 4`, [hospitalId])) {
       grupo(chaveDe(r)).razoes.push([Number(r.razao) || 0, Number(r.f) || 0]);
     }
@@ -363,18 +406,27 @@
       const repAdm = repPorAdm.get(adm) || [];
       const itens = [];
 
-      // glosa é do PROCEDIMENTO: mapa procNorm → papéis com linha de glosa
+      // Glosa e recebimento são do PROCEDIMENTO, não da linha:
+      //   glosaPorProc    procNorm → papéis com linha glosada (Recebido = 0)
+      //   recebidoPorProc procedimentos que o pagador PAGOU — se o dinheiro
+      //                   entrou e nada foi repassado, a dívida tem nome
       const glosaPorProc = new Map();
+      const recebidoPorProc = new Set();
       for (const lr of repAdm) {
-        if (!/glosa/i.test(String(lr.status || ''))) continue;
+        const glosa = ehGlosa(lr), recebida = foiRecebida(lr);
+        if (!glosa && !recebida) continue;
         for (const lp of itensProd) {
           if (lr.procedimento_norm === lp.procedimento_norm ||
               U_.similaridade(lr.procedimento_norm, lp.procedimento_norm) >= limiarFuzzy) {
+            if (recebida) recebidoPorProc.add(lp.procedimento_norm);
+            if (!glosa) continue;
             if (!glosaPorProc.has(lp.procedimento_norm)) glosaPorProc.set(lp.procedimento_norm, new Set());
             if (lr.papel_canon) glosaPorProc.get(lp.procedimento_norm).add(lr.papel_canon);
           }
         }
-        lr._consumida = true;   // linha de glosa não é pagamento nem "não pareado"
+        // linha glosada não é pagamento nem "não pareado" — mas se o sistema
+        // repassou alguma coisa nela, o dinheiro saiu e continua contando
+        if (glosa && !(Number(lr.repassado) > 0)) lr._consumida = true;
       }
 
       for (const lp of itensProd) {
@@ -487,9 +539,13 @@
 
           // ── status (a ordem é a da metodologia — docs/METODOLOGIA.md) ──
           let status, motivo = null, esperado = esperadoBruto, falta = 0, dif = null;
+          let esperadoGlosa = 0;
           if (pago > 0) {
             dif = (esperado != null) ? Math.round((esperado - pago) * 100) / 100 : null;
-            if (esperado == null) status = 'OK';
+            // sem regra conhecida, o valor repassado não prova nada: o sistema
+            // do hospital nem sempre tem a regra cadastrada e nem sempre segue
+            // a Base Tabela. O pagamento aparece; a conferência fica pendente.
+            if (esperado == null) { status = 'SEM_REGRA'; motivo = 'pago_sem_regra'; }
             else if (Math.abs(dif) <= tol) status = 'OK';
             else if (dif > 0) { status = 'A_MENOR'; falta = dif; }
             else status = 'A_MAIOR';
@@ -497,6 +553,7 @@
             // glosado não é dívida — visível, valendo zero
             status = 'GLOSA';
             motivo = glosaPorProc.get(procN).has(cand.papel) ? 'glosa' : 'glosa_do_procedimento';
+            esperadoGlosa = esperado;   // o que a regra pagaria se não fosse a recusa
             esperado = 0;
           } else if (pagoOutro > 0 && esperado != null) {
             // pago ao médico errado — a dívida continua
@@ -508,7 +565,10 @@
             status = 'SEM_REGRA';
           } else {
             status = 'NAO_PAGO';
-            motivo = nomeDono ? 'nao_pago' : 'sem_medico';   // dívida sem dono
+            // o pagador pagou o procedimento e o repasse não saiu: é a
+            // dívida mais clara que existe — tem nome próprio no relatório
+            motivo = !nomeDono ? 'sem_medico'
+              : (recebidoPorProc.has(procN) ? 'recebido_sem_repasse' : 'nao_pago');
             falta = esperado;
             dif = esperado;
           }
@@ -519,7 +579,7 @@
             procedimento: lp.procedimento, quantidade: lp.quantidade,
             valorProducao: lp.valor,
             papel: cand.papel, medico: nomeDono,
-            regra, esperado, pago, pagoOutro, diferenca: dif, falta, status, motivo,
+            regra, esperado, esperadoGlosa, pago, pagoOutro, diferenca: dif, falta, status, motivo,
             pagoA: [...nomesOutros].join(', '),
           };
           itens.push(item);
@@ -561,6 +621,9 @@
         medicos: [...new Set(itens.map(i => i.medico).filter(Boolean))],
         produzido: itensProd.reduce((s, l) => s + (Number(l.valor) || 0), 0),
         esperado: itens.reduce((s, i) => s + (i.esperado || 0), 0),
+        // o que as regras pagariam nos itens glosados — não é dívida, é o
+        // tamanho do que o pagador recusou
+        glosado: itens.reduce((s, i) => s + (i.status === 'GLOSA' ? (i.esperadoGlosa || 0) : 0), 0),
         // "pago" da admissão = tudo que saiu, inclusive ao médico errado
         pago: itens.reduce((s, i) => s + (i.pago || 0) + (i.pagoOutro || 0), 0),
         falta: itens.reduce((s, i) => s + (i.falta || 0), 0),
@@ -597,9 +660,13 @@
       esperado: admissoes.reduce((s, a) => s + a.esperado, 0),
       pago: admissoes.reduce((s, a) => s + a.pago, 0),
       falta: admissoes.reduce((s, a) => s + a.falta, 0),
+      // o que as regras pagariam nos itens GLOSADOS — não é dívida (o pagador
+      // recusou), mas é o tamanho do que a glosa tirou do médico
+      glosado: admissoes.reduce((s, a) => s + (a.glosado || 0), 0),
       nAdmissoes: admissoes.length,
       nPendencias: admissoes.filter(a => a.falta > tol).length,
       nSemRegra: admissoes.filter(a => a.status === 'SEM_REGRA').length,
+      nGlosa: admissoes.filter(a => a.itens.some(i => i.status === 'GLOSA')).length,
     };
 
     const resultado = {
@@ -644,5 +711,5 @@
     return Banco.query(sql + ' ORDER BY competencia DESC', p).map(r => r.competencia);
   }
 
-  window.Motor = { auditar, inferirPadroes, listarCompetencias, mapaSinonimos, SEVERIDADE };
+  window.Motor = { auditar, inferirPadroes, listarCompetencias, mapaSinonimos, ehGlosa, foiRecebida, SEVERIDADE };
 })();

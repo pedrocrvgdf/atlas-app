@@ -46,7 +46,9 @@ App.telas['auditoria'] = function () {
   const MOTIVO_ROTULO = {
     pago_a_outro: 'pago ao médico errado — a dívida continua',
     sem_medico: 'papel remunerado sem profissional em base nenhuma',
-    glosa: 'procedimento glosado pelo pagador',
+    recebido_sem_repasse: 'o pagador pagou e o repasse não saiu',
+    pago_sem_regra: 'o sistema pagou, mas sem regra não dá para conferir o valor',
+    glosa: 'procedimento glosado pelo pagador (recebido = 0)',
     glosa_do_procedimento: 'herda a glosa do procedimento',
     fora_da_base: 'produto fora da cobrança papel-a-papel (informativo)',
   };
@@ -212,6 +214,9 @@ App.telas['auditoria'] = function () {
           <div class="card-valor mono">${fmtR(soma('esperado'))}</div></div>
         <div class="card"><div class="card-rotulo">Pago (sistema)</div>
           <div class="card-valor mono">${fmtR(soma('pago'))}</div></div>
+        ${soma('glosado') > 0 ? `<div class="card"><div class="card-rotulo">Glosado (não devido)</div>
+          <div class="card-valor mono">${fmtR(soma('glosado'))}</div>
+          <div class="card-extra">o pagador não pagou — não entra na cobrança</div></div>` : ''}
         <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
           <div class="card-valor mono">${fmtR(soma('falta'))}</div>
           <div class="card-extra">${nPend.toLocaleString('pt-BR')} de ${lista.length.toLocaleString('pt-BR')} admissões com pendência</div></div>

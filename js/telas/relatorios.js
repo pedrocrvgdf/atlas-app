@@ -66,6 +66,9 @@ App.telas['relatorios'] = function () {
           <div class="card-valor mono">${fmtR(r.kpis.esperado)}</div></div>
         <div class="card"><div class="card-rotulo">Pago (sistema)</div>
           <div class="card-valor mono">${fmtR(r.kpis.pago)}</div></div>
+        ${r.kpis.glosado > 0 ? `<div class="card"><div class="card-rotulo">Glosado (não devido)</div>
+          <div class="card-valor mono">${fmtR(r.kpis.glosado)}</div>
+          <div class="card-extra">o pagador não pagou — não entra na cobrança</div></div>` : ''}
         <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
           <div class="card-valor mono">${fmtR(r.kpis.falta)}</div>
           <div class="card-extra">${medicos.filter(m => m.falta > 0.05).length} médico(s) com pendência</div></div>

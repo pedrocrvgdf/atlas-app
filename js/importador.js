@@ -84,8 +84,12 @@
         aliases: ['QUANTIDADE', 'QTD', 'QTDE'] },
       { campo: 'produzido',    rotulo: 'Valor produzido (R$)', obrig: false,
         aliases: ['PRODUZIDO', 'VALOR PRODUZIDO', 'PRODUCAO', 'VALOR PRODUCAO', 'FATURADO', 'VALOR FATURADO', 'VALOR BRUTO'] },
-      { campo: 'repassado',    rotulo: 'Valor repassado / pago (R$)', obrig: true,
-        aliases: ['REPASSADO', 'REPASSE', 'VALOR REPASSADO', 'VALOR REPASSE', 'VALOR PAGO', 'PAGO', 'VALOR MEDICO', 'HONORARIO', 'HONORARIO PAGO', 'VALOR LIQUIDO', 'RECEBIDO'] },
+      { campo: 'recebido',     rotulo: 'Valor RECEBIDO do pagador (R$) — 0 = glosa', obrig: false,
+        aliases: ['RECEBIDO', 'VALOR RECEBIDO', 'RECEBIDO CONVENIO', 'VALOR RECEBIDO CONVENIO'] },
+      { campo: 'honorario',    rotulo: 'Honorário (R$)', obrig: false,
+        aliases: ['HONORARIO', 'VALOR HONORARIO', 'HONORARIOS'] },
+      { campo: 'repassado',    rotulo: 'Valor repassado pelo sistema (R$)', obrig: true,
+        aliases: ['REPASSADO', 'REPASSE', 'VALOR REPASSADO', 'VALOR REPASSE', 'VALOR PAGO', 'PAGO', 'VALOR MEDICO', 'HONORARIO PAGO', 'VALOR LIQUIDO'] },
       { campo: 'status',       rotulo: 'Status / ocorrência (detecta GLOSA)', obrig: false,
         aliases: ['STATUS', 'ESTADO', 'SITUACAO', 'GLOSA', 'STATUS PAGAMENTO', 'SITUACAO PAGAMENTO', 'OCORRENCIA', 'MOTIVO'] },
     ],
@@ -381,8 +385,8 @@
     REPASSE: `INSERT INTO linhas_repasse
                (cliente_id, hospital_id, importacao_id, competencia, admissao, admissao_norm, data, paciente,
                 convenio, fonte, procedimento, procedimento_norm, papel, papel_canon,
-                medico, medico_norm, quantidade, produzido, repassado, status, linha_origem)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                medico, medico_norm, quantidade, produzido, honorario, recebido, repassado, status, linha_origem)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   };
 
   function paramsAplicar(tipo, p, impId, l) {
@@ -404,7 +408,8 @@
     }
     return [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, U_.normAdm(l.admissao), l.data, l.paciente,
       l.convenio, l.fonte, l.procedimento, l.procedimento_norm, l.papel, l.papel_canon,
-      l.medico, U_.normalizar(l.medico), l.quantidade, l.produzido, l.repassado, l.status, l.linha_origem];
+      l.medico, U_.normalizar(l.medico), l.quantidade, l.produzido, l.honorario, l.recebido, l.repassado,
+      l.status, l.linha_origem];
   }
 
   function prepararAplicar(p) {
@@ -416,8 +421,9 @@
     // a fonte sai da coluna. A substituição respeita a origem: reimportar o
     // Particular de um mês não apaga o Convênio do mesmo mês.
     const origem = tipo === 'REPASSE' && (p.origem === 'CONVENIO' || p.origem === 'PARTICULAR') ? p.origem : null;
-    const ctx = { tipo, origem, avisos: [], comps: new Set(), admissoes: new Set(),
-      divergentes: 0, produzido: 0, repassado: 0, lidas: 0, inseridas: 0, impId: null };
+    const ctx = { tipo, origem, avisos: [], comps: new Set(), admissoes: new Set(), admGlosa: new Set(),
+      divergentes: 0, produzido: 0, recebido: 0, repassado: 0, temRecebido: false, glosadas: 0,
+      lidas: 0, inseridas: 0, impId: null };
     const avisos = ctx.avisos;
 
     /** Linha crua (índice i na planilha) → registro, ou null quando não entra. */
@@ -511,22 +517,38 @@
       // REPASSE (Sistema)
       const papel = String(celula(raw, p.map, 'papel')).trim();
       if (origem && fonteTxt !== '' && U_.classificarFonte(fonteTxt) !== origem) ctx.divergentes++;
+      // RECEBIDO e HONORÁRIO: null quando o relatório NÃO trouxe a coluna — a
+      // diferença importa, porque "recebido = 0" é glosa e "sem coluna" não é.
+      const temCol = (campo) => p.map[campo] != null && p.map[campo] >= 0;
+      const fonteLinha = origem || fonte;
       const l = {
         admissao: adm, data: dataISO,
         competencia: p.competencia || U_.competenciaDe(dataISO) || '',
         paciente: String(celula(raw, p.map, 'paciente')).trim(),
-        convenio, fonte: origem || fonte,
+        convenio, fonte: fonteLinha,
         procedimento: proc, procedimento_norm: U_.normalizar(proc),
         papel, papel_canon: U_.papelCanonico(papel),
         medico: String(celula(raw, p.map, 'medico')).trim(),
         quantidade: qtd,
         produzido: U_.paraNumero(celula(raw, p.map, 'produzido')),
+        honorario: temCol('honorario') ? U_.paraNumero(celula(raw, p.map, 'honorario')) : null,
+        recebido: temCol('recebido') ? U_.paraNumero(celula(raw, p.map, 'recebido')) : null,
         repassado: U_.paraNumero(celula(raw, p.map, 'repassado')),
         status: String(celula(raw, p.map, 'status')).trim(),
         linha_origem: i + 1,
       };
       if (l.competencia) ctx.comps.add(l.competencia);
       ctx.produzido += l.produzido; ctx.repassado += l.repassado; ctx.admissoes.add(U_.normAdm(adm));
+      if (l.recebido != null) {
+        ctx.temRecebido = true;
+        ctx.recebido += l.recebido;
+        // glosa: o pagador não pagou. No PARTICULAR o paciente paga direto —
+        // a coluna não se aplica e zero ali não é glosa.
+        if (l.recebido <= 0 && U_.classificarFonte(fonteLinha) !== 'PARTICULAR') {
+          ctx.glosadas++;
+          ctx.admGlosa.add(U_.normAdm(adm));
+        }
+      }
       return l;
     };
     return ctx;
@@ -574,7 +596,9 @@
       linhasLidas: ctx.lidas,
       origem: tipo === 'REPASSE' ? (ctx.origem || 'TODAS') : null, divergentes: ctx.divergentes,
       admissoes: ctx.admissoes.size, produzido: Math.round(ctx.produzido * 100) / 100,
-      repassado: Math.round(ctx.repassado * 100) / 100 };
+      repassado: Math.round(ctx.repassado * 100) / 100,
+      temRecebido: ctx.temRecebido, recebido: Math.round(ctx.recebido * 100) / 100,
+      glosadas: ctx.glosadas, admissoesGlosadas: ctx.admGlosa.size };
   }
 
   /** Síncrona: p.matriz inteira em memória (testes, relatório do médico, base tabela). */

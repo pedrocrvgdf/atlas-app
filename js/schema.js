@@ -136,8 +136,14 @@ CREATE INDEX IF NOT EXISTS idx_prod_cli_comp ON linhas_producao(cliente_id, comp
 CREATE INDEX IF NOT EXISTS idx_prod_proc     ON linhas_producao(procedimento_norm);
 
 -- ====================================================================
--- REPASSE — o que foi PAGO (1 linha = papel × procedimento × admissão)
--- Formato LONGO (estilo QVIS): papel + profissional por linha.
+-- REPASSE — o relatório cru do SISTEMA do hospital
+-- (1 linha = papel × procedimento × admissão). Formato LONGO (estilo QVIS).
+--
+-- As quatro colunas de dinheiro têm pesos MUITO diferentes na auditoria:
+--   produzido  o que foi faturado do item
+--   honorario  a parcela de honorário do produzido
+--   recebido   O QUE O PAGADOR PAGOU — manda: 0 em convênio/SUS = GLOSA
+--   repassado  o que o SISTEMA diz que passou ao médico — INFORMATIVO
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS linhas_repasse (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -159,7 +165,12 @@ CREATE TABLE IF NOT EXISTS linhas_repasse (
   medico_norm   TEXT,
   quantidade    REAL DEFAULT 1,
   produzido     REAL DEFAULT 0,             -- valor de produção informado no repasse
-  repassado     REAL DEFAULT 0,             -- o que foi efetivamente pago ao médico
+  honorario     REAL,                       -- parcela de honorário do produzido (null = coluna ausente)
+  recebido      REAL,                       -- O QUE O PAGADOR PAGOU ao hospital. É a coluna que manda:
+                                            -- recebido = 0 em convênio/SUS é GLOSA (docs/METODOLOGIA.md §5).
+                                            -- null = o relatório não trouxe a coluna
+  repassado     REAL DEFAULT 0,             -- o que o SISTEMA diz que passou ao médico (informativo:
+                                            -- nem toda regra está cadastrada lá — nunca é a régua do esperado)
   status        TEXT,                       -- status da linha no relatório (detecção de GLOSA)
 
   linha_origem  INTEGER,

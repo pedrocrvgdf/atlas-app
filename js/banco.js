@@ -367,6 +367,11 @@
       addCol('linhas_producao', 'idade_atendimento', 'idade_atendimento REAL');
       // v0.7: origem do relatório do SISTEMA (Convênio / Particular / os dois)
       addCol('importacoes', 'origem', 'origem TEXT');
+      // v0.8.1: o que o PAGADOR pagou (recebido = 0 → glosa) e o honorário do item.
+      // Ficam NULL nas linhas já importadas: null = "o relatório não trouxe a coluna",
+      // e a regra da glosa por recebido não se aplica a elas.
+      addCol('linhas_repasse', 'recebido', 'recebido REAL');
+      addCol('linhas_repasse', 'honorario', 'honorario REAL');
       // v0.7.2: admissão normalizada (índice de busca) + paciente normalizado na produção.
       // Os índices ficam AQUI (não no SCHEMA_SQL) porque a coluna pode não existir
       // ainda num banco antigo na hora em que o schema roda.

@@ -255,8 +255,14 @@ window.AtlasInspecao = (function () {
     const mAdm = L.motorPor.get(adm) || null;
     const med = L.medPor.get(adm) || [];
 
-    const totalRepassado = rep.reduce((s, l) =>
-      s + (/glosa/i.test(String(l.status || '')) ? 0 : (Number(l.repassado) || 0)), 0);
+    // glosa = o pagador não pagou (Recebido = 0 em convênio/SUS, ou status GLOSA)
+    const glosada = (l) => Motor.ehGlosa(l);
+    const totalRepassado = rep.reduce((s, l) => s + (glosada(l) ? 0 : (Number(l.repassado) || 0)), 0);
+    // o que o PAGADOR pagou nesta admissão (null quando o relatório não traz a coluna)
+    const comRecebido = rep.filter(l => l.recebido != null);
+    const totalRecebidoPagador = comRecebido.length
+      ? Math.round(comRecebido.reduce((s, l) => s + (Number(l.recebido) || 0), 0) * 100) / 100 : null;
+    const nGlosadas = rep.filter(glosada).length;
     const compsPagas = [...new Set(rep.filter(l => Number(l.repassado) > 0)
       .map(l => l.competencia).filter(Boolean))].sort();
     const porComp = new Map();
@@ -295,7 +301,7 @@ window.AtlasInspecao = (function () {
         const equiv = (a, b) => a === b ||
           (['INDICANTE', 'SOLICITANTE'].includes(a) && ['INDICANTE', 'SOLICITANTE'].includes(b));
         for (const lr of rep) {
-          if (!(Number(lr.repassado) > 0) || /glosa/i.test(String(lr.status || ''))) continue;
+          if (!(Number(lr.repassado) > 0) || glosada(lr)) continue;
           const par = med.find((lm, i) => !usadas.has(i) && !ehGlosaMed(lm) &&
             equiv(lm.papel_canon || '', lr.papel_canon || '') &&
             (lm.procedimento_norm === lr.procedimento_norm ||
@@ -309,7 +315,7 @@ window.AtlasInspecao = (function () {
     }
 
     return { adm, prod, rep, med, mAdm, tom, titulo, totalRepassado, compsPagas, porComp,
-      totalRecebido, compsRecebidas, confronto };
+      totalRecebidoPagador, nGlosadas, totalRecebido, compsRecebidas, confronto };
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -340,8 +346,12 @@ window.AtlasInspecao = (function () {
 
       const rotProc = i.procedimento;
       if (i.status === 'SEM_REGRA') {
+        // procedimento PAGO sem regra conhecida não vira aviso: o pagamento
+        // aconteceu, e dizer "sem regra" ali só confunde quem lê. O que fica
+        // pendente é a conferência do valor, e isso a Auditoria mostra.
+        if (i.pago > 0) continue;
         out.push({ item: i, grave: false, texto: `${rotProc} - ${FRASE_SEM_REGRA}` });
-      } else if (insp.totalRepassado <= 0) {
+      } else if (i.motivo === 'recebido_sem_repasse' || insp.totalRepassado <= 0) {
         out.push({ item: i, grave: true, texto: `${rotProc} - ${FRASE_SEM_EXECUCAO}` });
       } else {
         const quem = QUEM_DO_PAPEL[i.papel] || i.papel.toLowerCase();
@@ -607,10 +617,13 @@ window.AtlasInspecao = (function () {
       sub = `Encontrada no repasse de ${comps || '—'} · ${fontes.join('/') || '—'} · ${esc(convs.join(', ') || '—')},
         com <strong>${fmtR(insp.totalRepassado)}</strong> repassado.`;
     } else if (insp.tom === 'etapa') {
-      const soGlosa = insp.rep.length && insp.rep.every(l => /glosa/i.test(String(l.status || '')) || !(Number(l.repassado) > 0));
-      sub = soGlosa && insp.rep.some(l => /glosa/i.test(String(l.status || '')))
-        ? 'As linhas desta admissão constam como <span class="glosa">GLOSA</span> — não há repasse a executar.'
-        : 'A admissão chegou no sistema, mas nenhum valor foi repassado — confira o processamento.';
+      const soGlosa = insp.nGlosadas > 0 &&
+        insp.rep.every(l => Motor.ehGlosa(l) || !(Number(l.repassado) > 0));
+      sub = soGlosa
+        ? 'As linhas desta admissão constam como <span class="glosa">GLOSA</span> — o pagador não pagou, não há repasse a executar.'
+        : (insp.totalRecebidoPagador > 0
+          ? `O pagador pagou <strong>${fmtR(insp.totalRecebidoPagador)}</strong> desta admissão e nenhum valor foi repassado ao médico — confira o processamento.`
+          : 'A admissão chegou no sistema, mas nenhum valor foi repassado — confira o processamento.');
     } else if (insp.tom === 'aviso') {
       sub = 'A admissão existe na produção e ainda não apareceu no repasse.';
     } else {
@@ -629,7 +642,7 @@ window.AtlasInspecao = (function () {
       analitica = [...grupos.values()].map(g => {
         const porPapel = new Map();
         for (const l of g.linhas) {
-          const glosa = /glosa/i.test(String(l.status || ''));
+          const glosa = Motor.ehGlosa(l);
           const k = (l.papel_canon || l.papel || '—') + '|' + U().normalizar(l.medico) + '|' +
             (glosa ? 'G' : Number(l.repassado) || 0);
           if (!porPapel.has(k)) porPapel.set(k, { papel: l.papel_canon || l.papel || '—',
@@ -713,7 +726,8 @@ window.AtlasInspecao = (function () {
     const p1 = insp.rep.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
         <th>Competência</th><th>Data</th><th>Paciente</th><th>Profissional</th><th>Papel</th>
         <th>Procedimento</th><th>Fonte</th><th>Convênio</th><th class="num">Qtd</th>
-        <th class="num">Produzido</th><th class="num">Repassado</th><th>Status</th>
+        <th class="num">Produzido</th><th class="num" title="O que o pagador pagou — 0 em convênio/SUS é glosa">Recebido</th>
+        <th class="num" title="O que o sistema diz que passou ao médico — informativo">Repassado</th><th>Status</th>
       </tr></thead><tbody>
       ${insp.rep.map(l => `<tr>
         <td>${Utilidades.compExibir(l.competencia)}</td>
@@ -726,8 +740,11 @@ window.AtlasInspecao = (function () {
         <td>${esc(l.convenio || '—')}</td>
         <td class="num">${l.quantidade || 1}</td>
         <td class="num">${fmtR(l.produzido)}</td>
+        <td class="num ${Motor.ehGlosa(l) ? 'texto-erro' : ''}">${l.recebido == null ? '—' : fmtR(l.recebido)}</td>
         <td class="num">${fmtR(l.repassado)}</td>
-        <td>${/glosa/i.test(String(l.status || '')) ? '<span class="badge badge-NAO_PAGO">GLOSA</span>' : esc(l.status || '—')}</td>
+        <td>${Motor.ehGlosa(l)
+          ? `<span class="badge badge-NAO_PAGO">GLOSA</span>${l.recebido != null && Number(l.recebido) <= 0 ? ' <span class="texto-cinza" style="font-size:10.5px">recebido 0</span>' : ''}`
+          : esc(l.status || '—')}</td>
       </tr>`).join('')}</tbody></table></div>`
       : vazio('Nada no sistema — ' + (insp.prod.length ? 'o pagador ainda não pagou esta admissão.' : 'admissão fora desta base.'));
 
