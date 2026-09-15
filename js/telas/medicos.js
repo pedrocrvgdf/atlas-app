@@ -284,7 +284,7 @@ App.telas['medicos'] = function () {
               </div>
               <input class="entrada" style="flex:1;min-width:200px" data-sug-nome="${i}"
                 value="${esc(s.medicoId ? (d.porOficial.get(s.medicoId) || { m: { nome_oficial: s.nomeSugerido } }).m.nome_oficial : s.nomeSugerido)}">
-              <button class="botao botao-ouro botao-mini" data-sug="${i}">Unificar</button>
+              <button class="botao botao-primario botao-mini" data-sug="${i}">Unificar</button>
             </div>`).join('')}
           ${d.sugestoes.length > LIM_SUG ? `<button class="botao botao-mini" id="sug-mais" style="margin-top:10px">
             mostrar todas as ${d.sugestoes.length} sugestões</button>` : ''}
@@ -326,7 +326,7 @@ App.telas['medicos'] = function () {
           <span class="painel-conta">${d.oficiais.length} cadastrado(s)</span>
           <div class="painel-acoes">
             <input class="entrada" id="of-nome" placeholder="nome oficial novo">
-            <button class="botao botao-ouro botao-mini" id="of-add">＋ Cadastrar</button>
+            <button class="botao botao-primario botao-mini" id="of-add">＋ Cadastrar</button>
           </div>
         </div>
         ${d.oficiais.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>

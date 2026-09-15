@@ -38,7 +38,7 @@ App.telas['clientes'] = function () {
               <input id="cli-doc" placeholder="opcional"></div>
             <div class="campo"><span class="campo-rotulo">Contato</span>
               <input id="cli-contato" placeholder="e-mail ou telefone (opcional)"></div>
-            <button class="botao botao-ouro" id="cli-add">＋ Cadastrar</button>
+            <button class="botao botao-primario" id="cli-add">＋ Cadastrar</button>
           </div>
         </div>
       </div>

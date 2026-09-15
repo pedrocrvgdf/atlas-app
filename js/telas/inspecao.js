@@ -61,7 +61,7 @@ window.AtlasInspecao = (function () {
     EXECUTANTE: 'médico executante', AUXILIAR: 'auxiliar', INDICANTE: 'médico indicante',
     SOLICITANTE: 'médico solicitante', LAUDO: 'médico laudista', ANESTESISTA: 'anestesista',
   };
-  const AZUL_SPEC = '107DAC';   // azul das frases/estados herdado da spec
+  const AZUL_SPEC = '143352';   // o azul da logo (paleta principal da ATLAS)
 
   // ── estado de tela (sobrevive à navegação; não viaja no banco) ─────────
   const st = {
@@ -791,7 +791,7 @@ window.AtlasInspecao = (function () {
       <div class="lat-acoes">
         <label class="botao botao-mini" style="cursor:pointer" title="Relatório que o médico recebeu (3 gerações) ou lista de admissões">📥 Importar
           <input type="file" id="lat-importar" accept=".xlsx,.xls,.csv" style="display:none"></label>
-        <button class="botao botao-mini botao-ouro" id="lat-exportar" ${st.exportando ? 'disabled' : ''}>📤 Exportar</button>
+        <button class="botao botao-mini botao-primario" id="lat-exportar" ${st.exportando ? 'disabled' : ''}>📤 Exportar</button>
         <button class="botao botao-mini botao-perigo" id="lat-limpar">Limpar</button>
       </div>
       ${d.temBaseMedico ? `<div class="info-caixa" style="margin-bottom:10px;padding:8px 10px;font-size:11.5px">
@@ -963,7 +963,7 @@ window.AtlasInspecao = (function () {
         </div>
         <div class="modal-rodape">
           <button class="botao" id="rm-cancelar">Cancelar</button>
-          <button class="botao botao-ouro" id="rm-ok">📥 Importar</button>
+          <button class="botao botao-primario" id="rm-ok">📥 Importar</button>
         </div>
       </div>`;
     document.body.appendChild(ov);

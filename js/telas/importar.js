@@ -487,7 +487,7 @@ App.telas['importar'] = function () {
         </div>
         <div class="modal-rodape">
           <button class="botao" id="imp-esc-cancelar">Cancelar</button>
-          <button class="botao botao-ouro" id="imp-esc-escolher">${opts.arquivo ? '📥 Importar' : 'Escolher o arquivo…'}</button>
+          <button class="botao botao-primario" id="imp-esc-escolher">${opts.arquivo ? '📥 Importar' : 'Escolher o arquivo…'}</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
@@ -901,7 +901,7 @@ App.telas['importar'] = function () {
                 ? 'Substituir o que já foi importado deste hospital para este mês de pagamento e esta origem (reimportação segura, sem duplicar)'
                 : 'Substituir dados já importados deste hospital para as competências presentes no arquivo (reimportação segura, sem duplicar)'}
           </label>
-          <button class="botao botao-ouro" id="map-importar">📥 Importar agora</button>
+          <button class="botao botao-primario" id="map-importar">📥 Importar agora</button>
         </div>
       </div>`;
 

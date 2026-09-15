@@ -80,7 +80,7 @@ App.telas['base'] = function () {
             <input id="nr-valor" placeholder="ex.: 630,00"></div>
           <div class="campo" style="max-width:130px"><span class="campo-rotulo">OU percentual (%)</span>
             <input id="nr-pct" placeholder="ex.: 70"></div>
-          <button class="botao botao-ouro" id="nr-add">＋ Gravar</button>
+          <button class="botao botao-primario" id="nr-add">＋ Gravar</button>
         </div></div>
       </div>
 

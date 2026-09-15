@@ -42,7 +42,7 @@ App.telas['relatorios'] = function () {
         <h1 class="tela-titulo">Relatórios</h1>
         <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span>
         <div class="tela-acoes">
-          <button class="botao botao-ouro" id="rel-exportar">📤 Exportar consolidado (Excel)</button>
+          <button class="botao botao-primario" id="rel-exportar">📤 Exportar consolidado (Excel)</button>
         </div>
       </div>
 

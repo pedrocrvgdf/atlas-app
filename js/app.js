@@ -105,7 +105,7 @@
                 <option value="0" ${!ativo ? 'selected' : ''}>— selecione —</option>
                 ${opcoes}
               </select>` :
-              `<button class="botao botao-mini botao-ouro" data-tela="clientes">＋ cadastrar</button>`}
+              `<button class="botao botao-mini botao-primario" data-tela="clientes">＋ cadastrar</button>`}
           </div>
         </header>
       </div>
@@ -165,7 +165,7 @@
         <p>Escolha o <strong>cliente ativo</strong> na barra lateral — ou cadastre o
         primeiro em <strong>Clientes</strong>. Toda a ferramenta trabalha no contexto
         de um cliente por vez.</p>
-        <button class="botao botao-ouro" id="ir-clientes">Ir para Clientes</button>
+        <button class="botao botao-primario" id="ir-clientes">Ir para Clientes</button>
       </div>`;
     const b = el.querySelector('#ir-clientes');
     if (b) b.addEventListener('click', () => App.navegar('clientes'));

@@ -23,7 +23,7 @@ App.telas['visao'] = function () {
           <strong>repasse</strong> e mostramos, admissão por admissão, o que ainda
           falta o médico receber.</p>
           <p class="texto-cinza">Comece cadastrando o primeiro cliente.</p>
-          <button class="botao botao-ouro" id="ir-clientes">Cadastrar cliente</button>
+          <button class="botao botao-primario" id="ir-clientes">Cadastrar cliente</button>
         </div>`;
       el.querySelector('#ir-clientes').addEventListener('click', () => App.navegar('clientes'));
       return;

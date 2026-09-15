@@ -30,7 +30,7 @@ App.telas['sistema'] = function () {
         máquina (IndexedDB). Faça backups regulares — se o navegador limpar os dados, o backup
         é o único caminho de volta.</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="botao botao-ouro" id="bk-exportar">⬇ Exportar banco (.db)</button>
+          <button class="botao botao-primario" id="bk-exportar">⬇ Exportar banco (.db)</button>
           <label class="botao" style="cursor:pointer">⬆ Importar banco (.db)
             <input type="file" id="bk-importar" accept=".db,.sqlite,.sqlite3" style="display:none"></label>
         </div>
