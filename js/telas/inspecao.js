@@ -75,6 +75,11 @@ window.AtlasInspecao = (function () {
     latAberta: true,
     buscas: {},                  // busca "contém" de cada bloco da lateral
     exportando: false,
+    // recorte do trabalho: a Inspeção abre mostrando o RESULTADO destes filtros
+    hospitalId: 0,
+    competencia: null,           // null = ainda não escolhida (abre no mês mais recente)
+    situacao: 'falta',           // 'falta' | 'aguardando' | 'glosa' | 'ok' | 'todas'
+    pagina: 0,
   };
 
   let el = null;
@@ -89,19 +94,31 @@ window.AtlasInspecao = (function () {
     medSel: 'insp_med_sel_v1', papelSel: 'insp_papel_sel_v1',
     flagFaltante: 'insp_rep_faltante_v1',
   };
-  const VIGIAS_PADRAO = [{ produto: 'TOMOGRAFIA DE COERENCIA OPTICA OCT', papel: 'LAUDO' }];
+  /**
+   * NENHUMA vigia por padrão. Vigia é um RECORTE que o usuário liga para olhar
+   * um produto de perto — e, ligada, ela esconde o alerta de todo o resto. Vir
+   * com uma de fábrica (a OCT, do caso da CBV) silenciava a tela inteira num
+   * cliente novo, sem dizer por quê.
+   */
+  const VIGIAS_PADRAO = [];
 
+  /** O módulo é chamado de fora da tela (importação): resolve o cliente sempre. */
+  function cid() {
+    const ativo = App.clienteAtivo && App.clienteAtivo();
+    if (ativo) clienteId = ativo.id;
+    return clienteId;
+  }
   function cfgLer(chave, padrao) {
-    const v = Banco.configLer(chave + '_c' + clienteId, null);
+    const v = Banco.configLer(chave + '_c' + cid(), null);
     return v == null ? padrao : v;
   }
   function cfgGravar(chave, valor) {
-    Banco.configGravar(chave + '_c' + clienteId, valor);
+    Banco.configGravar(chave + '_c' + cid(), valor);
     Banco.salvarDebounced();
   }
   const lerPauta = () => cfgLer(CFG.pauta, []);
   const lerVigias = () => {
-    const v = Banco.configLer(CFG.vigias + '_c' + clienteId, null);
+    const v = Banco.configLer(CFG.vigias + '_c' + cid(), null);
     return v == null ? VIGIAS_PADRAO.slice() : v;   // 1ª vez: OCT + Médico Laudo
   };
   const lerSet = (chave) => new Set(cfgLer(chave, []));
@@ -443,16 +460,26 @@ window.AtlasInspecao = (function () {
     const pauta = lerPauta();
     const d = dados();
 
-    // stats da pauta (referência visual: fileira de cards, o último escuro)
-    carregarLote(pauta.map(p => p.admissao));   // uma ida ao banco para a pauta inteira
-    let stPagas = 0, stAguard = 0, stFalta = 0, stNaoChegou = 0, stNaoChegouN = 0;
-    for (const p of pauta) {
-      const i = inspecionar(p.admissao);
-      if (i.tom === 'ok') stPagas++;
-      else if (i.tom === 'aviso') stAguard++;
-      stFalta += faltanteDe(i, null);
-      if (i.confronto.estado === 'nao_chegou' || i.confronto.estado === 'divergente') {
-        stNaoChegou += Math.max(0, i.confronto.dif); stNaoChegouN++;
+    // stats do RECORTE (empresa × médico × mês) — é o que o usuário acabou de
+    // importar, não a pauta. O confronto com o relatório do médico continua
+    // saindo da pauta, que é justamente a lista de admissões dele.
+    let stAdm = 0, stPagas = 0, stAguard = 0, stFalta = 0, stNaoChegou = 0, stNaoChegouN = 0;
+    if (d.temDados) {
+      const linhas = linhasDoRecorte();
+      stAdm = linhas.length;
+      for (const l of linhas) {
+        if (l.falta > 0) continue;
+        if (l.aguardando > 0) stAguard++; else stPagas++;
+      }
+      stFalta = linhas.reduce((s, l) => s + l.falta, 0);
+    }
+    if (pauta.length) {
+      carregarLote(pauta.map(p => p.admissao));   // uma ida ao banco para a pauta inteira
+      for (const p of pauta) {
+        const i = inspecionar(p.admissao);
+        if (i.confronto.estado === 'nao_chegou' || i.confronto.estado === 'divergente') {
+          stNaoChegou += Math.max(0, i.confronto.dif); stNaoChegouN++;
+        }
       }
     }
 
@@ -463,10 +490,11 @@ window.AtlasInspecao = (function () {
           ${st.latAberta ? '' : '<button class="botao botao-mini" id="insp-abrir-lat">🗂 planilha do médico</button>'}
         </div>
         <h1>Inspeção da Admissão</h1>
-        <p>Rastreie a admissão pelas bases, na ordem em que o dinheiro caminha —
-        sistema (relatório cru), resultado auditado, produção e o que o médico de fato
-        recebeu — e veja onde ela parou.
-        Cliente: <strong>${esc(cliente.nome)}</strong></p>
+        <p>O que falta o médico receber, admissão por admissão — cruzando produção,
+        relatório do sistema e o que ele de fato recebeu.
+        Empresa: <strong>${esc(cliente.nome)}</strong>${App.medicoAtivoNome && App.medicoAtivoNome()
+          ? ` · Médico: <strong>${esc(App.medicoAtivoNome())}</strong>`
+          : ' · <span class="texto-cinza">todos os médicos</span>'}</p>
       </div>
 
       <div class="insp-busca">
@@ -496,14 +524,14 @@ window.AtlasInspecao = (function () {
       </div>
 
       <div class="insp-stats">
-        <div class="insp-stat"><div class="insp-stat-valor">${pauta.length.toLocaleString('pt-BR')}</div>
-          <div class="insp-stat-rotulo">admissões na planilha do médico</div></div>
+        <div class="insp-stat"><div class="insp-stat-valor">${stAdm.toLocaleString('pt-BR')}</div>
+          <div class="insp-stat-rotulo">admissões no recorte</div></div>
         <div class="insp-stat"><div class="insp-stat-valor texto-ok">${stPagas.toLocaleString('pt-BR')}</div>
-          <div class="insp-stat-rotulo">pagas no repasse</div></div>
+          <div class="insp-stat-rotulo">em dia</div></div>
         <div class="insp-stat suave"><div class="insp-stat-valor texto-aviso">${stAguard.toLocaleString('pt-BR')}</div>
           <div class="insp-stat-rotulo">aguardando convênio / conciliação</div></div>
         <div class="insp-stat escuro"><div class="insp-stat-valor mono">${fmtR(stFalta)}</div>
-          <div class="insp-stat-rotulo">repasse faltante na pauta</div></div>
+          <div class="insp-stat-rotulo">falta receber no recorte</div></div>
         ${d.temBaseMedico ? `<div class="insp-stat"><div class="insp-stat-valor mono texto-erro">${fmtR(stNaoChegou)}</div>
           <div class="insp-stat-rotulo">no sistema e não no médico (${stNaoChegouN} adm.)</div></div>` : ''}
       </div>
@@ -564,6 +592,159 @@ window.AtlasInspecao = (function () {
   }
 
   // ────────────────────────────────────────────────────────────────────
+
+  // ────────────────────────────────────────────────────────────────────
+  // A LISTA DE TRABALHO — o que a Inspeção mostra ao abrir
+  //
+  // Antes a tela pedia um código de admissão para começar. Depois de importar
+  // os três relatórios, o que o usuário quer ver é o RESULTADO: as admissões
+  // do mês, ordenadas pelo que falta receber, já no recorte do médico
+  // auditado. Clicar numa delas abre o rastreio de sempre.
+  // ────────────────────────────────────────────────────────────────────
+
+  const SIT_ROTULO = {
+    falta: 'falta receber', aguardando: 'aguardando conciliação',
+    glosa: 'glosadas', ok: 'em dia', todas: 'todas',
+  };
+
+  /** Competências disponíveis na produção do recorte. */
+  function competenciasDoRecorte() {
+    return Motor.listarCompetencias(clienteId, st.hospitalId) || [];
+  }
+
+  /** O resultado do motor no recorte atual (memoizado pelo próprio motor). */
+  function resultadoDoRecorte() {
+    const comps = competenciasDoRecorte();
+    if (st.competencia == null || (st.competencia && !comps.includes(st.competencia))) {
+      st.competencia = comps[0] || '';
+    }
+    return Motor.auditar({ clienteId, hospitalId: st.hospitalId, competencia: st.competencia });
+  }
+
+  /** A admissão interessa ao médico auditado? (vazio = a empresa inteira) */
+  function doMedicoAtivo(agg, chaveMed) {
+    if (!chaveMed) return true;
+    return agg.itens.some(i => U().normalizar(i.medico) === chaveMed);
+  }
+
+  /** Todas as admissões do recorte (sem o filtro de situação) — base dos cards. */
+  function linhasDoRecorte() {
+    return linhasDaLista(resultadoDoRecorte(), true);
+  }
+
+  /** Linhas da lista, já filtradas por situação e pelo médico auditado. */
+  function linhasDaLista(r, todas) {
+    const chaveMed = App.medicoAtivo ? App.medicoAtivo() : '';
+    const TOL = Number(Banco.configLer('tolerancia_centavos', 0.05)) || 0.05;
+    const out = [];
+    for (const a of r.admissoes) {
+      if (!doMedicoAtivo(a, chaveMed)) continue;
+      const falta = chaveMed
+        ? a.itens.reduce((s, i) => s + (U().normalizar(i.medico) === chaveMed ? (i.falta || 0) : 0), 0)
+        : a.falta;
+      const aguardando = chaveMed
+        ? a.itens.reduce((s, i) => s + (U().normalizar(i.medico) === chaveMed ? (i.aguardando || 0) : 0), 0)
+        : (a.aguardando || 0);
+      const glosado = chaveMed
+        ? a.itens.reduce((s, i) => s + (U().normalizar(i.medico) === chaveMed ? (i.esperadoGlosa || 0) : 0), 0)
+        : (a.glosado || 0);
+      if (!todas) {
+        if (st.situacao === 'falta' && !(falta > TOL)) continue;
+        if (st.situacao === 'aguardando' && !(aguardando > 0)) continue;
+        if (st.situacao === 'glosa' && !(glosado > 0)) continue;
+        if (st.situacao === 'ok' && (falta > TOL || aguardando > 0)) continue;
+      }
+      out.push({ agg: a, falta, aguardando, glosado });
+    }
+    out.sort((x, y) => (y.falta - x.falta) || (y.aguardando - x.aguardando) ||
+      String(x.agg.admissao).localeCompare(String(y.agg.admissao)));
+    return out;
+  }
+
+  function renderLista(box, d) {
+    const hospitais = App.listarHospitais(clienteId);
+    const comps = competenciasDoRecorte();
+    if (!d.temDados) {
+      box.innerHTML = `<div class="painel"><div class="insp-painel-vazio">
+        Importe a <strong>produção</strong> e o <strong>relatório do sistema</strong> da empresa em
+        <strong>Importações</strong> — a Inspeção abre com o resultado assim que eles entrarem.
+      </div></div>`;
+      return;
+    }
+    const r = resultadoDoRecorte();
+    let linhas = linhasDaLista(r);
+    // abriu sem nada faltando: mostra o que existe em vez de uma tabela vazia
+    if (!linhas.length && st.situacao === 'falta' && !st._sitEscolhida) {
+      st.situacao = 'todas';
+      linhas = linhasDaLista(r);
+    }
+    const POR_PAG = 60;
+    const inicio = st.pagina * POR_PAG;
+    const pagina = linhas.slice(inicio, inicio + POR_PAG);
+    const medNome = App.medicoAtivoNome ? App.medicoAtivoNome() : '';
+
+    box.innerHTML = `
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <span class="painel-titulo">O que falta receber</span>
+          <span class="painel-conta">${linhas.length.toLocaleString('pt-BR')} admissão(ões) ·
+            ${esc(SIT_ROTULO[st.situacao])}${medNome ? ' · ' + esc(medNome) : ' · todos os médicos'}</span>
+        </div>
+        <div class="painel-corpo">
+          <div class="filtros" style="margin-bottom:0">
+            ${hospitais.length > 1 ? `<div class="campo"><span class="campo-rotulo">Hospital</span>
+              <select class="entrada" id="ins-hosp">
+                <option value="0">— todos —</option>
+                ${hospitais.map(h => `<option value="${h.id}" ${h.id === st.hospitalId ? 'selected' : ''}>${esc(h.nome)}</option>`).join('')}
+              </select></div>` : ''}
+            <div class="campo"><span class="campo-rotulo">Competência (produção)</span>
+              <select class="entrada" id="ins-comp">
+                <option value="" ${!st.competencia ? 'selected' : ''}>— todo o histórico —</option>
+                ${comps.map(c => `<option value="${c}" ${c === st.competencia ? 'selected' : ''}>${Utilidades.compExibir(c)}</option>`).join('')}
+              </select></div>
+            <div class="campo"><span class="campo-rotulo">Situação</span>
+              <select class="entrada" id="ins-sit">
+                ${Object.keys(SIT_ROTULO).map(k =>
+                  `<option value="${k}" ${k === st.situacao ? 'selected' : ''}>${SIT_ROTULO[k]}</option>`).join('')}
+              </select></div>
+          </div>
+        </div>
+        ${pagina.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+            <th>Admissão</th><th>Data</th><th>Paciente</th><th>Profissional</th>
+            <th class="num">Falta receber</th><th class="num">Aguardando</th><th>Situação</th>
+          </tr></thead><tbody>
+          ${pagina.map(l => `<tr class="clique" data-adm="${esc(l.agg.admNorm)}" data-rot="${esc(l.agg.admissao)}">
+            <td class="mono">${esc(l.agg.admissao)}</td>
+            <td>${Utilidades.dataExibir(l.agg.data)}</td>
+            <td>${esc(pacEx(l.agg.paciente))}</td>
+            <td>${esc(medEx(l.agg.medicos.slice(0, 2).join(', ')))}${l.agg.medicos.length > 2 ? ' +' + (l.agg.medicos.length - 2) : ''}</td>
+            <td class="num mono ${l.falta > 0 ? 'texto-erro' : ''}">${l.falta > 0 ? fmtR(l.falta) : '—'}</td>
+            <td class="num mono">${l.aguardando > 0 ? fmtR(l.aguardando) : '—'}</td>
+            <td><span class="badge badge-${esc(l.agg.status)}">${esc(String(l.agg.status).replace(/_/g, ' '))}</span></td>
+          </tr>`).join('')}
+          </tbody></table></div>
+          ${linhas.length > POR_PAG ? `<div class="painel-corpo" style="display:flex;gap:8px;align-items:center">
+            <button class="botao botao-mini" id="ins-ant" ${st.pagina ? '' : 'disabled'}>← anteriores</button>
+            <span class="texto-cinza">${(inicio + 1).toLocaleString('pt-BR')}–${Math.min(inicio + POR_PAG, linhas.length).toLocaleString('pt-BR')} de ${linhas.length.toLocaleString('pt-BR')}</span>
+            <button class="botao botao-mini" id="ins-prox" ${inicio + POR_PAG < linhas.length ? '' : 'disabled'}>próximas →</button>
+          </div>` : ''}`
+        : `<div class="tabela-vazia">Nenhuma admissão ${esc(SIT_ROTULO[st.situacao])}${medNome ? ' para ' + esc(medNome) : ''}
+             ${st.competencia ? 'em ' + esc(Utilidades.compExibir(st.competencia)) : 'no histórico'}.</div>`}
+      </div>`;
+
+    const hs = box.querySelector('#ins-hosp');
+    if (hs) hs.addEventListener('change', () => { st.hospitalId = Number(hs.value); st.competencia = null; st.pagina = 0; render(); });
+    box.querySelector('#ins-comp').addEventListener('change', (e) => { st.competencia = e.target.value; st.pagina = 0; render(); });
+    box.querySelector('#ins-sit').addEventListener('change', (e) => {
+      st.situacao = e.target.value; st._sitEscolhida = true; st.pagina = 0; render(); });
+    const ant = box.querySelector('#ins-ant'), prox = box.querySelector('#ins-prox');
+    if (ant) ant.addEventListener('click', () => { st.pagina = Math.max(0, st.pagina - 1); render(); });
+    if (prox) prox.addEventListener('click', () => { st.pagina++; render(); });
+    box.querySelectorAll('[data-adm]').forEach(tr => tr.addEventListener('click', () => {
+      st.admAtual = tr.dataset.adm; st.admAtualRotulo = tr.dataset.rot; render();
+    }));
+  }
+
   function renderPrincipal(d) {
     const box = el.querySelector('#insp-principal');
 
@@ -588,12 +769,7 @@ window.AtlasInspecao = (function () {
     }
 
     if (!st.admAtual) {
-      const temDados = d.temDados;
-      box.innerHTML = `<div class="painel"><div class="insp-painel-vazio">
-        ${temDados
-          ? 'Busque uma admissão pelo código ou pelo paciente — ou clique numa admissão da <strong>planilha do médico</strong> ao lado.'
-          : 'Importe a produção e o repasse deste cliente em <strong>Importações</strong> para começar a inspecionar.'}
-      </div></div>`;
+      renderLista(box, d);
       return;
     }
 
@@ -680,6 +856,9 @@ window.AtlasInspecao = (function () {
         : c.estado === 'divergente' ? 'divergente' : c.estado === 'sem_lastro' ? 'sem lastro no sistema' : 'sem recebimento'}</span>`;
 
     box.innerHTML = `
+      <div style="margin-bottom:10px">
+        <button class="botao botao-mini" id="insp-voltar">← voltar para a lista</button>
+      </div>
       <div class="diag-card diag-${insp.tom}">
         <div class="diag-cab" id="diag-cab">
           <span class="diag-farol"></span>
@@ -706,6 +885,9 @@ window.AtlasInspecao = (function () {
         </div>` : ''}
       </div>`;
 
+    box.querySelector('#insp-voltar').addEventListener('click', () => {
+      st.admAtual = null; st.admAtualRotulo = ''; st.candidatas = null; render();
+    });
     box.querySelector('#diag-cab').addEventListener('click', () => {
       st.diagAberto = !st.diagAberto; render();
     });

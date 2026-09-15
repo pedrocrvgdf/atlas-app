@@ -180,6 +180,177 @@
     };
   }
 
+
+  // ──────────────────────────────────────────────────────────────────────
+  // DE-PARA AUTOMÁTICO — o mesmo médico escrito de N formas
+  //
+  // Sem isso nenhum cruzamento fecha: "DURVAL JUNIOR" no sistema e "DURVAL
+  // MORAES DE CARVALHO JUNIOR" na produção são a mesma pessoa, e o motor
+  // precisa saber disso ANTES de dizer que um papel não foi pago a ele.
+  // Roda sozinho ao fim de toda importação. Decisão humana manda: grafias já
+  // vinculadas a médicos DIFERENTES nunca se juntam.
+  // ──────────────────────────────────────────────────────────────────────
+
+  /** Todas as grafias de profissional que aparecem nos relatórios do cliente. */
+  function grafiasDoCliente(clienteId) {
+    const cont = new Map();   // norm → { grafia (a mais frequente), n }
+    const juntar = (rows) => {
+      for (const r of rows) {
+        const g = String(r.nome || '').trim();
+        const k = U().normalizar(g);
+        if (!k) continue;
+        const n = Number(r.n) || 0;
+        const reg = cont.get(k);
+        if (!reg) cont.set(k, { norm: k, grafia: g, n, _melhor: n });
+        else { reg.n += n; if (n > reg._melhor) { reg._melhor = n; reg.grafia = g; } }
+      }
+    };
+    for (const col of ['executante', 'auxiliar', 'indicante', 'solicitante', 'laudo', 'cirurgiao', 'medico']) {
+      juntar(Banco.query(
+        `SELECT ${col} AS nome, COUNT(*) AS n FROM linhas_producao
+          WHERE cliente_id = ? AND TRIM(COALESCE(${col}, '')) <> '' GROUP BY ${col}`, [clienteId]));
+    }
+    juntar(Banco.query(
+      `SELECT medico AS nome, COUNT(*) AS n FROM linhas_repasse
+        WHERE cliente_id = ? AND TRIM(COALESCE(medico, '')) <> '' GROUP BY medico`, [clienteId]));
+    juntar(Banco.query(
+      `SELECT medico AS nome, COUNT(*) AS n FROM linhas_medico
+        WHERE cliente_id = ? AND TRIM(COALESCE(medico, '')) <> '' GROUP BY medico`, [clienteId]));
+    return [...cont.values()].sort((a, b) => b.n - a.n);
+  }
+
+  /**
+   * Unifica as grafias pelo `Utilidades.nomesBatem` e grava o de-para.
+   * Devolve { grafias, medicos, vinculadas, gruposNovos }.
+   */
+  function unificarMedicos(clienteId) {
+    const U_ = U();
+    const grafias = grafiasDoCliente(clienteId);
+    if (!grafias.length) return { grafias: 0, medicos: 0, vinculadas: 0, gruposNovos: 0 };
+
+    // vínculos já existentes (decisão humana ou de uma rodada anterior)
+    const jaVinculada = new Map();   // grafia_norm → medico_id
+    for (const m of Banco.query('SELECT id, nome_norm FROM medicos WHERE cliente_id = ?', [clienteId])) {
+      jaVinculada.set(m.nome_norm, m.id);
+    }
+    for (const s of Banco.query(
+      `SELECT s.grafia_norm, s.medico_id FROM sinonimos_medico s
+         JOIN medicos m ON m.id = s.medico_id WHERE m.cliente_id = ?`, [clienteId])) {
+      jaVinculada.set(s.grafia_norm, s.medico_id);
+    }
+
+    // baldes pelo PRIMEIRO e pelo ÚLTIMO nome significativo: duas grafias da
+    // mesma pessoa compartilham pelo menos um dos dois (evita o N² da base toda)
+    const baldes = new Map();
+    for (const g of grafias) {
+      g._toks = U_.tokensNome(g.grafia);
+      const chaves = new Set();
+      if (g._toks.length) { chaves.add('P' + g._toks[0]); chaves.add('U' + g._toks[g._toks.length - 1]); }
+      else chaves.add('X' + g.norm);
+      for (const k of chaves) {
+        if (!baldes.has(k)) baldes.set(k, []);
+        baldes.get(k).push(g);
+      }
+    }
+
+    const pai = new Map();
+    const achar = (k) => { while (pai.get(k) !== k) { pai.set(k, pai.get(pai.get(k))); k = pai.get(k); } return k; };
+    const unir = (a, b) => { const ra = achar(a), rb = achar(b); if (ra !== rb) pai.set(ra, rb); };
+    for (const g of grafias) pai.set(g.norm, g.norm);
+
+    for (const lote of baldes.values()) {
+      if (lote.length < 2 || lote.length > 400) continue;
+      for (let i = 0; i < lote.length; i++) {
+        for (let j = i + 1; j < lote.length; j++) {
+          const A = lote[i], B = lote[j];
+          const ma = jaVinculada.get(A.norm), mb = jaVinculada.get(B.norm);
+          if (ma && mb && ma !== mb) continue;         // já separadas por decisão humana
+          if (U_.nomesBatem(A.grafia, B.grafia)) unir(A.norm, B.norm);
+        }
+      }
+    }
+
+    const clusters = new Map();
+    for (const g of grafias) {
+      const raiz = achar(g.norm);
+      if (!clusters.has(raiz)) clusters.set(raiz, []);
+      clusters.get(raiz).push(g);
+    }
+
+    let vinculadas = 0, gruposNovos = 0;
+    Banco.transacao(() => {
+      for (const grupo of clusters.values()) {
+        // nome oficial: a grafia MAIS COMPLETA do grupo (mais nomes significativos),
+        // desempate pela mais frequente — "DURVAL MORAES DE CARVALHO JUNIOR"
+        const ordenado = grupo.slice().sort((a, b) =>
+          (b._toks.length - a._toks.length) || (b.n - a.n) || (b.grafia.length - a.grafia.length));
+        const ids = [...new Set(grupo.map(g => jaVinculada.get(g.norm)).filter(Boolean))];
+        if (ids.length > 1) continue;                  // conflito humano: não mexe
+        let medicoId = ids[0] || null;
+        const faltando = grupo.filter(g => !jaVinculada.get(g.norm));
+        if (!faltando.length) continue;                // grupo já resolvido
+        if (grupo.length < 2 && !medicoId) continue;   // grafia única não precisa de de-para
+        if (!medicoId) {
+          const oficial = ordenado[0].grafia;
+          Banco.executar('INSERT INTO medicos (cliente_id, nome_oficial, nome_norm) VALUES (?,?,?)',
+            [clienteId, oficial, U_.normalizar(oficial)]);
+          medicoId = Banco.ultimoId();
+          jaVinculada.set(U_.normalizar(oficial), medicoId);
+          gruposNovos++;
+        }
+        for (const g of grupo) {
+          if (jaVinculada.get(g.norm)) continue;
+          Banco.executar('INSERT INTO sinonimos_medico (medico_id, grafia, grafia_norm) VALUES (?,?,?)',
+            [medicoId, g.grafia, g.norm]);
+          jaVinculada.set(g.norm, medicoId);
+          vinculadas++;
+        }
+      }
+    });
+
+    return {
+      grafias: grafias.length,
+      medicos: Banco.escalar('SELECT COUNT(*) FROM medicos WHERE cliente_id = ?', [clienteId]) || 0,
+      vinculadas, gruposNovos,
+    };
+  }
+
+  /**
+   * Profissionais do cliente, já unificados, com quanto cada um produziu —
+   * é desta lista que sai o MÉDICO AUDITADO escolhido na barra do topo.
+   */
+  function medicosDoCliente(clienteId) {
+    const U_ = U();
+    const sin = mapaSinonimos(clienteId);
+    const oficial = (nome) => sin.get(U_.normalizar(nome)) || String(nome || '').trim();
+    const porMedico = new Map();
+    const juntar = (rows, campo) => {
+      for (const r of rows) {
+        const nome = oficial(r.nome);
+        if (!nome) continue;
+        const k = U_.normalizar(nome);
+        let reg = porMedico.get(k);
+        if (!reg) porMedico.set(k, reg = { nome, chave: k, producao: 0, sistema: 0, medico: 0, grafias: new Set() });
+        reg[campo] += Number(r.n) || 0;
+        reg.grafias.add(String(r.nome || '').trim());
+      }
+    };
+    for (const col of ['executante', 'auxiliar', 'indicante', 'solicitante', 'laudo']) {
+      juntar(Banco.query(
+        `SELECT ${col} AS nome, COUNT(*) AS n FROM linhas_producao
+          WHERE cliente_id = ? AND TRIM(COALESCE(${col}, '')) <> '' GROUP BY ${col}`, [clienteId]), 'producao');
+    }
+    juntar(Banco.query(
+      `SELECT medico AS nome, COUNT(*) AS n FROM linhas_repasse
+        WHERE cliente_id = ? AND TRIM(COALESCE(medico, '')) <> '' GROUP BY medico`, [clienteId]), 'sistema');
+    juntar(Banco.query(
+      `SELECT medico AS nome, COUNT(*) AS n FROM linhas_medico
+        WHERE cliente_id = ? AND TRIM(COALESCE(medico, '')) <> '' GROUP BY medico`, [clienteId]), 'medico');
+    return [...porMedico.values()]
+      .map(m => ({ ...m, grafias: [...m.grafias], total: m.producao + m.sistema + m.medico }))
+      .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
   // ──────────────────────────────────────────────────────────────────────
   // INFERÊNCIA DE PADRÃO — aprende as regras olhando o que JÁ FOI PAGO
   // ──────────────────────────────────────────────────────────────────────
@@ -540,20 +711,42 @@
          * Devolve { nome, motivo } — o motivo só existe quando a atribuição
          * precisa aparecer escrita no relatório.
          */
+        /** Quem o SISTEMA nomeia neste papel deste procedimento ('' se ninguém). */
+        const doSistema = (papel) => {
+          for (const lr of repAdm) {
+            if (!procCasa(lr)) continue;
+            const pc = lr.papel_canon;
+            const casa = pc === papel || (ehIndSol(papel) && ehIndSol(pc));
+            if (!casa) continue;
+            const nome = String(lr.medico || '').trim();
+            if (nome) return resolverMedico(nome, sinonimos);
+          }
+          return '';
+        };
+        /**
+         * A PRODUÇÃO decide de quem é o papel; o SISTEMA só COMPLETA o que ela
+         * não diz. A ordem importa e é diferente da ferramenta de origem: lá o
+         * QVIS vem primeiro porque ela GERA o pagamento e o relatório é o
+         * registro de quem ocupou o papel. Aqui a ATLAS AUDITA o pagamento — se
+         * o dono saísse do próprio sistema, o nome dele sempre bateria com o
+         * pagamento dele e "pago ao médico errado" nunca seria detectado. A
+         * produção é a fonte independente; o sistema entra quando ela cala.
+         */
         const donoDoPapel = (papel) => {
-          if (papel === 'EXECUTANTE') return { nome: execDaLinha, motivo: null };
+          if (papel === 'EXECUTANTE') return { nome: execDaLinha || doSistema(papel), motivo: null };
           if (papel === 'AUXILIAR') {
-            return { nome: execDaLinha || resolverMedico(cru('auxiliar'), sinonimos), motivo: null };
+            // o valor do auxiliar é do EXECUTANTE — o nome na linha do auxiliar não manda
+            return { nome: execDaLinha || resolverMedico(cru('auxiliar'), sinonimos) || doSistema(papel), motivo: null };
           }
           if (ehIndSol(papel)) {
-            const ind = cru('indicante') || cru('solicitante');
+            const ind = cru('indicante') || cru('solicitante') || doSistema(papel);
             if (ind) return { nome: resolverMedico(ind, sinonimos), motivo: null };
-            // indicante não informado no sistema: o valor é repassado ao executante
+            // indicante não informado em lugar nenhum: o valor é repassado ao executante
             if (execDaLinha) return { nome: execDaLinha, motivo: 'indicante_ao_executante' };
             return { nome: '', motivo: null };
           }
           const par = PAPEIS_PROD.find(([p]) => p === papel);
-          return { nome: par ? resolverMedico(cru(par[1]), sinonimos) : '', motivo: null };
+          return { nome: (par ? resolverMedico(cru(par[1]), sinonimos) : '') || doSistema(papel), motivo: null };
         };
 
         /**
@@ -862,5 +1055,6 @@
     return Banco.query(sql + ' ORDER BY competencia DESC', p).map(r => r.competencia);
   }
 
-  window.Motor = { auditar, inferirPadroes, listarCompetencias, mapaSinonimos, ehGlosa, foiRecebida, SEVERIDADE };
+  window.Motor = { auditar, inferirPadroes, listarCompetencias, mapaSinonimos,
+    unificarMedicos, medicosDoCliente, grafiasDoCliente, ehGlosa, foiRecebida, SEVERIDADE };
 })();

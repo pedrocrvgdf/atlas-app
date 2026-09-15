@@ -88,6 +88,7 @@ App.telas['importar'] = function () {
         <span class="tela-sub">cliente: <strong>${esc(cliente.nome)}</strong></span>
       </div>
       <div id="imp-area"></div>
+      <div id="imp-acoes"></div>
       <div id="imp-prod"></div>
       <div id="imp-sis"></div>
       <div id="imp-med"></div>
@@ -96,6 +97,7 @@ App.telas['importar'] = function () {
 
     if (st.etapa === 2 && st.arq) renderMapeamento(hospitais);
     else renderEscolha(hospitais);
+    renderAcoes(hospitais);
     renderProducao(hospitais);
     renderSistema(hospitais);
     renderMedico(hospitais);
@@ -262,6 +264,38 @@ App.telas['importar'] = function () {
     return Importador.abrirFonte(f);
   }
 
+  /**
+   * O QUE TODA IMPORTAÇÃO DISPARA — é o que faz os módulos conversarem.
+   * Sem isto, a Inspeção abre zerada depois de você importar tudo:
+   *   1. unifica as grafias de médico (de-para automático);
+   *   2. deixa o médico auditado escolhido quando só há um candidato óbvio;
+   *   3. grava.
+   */
+  function aposImportar(opts) {
+    const o = opts || {};
+    let uni = null;
+    try { uni = Motor.unificarMedicos(cliente.id); }
+    catch (e) { console.warn('[importar] de-para automático falhou:', e); }
+    // médico auditado: se ainda não há um escolhido e o nome do hospital/empresa
+    // casa com um profissional dos relatórios, já deixa ele selecionado
+    try {
+      if (!App.medicoAtivo()) {
+        const lista = App.listarMedicos();
+        const hosp = (App.listarHospitais(cliente.id).find(h => h.id === st.hospitalId) || {}).nome || '';
+        const alvo = lista.find(m => Utilidades.nomesBatem(m.nome, hosp)) ||
+          (lista.length === 1 ? lista[0] : null);
+        if (alvo) Banco.configGravar('medico_ativo_c' + cliente.id, alvo.chave);
+      }
+    } catch (e) { console.warn('[importar] escolha do médico falhou:', e); }
+    Banco.salvarDebounced();
+    // renderShell() recria o #conteudo: o `el` capturado por esta tela vira um
+    // nó solto. Remontar a tela pelo roteador é o que mantém tudo vivo (o
+    // estado é window.__imp, então nada se perde).
+    App.renderShell();
+    if (o.render !== false) App.navegar('importar');
+    return uni;
+  }
+
   /** Callback de progresso das importações em lotes: mensagem + barra. */
   const progressoDe = (rotulo) => (info) => Utilidades.loading.mostrar(
     `${rotulo} ${info.pct != null ? Math.round(info.pct * 100) + '% · ' : ''}${n(info.lidas)} linhas`, info.pct);
@@ -316,8 +350,7 @@ App.telas['importar'] = function () {
         arquivo: f.name, competencia: st.competencia, substituir: true, origem: st.origem,
       }, fonte, progressoDe('Importando o relatório do sistema…'));
       gravarPerfil('REPASSE', cab, map, linhaCab);
-      Banco.salvarDebounced();
-      render();
+      aposImportar();
       resumoSistema(r, f.name, cab, map);
     } catch (err) {
       console.error(err);
@@ -418,8 +451,8 @@ App.telas['importar'] = function () {
       Utilidades.loading.mostrar('Importando o relatório do médico…');
       await respirar();
       const r = window.AtlasInspecao.importarRelatorioMedico(matriz,
-        { hospitalId: st.hospitalId, competencia: comp, arquivo: f.name, substituir: true, montarPauta: false });
-      render();
+        { hospitalId: st.hospitalId, competencia: comp, arquivo: f.name, substituir: true, montarPauta: true });
+      aposImportar();
       Utilidades.toast(`${n(r.inseridas)} linha(s) do relatório do médico em ${Utilidades.compExibir(comp)}` +
         (r.casadas ? ` · ${r.casadas} admissões casadas por paciente+data` : '') +
         (r.semAdmissao ? ` · ${r.semAdmissao} sem admissão` : ''), 'ok', 6000);
@@ -444,8 +477,7 @@ App.telas['importar'] = function () {
           matriz: lido.matriz, formatos: lido.formatos, layout,
           clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: f.name, substituir: true,
         });
-        Banco.salvarDebounced();
-        render();
+        aposImportar();
         resumoBase(r, f.name);
         return;
       }
@@ -463,8 +495,7 @@ App.telas['importar'] = function () {
         arquivo: f.name, competencia: '', substituir: true,
       });
       gravarPerfil('BASE_TABELA', cab, map, linhaCab);
-      Banco.salvarDebounced();
-      render();
+      aposImportar();
       Utilidades.toast(`${n(r.inseridas)} regra(s) da Base Tabela importadas (a base anterior do hospital foi substituída).`, 'ok', 5200);
       popupBase(st.hospitalId);   // mostra na hora o que passou a valer
     } catch (err) {
@@ -632,9 +663,8 @@ App.telas['importar'] = function () {
         clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: f.name,
         substituir: true, perfil: Importador.perfilLer(st.hospitalId, 'PRODUCAO'), escopo: st.escopo,
       }, fonte, progressoDe('Importando a produção…'));
-      Banco.salvarDebounced();
       st.alvo = ''; st.arq = null; st.etapa = 1; st.aguardando = false;
-      render();
+      aposImportar();
       resumoProducao(r, f.name, alvo);
     } catch (err) {
       st.aguardando = false;
@@ -1041,6 +1071,223 @@ App.telas['importar'] = function () {
   }
 
 
+
+  // ────────────────────────────────────────────────────────────────────
+  // CALCULAR O QUE FALTA — o botão que fecha o ciclo da importação
+  //
+  // Importou produção, sistema, médico e Base Tabela: aqui a ATLAS cruza
+  // tudo e diz quanto falta o médico receber. É a mesma leitura da Inspeção
+  // (os papéis que a Base manda pagar, o dono de cada um pela produção,
+  // glosa valendo zero, aguardando fora da dívida), rodada sobre o mês
+  // inteiro em vez de uma admissão por vez.
+  // ────────────────────────────────────────────────────────────────────
+  function renderAcoes(hospitais) {
+    const box = el.querySelector('#imp-acoes');
+    if (!box) return;
+    const temProd = Banco.escalar('SELECT 1 FROM linhas_producao WHERE cliente_id=? LIMIT 1', [cliente.id]) != null;
+    const temSis = Banco.escalar('SELECT 1 FROM linhas_repasse WHERE cliente_id=? LIMIT 1', [cliente.id]) != null;
+    const temBase = Banco.escalar(
+      `SELECT 1 FROM base_tabela b JOIN hospitais h ON h.id=b.hospital_id WHERE h.cliente_id=? LIMIT 1`, [cliente.id]) != null;
+    const temMed = Banco.escalar('SELECT 1 FROM linhas_medico WHERE cliente_id=? LIMIT 1', [cliente.id]) != null;
+    const pronto = temProd && temSis && temBase;
+    const chip = (ok, txt) => `<span class="imp-chip ${ok ? 'imp-chip-TODAS' : ''}" style="${ok ? '' : 'opacity:.55'}">${ok ? '✓' : '○'} ${esc(txt)}</span>`;
+
+    box.innerHTML = `
+      <div class="painel ${pronto ? 'painel-ativo' : ''}">
+        <div class="painel-cabecalho">
+          <span class="painel-titulo">Calcular o que falta receber</span>
+          <span class="painel-conta">${chip(temProd, 'Produção')} ${chip(temSis, 'Sistema')} ${chip(temBase, 'Base Tabela')} ${chip(temMed, 'Médico (opcional)')}</span>
+        </div>
+        <div class="painel-corpo" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <button class="botao botao-primario" id="imp-calcular" ${pronto ? '' : 'disabled title="Importe produção, sistema e Base Tabela"'}>
+            🧮 Calcular o que falta</button>
+          <span class="texto-cinza" style="font-size:11.5px;flex:1;min-width:260px">${pronto
+            ? 'Cruza a produção com o relatório do sistema pelas regras da Base Tabela e abre a Inspeção com o resultado.'
+            : 'Faltam relatórios: sem Base Tabela não há como saber quanto deveria ter sido pago, e sem produção ou sistema não há o que cruzar.'}</span>
+          <button class="botao botao-perigo" id="imp-limpar">🧹 Limpar importações</button>
+        </div>
+      </div>`;
+
+    const bc = box.querySelector('#imp-calcular');
+    if (bc && pronto) bc.addEventListener('click', calcular);
+    box.querySelector('#imp-limpar').addEventListener('click', () => popupLimpar(hospitais));
+  }
+
+  async function calcular() {
+    Utilidades.loading.mostrar('Unificando os nomes dos médicos…');
+    await respirar();
+    try {
+      const uni = Motor.unificarMedicos(cliente.id);
+      Utilidades.loading.mostrar('Cruzando produção × sistema pelas regras da Base Tabela…');
+      await respirar();
+      const comps = Motor.listarCompetencias(cliente.id, 0);
+      const comp = comps[0] || '';
+      const r = Motor.auditar({ clienteId: cliente.id, hospitalId: 0, competencia: comp });
+      const chaveMed = App.medicoAtivo();
+      const nomeMed = App.medicoAtivoNome();
+      const so = (campo) => chaveMed
+        ? r.admissoes.reduce((s, a) => s + a.itens.reduce((t, i) =>
+            t + (Utilidades.normalizar(i.medico) === chaveMed ? (i[campo] || 0) : 0), 0), 0)
+        : r.kpis[campo === 'esperadoGlosa' ? 'glosado' : campo];
+      const falta = so('falta'), aguardando = so('aguardando'), glosado = so('esperadoGlosa');
+      Banco.salvarDebounced();
+      Utilidades.loading.esconder();
+      resumoCalculo({ comp, comps, r, uni, falta, aguardando, glosado, nomeMed });
+    } catch (e) {
+      console.error(e);
+      Utilidades.toast('O cálculo falhou: ' + (e.message || e), 'erro', 6000);
+    } finally { Utilidades.loading.esconder(); }
+  }
+
+  function resumoCalculo(x) {
+    const nPend = x.r.admissoes.filter(a => a.falta > 0.05).length;
+    const ov = document.createElement('div');
+    ov.className = 'modal-fundo';
+    ov.innerHTML = `
+      <div class="modal" style="width:660px;max-width:95vw">
+        <div class="modal-cabecalho">
+          <span class="modal-titulo">🧮 O que falta receber</span>
+          <button class="modal-fechar">✕</button>
+        </div>
+        <div class="modal-corpo">
+          <div class="info-caixa">Competência <strong>${esc(Utilidades.compExibir(x.comp))}</strong> (a mais recente das
+            ${x.comps.length} importadas) · ${x.nomeMed ? `médico <strong>${esc(x.nomeMed)}</strong>` : 'todos os médicos da empresa'}
+            · ${n(x.r.kpis.nAdmissoes)} admissão(ões) auditada(s).</div>
+          <div class="cards" style="margin:12px 0">
+            <div class="card card-destaque"><div class="card-rotulo">Falta receber</div>
+              <div class="card-valor mono">${fmtR(x.falta)}</div>
+              <div class="card-extra">${n(nPend)} admissão(ões) com pendência</div></div>
+            <div class="card"><div class="card-rotulo">Aguardando conciliação</div>
+              <div class="card-valor mono">${fmtR(x.aguardando)}</div>
+              <div class="card-extra">ainda no caminho — não é dívida</div></div>
+            <div class="card"><div class="card-rotulo">Glosado (não devido)</div>
+              <div class="card-valor mono">${fmtR(x.glosado)}</div>
+              <div class="card-extra">o pagador não pagou</div></div>
+          </div>
+          ${x.uni && x.uni.vinculadas ? `<div class="info-caixa" style="margin-bottom:10px">De-para automático:
+            <strong>${n(x.uni.vinculadas)}</strong> grafia(s) de nome unificadas em ${n(x.uni.medicos)} profissional(is).
+            Sem isso o cruzamento não fecha — "DURVAL JUNIOR" e "DURVAL MORAES DE CARVALHO JUNIOR" são a mesma pessoa.</div>` : ''}
+          ${x.r.hospitaisSemBase && x.r.hospitaisSemBase.length ? `<div class="aviso-caixa">⚠ Há hospital sem
+            <strong>nenhuma regra na Base Tabela</strong>: os procedimentos dele saem como SEM REGRA e não são cobrados.</div>` : ''}
+          <div class="texto-cinza" style="font-size:11.5px;margin-top:10px">A Inspeção abre com esta lista, admissão por
+            admissão, e mostra de quem é cada papel que falta.</div>
+        </div>
+        <div class="modal-rodape">
+          <button class="botao botao-primario" id="rc-insp" style="margin-right:auto">🔎 Abrir a Inspeção</button>
+          <button class="botao botao-marinho" id="rc-ok">Fechar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
+    ov.querySelector('#rc-ok').addEventListener('click', fechar);
+    ov.querySelector('#rc-insp').addEventListener('click', () => { fechar(); App.navegar('inspecao'); });
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // LIMPAR IMPORTAÇÕES — apaga o que foi importado, mantendo o cadastro
+  // ────────────────────────────────────────────────────────────────────
+  function popupLimpar(hospitais) {
+    const cont = {
+      PRODUCAO: Banco.escalar('SELECT COUNT(*) FROM linhas_producao WHERE cliente_id=?', [cliente.id]) || 0,
+      REPASSE: Banco.escalar('SELECT COUNT(*) FROM linhas_repasse WHERE cliente_id=?', [cliente.id]) || 0,
+      MEDICO: Banco.escalar('SELECT COUNT(*) FROM linhas_medico WHERE cliente_id=?', [cliente.id]) || 0,
+      BASE_TABELA: Banco.escalar(
+        `SELECT COUNT(*) FROM base_tabela b JOIN hospitais h ON h.id=b.hospital_id WHERE h.cliente_id=?`, [cliente.id]) || 0,
+    };
+    const TIPOS = [
+      ['PRODUCAO', '📋 Produção', 'linhas importadas dos relatórios analíticos'],
+      ['REPASSE', '🏥 Sistema', 'o relatório cru do sistema do hospital'],
+      ['MEDICO', '🧾 Médico', 'o relatório que o médico recebeu (e a pauta da Inspeção)'],
+      ['BASE_TABELA', '📐 Base Tabela', 'as regras de repasse — sem elas nada é cobrado'],
+    ];
+    const ov = document.createElement('div');
+    ov.className = 'modal-fundo';
+    ov.innerHTML = `
+      <div class="modal" style="width:620px;max-width:95vw">
+        <div class="modal-cabecalho">
+          <span class="modal-titulo">🧹 Limpar importações</span>
+          <button class="modal-fechar">✕</button>
+        </div>
+        <div class="modal-corpo">
+          <div class="aviso-caixa">Apaga os dados <strong>importados</strong> — a empresa, os hospitais e os
+            clientes continuam cadastrados. Não dá para desfazer: para recuperar, reimporte os arquivos.</div>
+          <div class="raiox-rotulo" style="margin-top:14px">O que apagar</div>
+          <div class="rolagem-x"><table class="tabela"><tbody>
+            ${TIPOS.map(([id, rot, desc]) => `<tr>
+              <td style="width:32px"><input type="checkbox" data-lim="${id}" ${cont[id] ? '' : 'disabled'}></td>
+              <td><strong>${rot}</strong><br><span class="texto-cinza" style="font-size:11px">${desc}</span></td>
+              <td class="num mono">${n(cont[id])}</td>
+            </tr>`).join('')}
+          </tbody></table></div>
+          <div class="linha-campos" style="margin-top:14px">
+            <div class="campo"><span class="campo-rotulo">Escopo</span>
+              <select id="lim-hosp">
+                <option value="0">Todos os hospitais da empresa</option>
+                ${hospitais.map(h => `<option value="${h.id}" ${h.id === st.hospitalId ? 'selected' : ''}>Só ${esc(h.nome)}</option>`).join('')}
+              </select></div>
+          </div>
+        </div>
+        <div class="modal-rodape">
+          <button class="botao" id="lim-cancelar">Cancelar</button>
+          <button class="botao botao-perigo" id="lim-ok">🧹 Apagar o que foi marcado</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
+    ov.querySelector('#lim-cancelar').addEventListener('click', fechar);
+    ov.querySelector('#lim-ok').addEventListener('click', () => {
+      const tipos = [...ov.querySelectorAll('[data-lim]:checked')].map(c => c.dataset.lim);
+      if (!tipos.length) { Utilidades.toast('Marque o que quer apagar.', 'aviso'); return; }
+      const hospId = Number(ov.querySelector('#lim-hosp').value) || 0;
+      const rotulos = TIPOS.filter(t => tipos.includes(t[0])).map(t => t[1].replace(/^\S+\s/, ''));
+      const escopo = hospId ? (hospitais.find(h => h.id === hospId) || {}).nome : 'TODOS os hospitais';
+      if (!confirm(`Apagar ${rotulos.join(', ')} de ${escopo}?\n\nNão dá para desfazer.`)) return;
+      limparImportacoes(tipos, hospId);
+      fechar();
+    });
+  }
+
+  function limparImportacoes(tipos, hospitalId) {
+    const onde = hospitalId ? ' AND hospital_id = ?' : '';
+    const p = (base) => hospitalId ? base.concat([hospitalId]) : base;
+    Banco.transacao(() => {
+      if (tipos.includes('PRODUCAO')) {
+        Banco.executar('DELETE FROM linhas_producao WHERE cliente_id = ?' + onde, p([cliente.id]));
+        Banco.executar(`DELETE FROM importacoes WHERE cliente_id = ? AND tipo = 'PRODUCAO'` + onde, p([cliente.id]));
+      }
+      if (tipos.includes('REPASSE')) {
+        Banco.executar('DELETE FROM linhas_repasse WHERE cliente_id = ?' + onde, p([cliente.id]));
+        Banco.executar(`DELETE FROM importacoes WHERE cliente_id = ? AND tipo = 'REPASSE'` + onde, p([cliente.id]));
+      }
+      if (tipos.includes('MEDICO')) {
+        Banco.executar('DELETE FROM linhas_medico WHERE cliente_id = ?' + onde, p([cliente.id]));
+        Banco.executar(`DELETE FROM importacoes WHERE cliente_id = ? AND tipo = 'MEDICO'` + onde, p([cliente.id]));
+      }
+      if (tipos.includes('BASE_TABELA')) {
+        Banco.executar(
+          `DELETE FROM base_tabela WHERE hospital_id IN (SELECT id FROM hospitais WHERE cliente_id = ?${hospitalId ? ' AND id = ?' : ''})`,
+          p([cliente.id]));
+        Banco.executar(`DELETE FROM importacoes WHERE cliente_id = ? AND tipo = 'BASE_TABELA'` + onde, p([cliente.id]));
+      }
+    });
+    // o que a Inspeção guardava apontava para admissões que não existem mais
+    if (tipos.includes('MEDICO') || tipos.includes('PRODUCAO')) {
+      Banco.configGravar('insp_pauta_v1_c' + cliente.id, []);
+    }
+    if (tipos.includes('PRODUCAO') || tipos.includes('REPASSE')) {
+      Banco.configGravar('insp_med_sel_v1_c' + cliente.id, []);
+      Banco.configGravar('insp_prod_sel_v1_c' + cliente.id, []);
+      Banco.configGravar('insp_prod_sit_v1_c' + cliente.id, []);
+      Banco.configGravar('medico_ativo_c' + cliente.id, '');
+    }
+    Banco.salvarDebounced();
+    App.renderShell();
+    App.navegar('importar');
+    Utilidades.toast('Importações apagadas.', 'ok');
+  }
+
   // ────────────────────────────────────────────────────────────────────
   // ILHA "MÉDICO IMPORTADO" — o relatório que o médico de fato recebeu
   // (a terceira ponta do triângulo PRODUÇÃO × SISTEMA × MÉDICO)
@@ -1068,6 +1315,18 @@ App.telas['importar'] = function () {
     const rows = window.__impMedMemo.rows;
     const multiHosp = hospitais.length > 1;
     const total = rows.reduce((a, r) => a + (Number(r.recebido) || 0), 0);
+    // agrupado por ANO, com o mesmo recolher das ilhas de Produção e Sistema
+    const grupos = [];
+    for (const r of rows) {
+      const ano = String(r.competencia || '').slice(0, 4) || '—';
+      let g = grupos.find(x => x.ano === ano);
+      if (!g) grupos.push(g = { ano, itens: [], linhas: 0, adms: 0, recebido: 0 });
+      g.itens.push(r);
+      g.linhas += Number(r.linhas) || 0; g.adms += Number(r.adms) || 0; g.recebido += Number(r.recebido) || 0;
+    }
+    const nMeses = (g) => new Set(g.itens.map(c => c.competencia)).size;
+    if (!(st.anosAbertosMed instanceof Set)) st.anosAbertosMed = new Set(grupos.length ? [grupos[0].ano] : []);
+    const abertos = st.anosAbertosMed;
 
     box.innerHTML = `
       <div class="painel">
@@ -1080,8 +1339,15 @@ App.telas['importar'] = function () {
             <th class="num">Linhas</th><th class="num">Admissões</th><th class="num">Profissionais</th>
             <th class="num">Recebido</th><th>Importado em</th><th></th>
           </tr></thead><tbody>
-          ${rows.map(r => `<tr>
-            <td class="mono">${esc(Utilidades.compExibir(r.competencia))}</td>
+          ${grupos.map(g => `
+            <tr class="imp-ano-med clique" data-ano="${esc(g.ano)}" title="${abertos.has(g.ano) ? 'Recolher' : 'Expandir'} os meses de ${esc(g.ano)}">
+              <td colspan="${multiHosp ? 2 : 1}"><strong>${abertos.has(g.ano) ? '▾' : '▸'} ${esc(g.ano)}</strong>
+                <span class="texto-cinza">(${nMeses(g)} ${nMeses(g) === 1 ? 'mês' : 'meses'})</span></td>
+              <td class="num mono">${n(g.linhas)}</td><td class="num mono">${n(g.adms)}</td><td></td>
+              <td class="num mono"><strong>${fmtR(g.recebido)}</strong></td><td></td><td></td>
+            </tr>
+            ${abertos.has(g.ano) ? g.itens.map(r => `<tr class="imp-mes-med">
+            <td class="mono" style="padding-left:28px">${esc(Utilidades.compExibir(r.competencia))}</td>
             ${multiHosp ? `<td>${esc(r.hospital)}</td>` : ''}
             <td class="num mono">${n(r.linhas)}${r.glosadas ? ` <span class="texto-cinza" style="font-size:10.5px">(${n(r.glosadas)} glosa)</span>` : ''}</td>
             <td class="num mono">${n(r.adms)}${r.semAdm ? ` <span class="texto-cinza" style="font-size:10.5px">(${n(r.semAdm)} sem admissão)</span>` : ''}</td>
@@ -1093,12 +1359,17 @@ App.telas['importar'] = function () {
                 title="Lançar um relatório ATUALIZADO deste mês (sobrescreve só ele)">↻ Atualizar</button>
               <button class="botao botao-mini botao-perigo" data-excluir-med="${esc(r.competencia)}" data-hosp="${r.hospital_id}">Excluir</button>
             </td>
-          </tr>`).join('')}
+          </tr>`).join('') : ''}`).join('')}
           </tbody></table></div>`
         : `<div class="tabela-vazia">Nenhum relatório do médico importado ainda — escolha <strong>Médico</strong> acima e solte o arquivo.
              É ele que fecha o triângulo: mostra o que o médico <strong>de fato recebeu</strong> contra o que o sistema diz que pagou.</div>`}
       </div>`;
 
+    box.querySelectorAll('.imp-ano-med').forEach(tr => tr.addEventListener('click', () => {
+      const ano = tr.dataset.ano;
+      if (abertos.has(ano)) abertos.delete(ano); else abertos.add(ano);
+      renderMedico(hospitais);
+    }));
     box.querySelectorAll('[data-atualizar-med]').forEach(b => b.addEventListener('click', () => {
       st.tipo = 'MEDICO'; st.hospitalId = Number(b.dataset.hosp); st.competencia = b.dataset.atualizarMed;
       st.arq = null; st.etapa = 1;
@@ -1377,10 +1648,9 @@ App.telas['importar'] = function () {
             substituir, linhaCab: a.linhaCab, nucleo: a.map, escopo: st.escopo,
           }, fonteDe(), progressoDe('Importando a produção…'));
           gravarPerfil('PRODUCAO', cab, a.map, a.linhaCab);
-          Banco.salvarDebounced();
           const alvo = st.alvo || '';
           st.arq = null; st.etapa = 1; st.alvo = '';
-          render();
+          aposImportar();
           resumoProducao(r, a.nome, alvo);
           return;
         }
@@ -1391,11 +1661,10 @@ App.telas['importar'] = function () {
           ? await Importador.aplicarFonte(base, fonteDe(), progressoDe('Importando o relatório do sistema…'))
           : Importador.aplicar({ ...base, matriz: await fonteDe().matriz() });
         gravarPerfil(st.tipo, cab, a.map, a.linhaCab);
-        Banco.salvarDebounced();
 
         const nome = a.nome, mapa = { ...a.map };
         st.arq = null; st.etapa = 1;
-        render();
+        aposImportar();
         if (st.tipo === 'REPASSE') { resumoSistema(r, nome, cab, mapa); return; }
         const comps = r.competencias.length ? ' Competências: ' + r.competencias.map(Utilidades.compExibir).join(', ') + '.' : '';
         Utilidades.toast(`${r.inseridas.toLocaleString('pt-BR')} linhas importadas.${comps}` +

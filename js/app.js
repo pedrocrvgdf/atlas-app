@@ -35,6 +35,7 @@
   ];
 
   let _telaAtual = null;
+  let _memoMed = { chave: null, lista: [] };
 
   // ──────────────────────────────────────────────────────────────────────
   // CLIENTE ATIVO
@@ -74,6 +75,51 @@
   };
 
   // ──────────────────────────────────────────────────────────────────────
+  // MÉDICO AUDITADO
+  //
+  // A EMPRESA (o cliente/cofre) guarda os relatórios de PRODUÇÃO e SISTEMA,
+  // que são da instituição inteira e trazem TODOS os profissionais dela. Quem
+  // a ATLAS audita é UM médico: ele é escolhido aqui, a partir de quem
+  // apareceu nos relatórios (já unificado pelo de-para), e vira o recorte de
+  // todas as telas. Vazio = a empresa inteira.
+  // ──────────────────────────────────────────────────────────────────────
+
+  App.listarMedicos = function () {
+    const c = App.clienteAtivo();
+    if (!c) return [];
+    const chave = c.id + '|' + Banco._versao;
+    if (_memoMed.chave === chave) return _memoMed.lista;
+    _memoMed = { chave, lista: Motor.medicosDoCliente(c.id) };
+    return _memoMed.lista;
+  };
+
+  /** Chave normalizada do médico auditado ('' = todos os médicos da empresa). */
+  App.medicoAtivo = function () {
+    const c = App.clienteAtivo();
+    if (!c) return '';
+    const k = String(Banco.configLer('medico_ativo_c' + c.id, '') || '');
+    if (!k) return '';
+    return App.listarMedicos().some(m => m.chave === k) ? k : '';
+  };
+
+  /** Nome oficial do médico auditado ('' = todos). */
+  App.medicoAtivoNome = function () {
+    const k = App.medicoAtivo();
+    if (!k) return '';
+    const m = App.listarMedicos().find(x => x.chave === k);
+    return m ? m.nome : '';
+  };
+
+  App.setMedicoAtivo = function (chave) {
+    const c = App.clienteAtivo();
+    if (!c) return;
+    Banco.configGravar('medico_ativo_c' + c.id, String(chave || ''));
+    Banco.salvarDebounced();
+    App.renderShell();
+    App.navegar(_telaAtual || 'inspecao');
+  };
+
+  // ──────────────────────────────────────────────────────────────────────
   // SHELL
   // ──────────────────────────────────────────────────────────────────────
 
@@ -86,6 +132,8 @@
     const opcoes = clientes.map(c =>
       `<option value="${c.id}" ${ativo && ativo.id === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`
     ).join('');
+    const medicos = ativo ? App.listarMedicos() : [];
+    const medAtivo = ativo ? App.medicoAtivo() : '';
 
     document.getElementById('app').innerHTML = `
       <div class="marca-dagua" aria-hidden="true"></div>
@@ -112,13 +160,21 @@
           </nav>
 
           <div class="topo-cliente">
-            <span class="topo-cliente-rotulo">Cliente</span>
+            <span class="topo-cliente-rotulo">Empresa</span>
             ${clientes.length ? `
               <select id="sel-cliente" class="topo-cliente-select">
                 <option value="0" ${!ativo ? 'selected' : ''}>— selecione —</option>
                 ${opcoes}
               </select>` :
               `<button class="botao botao-mini botao-primario" data-tela="clientes">＋ cadastrar</button>`}
+            ${ativo ? `
+              <span class="topo-cliente-rotulo" style="margin-left:10px">Médico</span>
+              ${medicos.length ? `
+                <select id="sel-medico" class="topo-cliente-select" title="O médico auditado — sai dos relatórios importados">
+                  <option value="">— todos (${medicos.length}) —</option>
+                  ${medicos.map(m => `<option value="${esc(m.chave)}" ${m.chave === medAtivo ? 'selected' : ''}>${esc(m.nome)}</option>`).join('')}
+                </select>` :
+                `<span class="topo-cliente-vazio" title="Importe a produção e o sistema da empresa: os médicos saem dos relatórios">importe os relatórios</span>`}` : ''}
           </div>
         </header>
       </div>
@@ -128,6 +184,8 @@
 
     const sel = document.getElementById('sel-cliente');
     if (sel) sel.addEventListener('change', () => App.setClienteAtivo(sel.value));
+    const selMed = document.getElementById('sel-medico');
+    if (selMed) selMed.addEventListener('change', () => App.setMedicoAtivo(selMed.value));
 
     // navegação (barra + menu suspenso)
     document.querySelectorAll('[data-tela]').forEach(btn => {

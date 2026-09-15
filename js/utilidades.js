@@ -98,6 +98,46 @@
     return v;
   };
 
+  /**
+   * Palavras que não identificam ninguém num nome de médico: preposições e
+   * sufixos de geração. "DURVAL JUNIOR" e "DURVAL MORAES DE CARVALHO JUNIOR"
+   * são a mesma pessoa, e é o DURVAL que diz isso, não o JUNIOR.
+   */
+  const RUIDO_NOME = new Set(['DE', 'DA', 'DO', 'DAS', 'DOS', 'E', 'DI', 'DU',
+    'JUNIOR', 'JR', 'FILHO', 'NETO', 'SOBRINHO', 'SEGUNDO', 'TERCEIRO',
+    'DR', 'DRA', 'DOUTOR', 'DOUTORA']);
+
+  /** Tokens que identificam a pessoa (sem ruído, sem partículas de 1-2 letras). */
+  Utilidades.tokensNome = function (s) {
+    return Utilidades.normalizar(s).split(/\s+/).filter(t => t.length > 2 && !RUIDO_NOME.has(t));
+  };
+
+  /**
+   * É a MESMA pessoa? A regra da ferramenta de origem (nomesBatem), na letra:
+   *   · nomes normalizados iguais;
+   *   · um contém o outro ("DURVAL MORAES" dentro de "DURVAL MORAES CARVALHO");
+   *   · primeiro E último nome significativo coincidem;
+   *   · dois ou mais nomes significativos em comum;
+   *   · similaridade ≥ 0,82 (typo de digitação).
+   * Sufixo de geração (JUNIOR, FILHO…) e preposições não contam como nome.
+   */
+  Utilidades.nomesBatem = function (a, b) {
+    const na = Utilidades.normalizar(a), nb = Utilidades.normalizar(b);
+    if (!na || !nb) return false;
+    if (na === nb) return true;
+    if (na.includes(nb) || nb.includes(na)) return true;
+    const ta = Utilidades.tokensNome(a), tb = Utilidades.tokensNome(b);
+    if (ta.length && tb.length) {
+      if (ta[0] === tb[0] && ta[ta.length - 1] === tb[tb.length - 1]) return true;
+      const setB = new Set(tb);
+      const comuns = ta.filter(t => setB.has(t)).length;
+      if (comuns >= 2) return true;
+      // um nome curto inteiro dentro do outro: "DURVAL JUNIOR" ⊂ "DURVAL MORAES … JUNIOR"
+      if (comuns && comuns === Math.min(ta.length, tb.length) && ta[0] === tb[0]) return true;
+    }
+    return Utilidades.similaridade(na, nb) >= 0.82;
+  };
+
   // ──────────────────────────────────────────────────────────────────────
   // NÚMEROS, MOEDA E DATAS
   // ──────────────────────────────────────────────────────────────────────
