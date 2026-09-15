@@ -285,6 +285,21 @@ input.entrada:focus, select.entrada:focus { border-color: var(--azul-500); box-s
 #atlas-loading .al-box { background: var(--branco); border-radius: 14px;
   padding: 22px 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
 #atlas-loading .al-msg { margin-top: 10px; font-weight: 700; font-size: 12.5px; }
+/* ── Mini-ilhas da Base Tabela (tela Importações) ────────────────────── */
+.imp-base-ilhas { display: flex; flex-wrap: wrap; gap: 12px; }
+.imp-base-ilha { display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  min-width: 210px; padding: 12px 16px; border: 1px solid var(--borda);
+  border-radius: 12px; background: var(--papel); text-align: left; cursor: pointer;
+  font: inherit; color: inherit; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.imp-base-ilha:hover { border-color: var(--marinho); box-shadow: 0 6px 18px rgba(20,51,82,.12); transform: translateY(-1px); }
+.imp-base-nome { font-weight: 800; font-size: 12.5px; }
+.imp-base-num { font-size: 26px; font-weight: 800; line-height: 1.1; color: var(--marinho); }
+.imp-base-sub { font-size: 11.5px; color: var(--cinza); }
+.imp-base-ver { margin-top: 6px; font-size: 11.5px; font-weight: 700; color: var(--marinho); }
+.imp-base-vazia { cursor: default; border-style: dashed; }
+.imp-base-vazia:hover { border-color: var(--borda); box-shadow: none; transform: none; }
+.imp-base-vazia .imp-base-num, .imp-base-vazia .imp-base-ver { color: var(--cinza); }
+
 #atlas-loading .al-barra { width: 280px; max-width: 70vw; height: 8px; margin: 12px auto 0;
   background: rgba(20,51,82,.12); border-radius: 99px; overflow: hidden; }
 #atlas-loading .al-barra[hidden] { display: none; }
@@ -390,6 +405,7 @@ input.entrada:focus, select.entrada:focus { border-color: var(--azul-500); box-s
 .tag-CONVENIO   { background: #e3edf5; color: #2f5f83; }
 .tag-PARTICULAR { background: #ece7f3; color: #5d4a80; }
 .tag-SUS        { background: #e2f2ea; color: #1f6247; }
+.tag-TODAS      { background: #eceef1; color: #4a5568; }
 
 /* candidatas da busca por nome */
 .insp-candidatas { background: var(--branco); border: 1px solid var(--borda); border-radius: 14px;

@@ -30,11 +30,15 @@
  *   · Regra com valor E percentual zerados NÃO remunera.
  *   · Admissões casam por normAdm — só dígitos, sem zeros à esquerda.
  *
- * O VALOR ESPERADO de cada papel sai de duas origens, nesta ordem:
- *   1. BASE TABELA do hospital (procedimento × papel × fonte);
- *   2. PADRÃO INFERIDO do histórico pago do próprio hospital (valor fixo
- *      pela moda / percentual pela estabilidade de pago÷produzido), com
- *      confiança mínima configurável.
+ * SÓ HÁ CÁLCULO DE REPASSE COM BASE TABELA. O valor esperado de cada papel
+ * sai da BASE TABELA do hospital (procedimento × papel × fonte) e de mais
+ * lugar nenhum: sem tabela carregada não há como saber o que deveria ter
+ * sido pago, então não se cobra. Os papéis avaliados são os que a Base
+ * REMUNERA (valor ou percentual diferente de zero) — papel que a tabela não
+ * remunera não é divergência, é o desenho dela (consulta com solicitante,
+ * por exemplo). O PADRÃO INFERIDO do histórico continua sendo calculado,
+ * mas só como SUGESTÃO na tela Base Tabela: entra no cálculo quando (e se) o
+ * usuário promover o padrão a regra.
  *
  * Semântica do filtro de competência: filtra a PRODUÇÃO (mês do
  * atendimento). O repasse é buscado POR ADMISSÃO em todo o histórico —
@@ -270,20 +274,32 @@
   }
 
   /**
-   * Regra efetiva para (proc, papel, fonte):
-   *   Base[fonte] → Base[TODAS] → Inferida[fonte] (confiança ≥ mínima) → null
+   * Regra efetiva para (proc, papel, fonte): Base[fonte] → Base[TODAS] → null.
+   * A Base é a ÚNICA fonte do esperado (o padrão inferido só vira regra
+   * quando promovido na tela Base Tabela, e aí já está aqui dentro).
    */
-  function acharRegra(base, padroes, minConf, proc, papel, fonte) {
-    let r = base.get(proc + '|' + papel + '|' + fonte);
-    if (r) return { origem: 'BASE', valor: r.valor, percentual: r.percentual };
-    r = base.get(proc + '|' + papel + '|TODAS');
-    if (r) return { origem: 'BASE', valor: r.valor, percentual: r.percentual };
-    const p = padroes.get(proc + '|' + papel + '|' + fonte);
-    if (p && p.confianca >= minConf) {
-      return { origem: 'INFERIDA', valor: p.valor, percentual: p.percentual,
-               confianca: p.confianca, amostras: p.amostras };
+  function acharRegra(base, proc, papel, fonte) {
+    const r = base.get(proc + '|' + papel + '|' + fonte) || base.get(proc + '|' + papel + '|TODAS');
+    return r ? { origem: 'BASE', valor: r.valor, percentual: r.percentual } : null;
+  }
+
+  /** A regra remunera de fato? (valor e percentual zerados = papel não remunerado) */
+  function remunera(r) {
+    return !!r && ((r.valor != null && Number(r.valor) !== 0) ||
+                   (r.percentual != null && Number(r.percentual) !== 0));
+  }
+
+  /**
+   * Papéis que a Base REMUNERA para (procedimento, fonte) — são eles, e só
+   * eles, que a auditoria cobra. Vazio = a tabela não cobre este procedimento.
+   */
+  function papeisDaBase(base, proc, fonte) {
+    const out = [];
+    for (const papel of U().PAPEIS) {
+      const r = acharRegra(base, proc, papel, fonte);
+      if (remunera(r)) out.push({ papel, regra: r });
     }
-    return null;
+    return out;
   }
 
   function valorEsperado(regra, valorProducao, qtd) {
@@ -335,7 +351,6 @@
       return out;
     };
     const tol = cfgNum('tolerancia_centavos', 0.05);
-    const minConf = cfgNum('inferencia_min_confianca', 0.6);
     const limiarFuzzy = cfgNum('fuzzy_limiar', 0.88);
     const sinonimos = mapaSinonimos(f.clienteId);
     const ehInst = fnInstitucional();
@@ -359,12 +374,15 @@
     if (f.hospitalId) { sqlRep += ' AND hospital_id = ?'; pRep.push(f.hospitalId); }
     const rep = consultar(sqlRep, pRep, ' ORDER BY admissao, id', admsRep);
 
-    // regras e padrões por hospital (pode haver mais de um no filtro "todos")
+    // regras por hospital (pode haver mais de um no filtro "todos"). A
+    // inferência NÃO entra aqui: ela é sugestão da tela Base Tabela, não regra.
     const hospitais = new Set(prod.map(l => l.hospital_id).concat(rep.map(l => l.hospital_id)));
-    const basePorHosp = new Map(), padroesPorHosp = new Map();
+    const basePorHosp = new Map();
+    const semBase = [];
     for (const h of hospitais) {
-      basePorHosp.set(h, carregarBase(h));
-      padroesPorHosp.set(h, inferirPadroes(h));
+      const b = carregarBase(h);
+      basePorHosp.set(h, b);
+      if (!b.size) semBase.push(h);
     }
 
     // repasse indexado por admissão NORMALIZADA (normAdm)
@@ -390,6 +408,14 @@
 
     const admissoes = [];
     const porMedico = new Map();
+
+    /** Sem regra não vira dívida, mas o que foi pago é do médico — entra no consolidado. */
+    const registrarSemRegra = (item) => {
+      const reg = registroMedico(item.medico);
+      reg.pago += item.pago || 0;
+      reg.nItens++;
+      return item;
+    };
 
     const registroMedico = (nome) => {
       if (!nome) nome = '(sem profissional)';
@@ -431,7 +457,6 @@
 
       for (const lp of itensProd) {
         const base = basePorHosp.get(lp.hospital_id) || new Map();
-        const padroes = padroesPorHosp.get(lp.hospital_id) || new Map();
         const procN = lp.procedimento_norm;
         const procCasa = (lr) => lr.procedimento_norm === procN ||
           U_.similaridade(lr.procedimento_norm, procN) >= limiarFuzzy;
@@ -458,26 +483,57 @@
           continue;
         }
 
-        // papéis candidatos: os preenchidos na produção + os que a Base exige
-        const candidatos = [];
-        for (const [papel, col] of PAPEIS_PROD) {
-          const nome = String(lp[col] || '').trim();
-          if (nome) candidatos.push({ papel, nome });
-        }
-        for (const papel of U_.PAPEIS) {
-          if (candidatos.some(c => c.papel === papel)) continue;
-          const r = base.get(procN + '|' + papel + '|' + lp.fonte) ||
-                    base.get(procN + '|' + papel + '|TODAS');
-          if (r && ((r.valor != null && r.valor !== 0) || (r.percentual != null && r.percentual !== 0))) {
-            candidatos.push({ papel, nome: '' });   // exigido pela Base, sem nome na produção
-          }
-        }
-        if (!candidatos.length) candidatos.push({ papel: 'EXECUTANTE', nome: '' });
-
         const execDaLinha = resolverMedico(lp.executante, sinonimos);
+        const nomeDaProducao = (papel) => {
+          const par = PAPEIS_PROD.find(([p]) => p === papel);
+          return par ? String(lp[par[1]] || '').trim() : '';
+        };
+
+        /**
+         * Item informativo de pagamento SEM REGRA — o sistema pagou e a Base
+         * não diz quanto deveria. O valor aparece (o dinheiro saiu), mas a
+         * ATLAS não afirma que está certo nem inventa dívida.
+         */
+        const itemSemRegra = (papel, medico, pago) => ({
+          admissao: adm, hospital_id: lp.hospital_id, competencia: lp.competencia,
+          data: lp.data, paciente: lp.paciente, convenio: lp.convenio, fonte: lp.fonte,
+          procedimento: lp.procedimento, quantidade: lp.quantidade, valorProducao: lp.valor,
+          papel, medico, regra: null, esperado: null, esperadoGlosa: 0,
+          pago, pagoOutro: 0, diferenca: null, falta: 0,
+          status: 'SEM_REGRA', motivo: pago > 0 ? 'pago_sem_regra' : null, pagoA: '',
+        });
+
+        /**
+         * SÓ SE COBRA O QUE A BASE TABELA MANDA PAGAR. Os papéis avaliados são
+         * os que ela remunera para este procedimento × fonte; papel que a
+         * tabela não remunera não é divergência, é o desenho dela.
+         */
+        const candidatos = papeisDaBase(base, procN, lp.fonte)
+          .map(({ papel }) => ({ papel, nome: nomeDaProducao(papel) }));
+
+        // procedimento fora da Base: nada a cobrar. O que o sistema pagou
+        // aparece como SEM REGRA (por papel); nada pago vira um item só.
+        if (!candidatos.length) {
+          let algum = false;
+          for (const lr of repAdm) {
+            if (lr._consumida || !(Number(lr.repassado) > 0) || !procCasa(lr)) continue;
+            lr._consumida = true;
+            algum = true;
+            itens.push(registrarSemRegra(itemSemRegra(lr.papel_canon || lr.papel || '—',
+              resolverMedico(lr.medico, sinonimos), Number(lr.repassado))));
+          }
+          // nada pago: fica o registro de que o procedimento está fora da Base
+          // — a menos que o executante seja INSTITUCIONAL, que nunca tem
+          // repasse (procedimento dele não precisa de regra)
+          if (!algum && !(execDaLinha && ehInst(execDaLinha))) {
+            itens.push(registrarSemRegra(itemSemRegra('EXECUTANTE',
+              execDaLinha || resolverMedico(nomeDaProducao('EXECUTANTE'), sinonimos), 0)));
+          }
+          continue;
+        }
 
         for (const cand of candidatos) {
-          const regra = acharRegra(base, padroes, minConf, procN, cand.papel, lp.fonte);
+          const regra = acharRegra(base, procN, cand.papel, lp.fonte);
           const esperadoBruto = valorEsperado(regra, lp.valor, lp.quantidade);
           if (esperadoBruto === 0 && regra) continue;   // papel não remunerado
 
@@ -594,6 +650,15 @@
             regM.itensPendentes.push(item);
           }
         }
+
+        // o sistema pagou um papel que a Base NÃO remunera neste procedimento:
+        // o dinheiro saiu e fica à vista, sem virar cobrança nem anomalia
+        for (const lr of repAdm) {
+          if (lr._consumida || !(Number(lr.repassado) > 0) || !procCasa(lr)) continue;
+          lr._consumida = true;
+          itens.push(registrarSemRegra(itemSemRegra(lr.papel_canon || lr.papel || '—',
+            resolverMedico(lr.medico, sinonimos), Number(lr.repassado))));
+        }
       }
 
       // linhas de repasse pagas da admissão que não casaram com nenhum item
@@ -671,7 +736,9 @@
 
     const resultado = {
       kpis, admissoes, porMedico,
-      padroesPorHosp,
+      // hospitais do recorte que não têm NENHUMA regra na Base: sem tabela não
+      // há o que cobrar, e as telas avisam em vez de mostrar tudo "sem regra"
+      hospitaisSemBase: semBase,
       filtros: { clienteId: f.clienteId, hospitalId: f.hospitalId || 0, competencia: f.competencia || '' },
       geradoEm: new Date().toISOString(),
     };

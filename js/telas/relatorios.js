@@ -61,6 +61,11 @@ App.telas['relatorios'] = function () {
           </select></div>
       </div>
 
+      ${r.hospitaisSemBase && r.hospitaisSemBase.length ? `<div class="aviso-caixa" style="margin-bottom:12px">
+        ⚠ Este hospital não tem <strong>nenhuma regra na Base Tabela</strong>. Sem tabela não há como saber quanto
+        deveria ter sido repassado, então a ATLAS não cobra nada — importe a Base Tabela do hospital em
+        <strong>Importações</strong> ou promova os padrões aprendidos em <strong>Base Tabela</strong>.</div>` : ''}
+
       <div class="cards">
         <div class="card"><div class="card-rotulo">Esperado (regras)</div>
           <div class="card-valor mono">${fmtR(r.kpis.esperado)}</div></div>

@@ -43,6 +43,12 @@ App.telas['auditoria'] = function () {
     SEM_REGRA: 'SEM REGRA', A_MAIOR: 'PAGO A MAIOR', NAO_PAREADO: 'SEM PAREAMENTO',
     GLOSA: 'GLOSA', OK: 'OK',
   };
+  const SEM_BASE = 'Este hospital não tem <strong>nenhuma regra na Base Tabela</strong>. ' +
+    'Sem tabela não há como saber quanto deveria ter sido repassado, então a ATLAS não cobra nada: ' +
+    'os itens aparecem como <strong>SEM REGRA</strong>, com o que o sistema pagou à vista. ' +
+    'Importe a Base Tabela do hospital em <strong>Importações</strong> — ou promova os padrões ' +
+    'aprendidos em <strong>Base Tabela</strong>.';
+
   const MOTIVO_ROTULO = {
     pago_a_outro: 'pago ao médico errado — a dívida continua',
     sem_medico: 'papel remunerado sem profissional em base nenhuma',
@@ -118,6 +124,8 @@ App.telas['auditoria'] = function () {
         <div class="campo" style="flex:1"><span class="campo-rotulo">Busca</span>
           <input class="entrada" id="f-busca" placeholder="admissão, paciente, médico ou procedimento" value="${esc(st.busca)}"></div>
       </div>
+
+      ${r.hospitaisSemBase && r.hospitaisSemBase.length ? `<div class="aviso-caixa" style="margin-bottom:12px">⚠ ${SEM_BASE}</div>` : ''}
 
       <div id="insp-cards"></div>
 

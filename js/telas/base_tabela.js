@@ -162,12 +162,14 @@ App.telas['base'] = function () {
         O motor observa o histórico de repasses <strong>pagos</strong> deste hospital e infere o
         padrão por procedimento × papel × fonte: <strong>valor fixo</strong> quando o mesmo valor
         domina as amostras, <strong>percentual</strong> quando a razão pago ÷ produzido é estável.
-        Padrões com confiança ≥ ${Math.round(minConf * 100)}% já entram automaticamente no cálculo
-        quando não há regra na Base — promover a regra os torna definitivos (e editáveis).
+        <strong>Isto é sugestão, não regra</strong>: a auditoria só cobra pelo que está na Base
+        Tabela. O padrão aprendido mostra o costume do sistema (que nem sempre segue a tabela) —
+        confira e <strong>promova a regra</strong> para que ele passe a valer no cálculo.
+        Confiança de referência: ${Math.round(minConf * 100)}%.
       </div>
       <div class="painel">
         <div class="painel-cabecalho">
-          <span class="painel-titulo">Padrões aprendidos do histórico</span>
+          <span class="painel-titulo">Padrões aprendidos do histórico (sugestões)</span>
           <span class="painel-conta">${linhas.length} padrão(ões)</span>
         </div>
         ${linhas.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>

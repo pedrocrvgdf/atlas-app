@@ -90,12 +90,16 @@ App.telas['importar'] = function () {
       <div id="imp-area"></div>
       <div id="imp-prod"></div>
       <div id="imp-sis"></div>
+      <div id="imp-med"></div>
+      <div id="imp-base"></div>
       <div id="imp-lista"></div>`;
 
     if (st.etapa === 2 && st.arq) renderMapeamento(hospitais);
     else renderEscolha(hospitais);
     renderProducao(hospitais);
     renderSistema(hospitais);
+    renderMedico(hospitais);
+    renderBase(hospitais);
     renderLista();
   }
 
@@ -439,6 +443,7 @@ App.telas['importar'] = function () {
       Banco.salvarDebounced();
       render();
       Utilidades.toast(`${n(r.inseridas)} regra(s) da Base Tabela importadas (a base anterior do hospital foi substituída).`, 'ok', 5200);
+      popupBase(st.hospitalId);   // mostra na hora o que passou a valer
     } catch (err) {
       console.error(err);
       Utilidades.toast('Importação falhou: ' + (err.message || err), 'erro', 6000);
@@ -952,6 +957,215 @@ App.telas['importar'] = function () {
     Banco.salvarDebounced();
     Utilidades.toast(`Produção de ${Utilidades.compExibir(comp)} excluída.`, 'ok');
     render();
+  }
+
+
+  // ────────────────────────────────────────────────────────────────────
+  // ILHA "MÉDICO IMPORTADO" — o relatório que o médico de fato recebeu
+  // (a terceira ponta do triângulo PRODUÇÃO × SISTEMA × MÉDICO)
+  // ────────────────────────────────────────────────────────────────────
+  function renderMedico(hospitais) {
+    const box = el.querySelector('#imp-med');
+    if (!box) return;
+    const memo = window.__impMedMemo || {};
+    if (memo.versao !== Banco._versao || memo.cliente !== cliente.id) {
+      window.__impMedMemo = { versao: Banco._versao, cliente: cliente.id, rows: Banco.query(
+        `SELECT lm.hospital_id, h.nome AS hospital, lm.competencia,
+                COUNT(*) AS linhas, COUNT(DISTINCT lm.admissao_norm) AS adms,
+                COUNT(DISTINCT lm.medico_norm) AS medicos,
+                SUM(CASE WHEN UPPER(COALESCE(lm.sistema, '')) LIKE '%GLOSA%' THEN 0 ELSE COALESCE(lm.valor, 0) END) AS recebido,
+                SUM(CASE WHEN UPPER(COALESCE(lm.sistema, '')) LIKE '%GLOSA%' THEN 1 ELSE 0 END) AS glosadas,
+                SUM(CASE WHEN TRIM(COALESCE(lm.admissao, '')) = '' THEN 1 ELSE 0 END) AS semAdm,
+                MAX(i.importada_em) AS importada_em
+           FROM linhas_medico lm
+           JOIN hospitais h ON h.id = lm.hospital_id
+           LEFT JOIN importacoes i ON i.id = lm.importacao_id
+          WHERE lm.cliente_id = ?
+          GROUP BY lm.hospital_id, lm.competencia
+          ORDER BY lm.competencia DESC, h.nome`, [cliente.id]) };
+    }
+    const rows = window.__impMedMemo.rows;
+    const multiHosp = hospitais.length > 1;
+    const total = rows.reduce((a, r) => a + (Number(r.recebido) || 0), 0);
+
+    box.innerHTML = `
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <span class="painel-titulo">Médico importado</span>
+          <span class="painel-conta">${rows.length} relatório(s) · ${fmtR(total)} recebidos pelo médico</span>
+        </div>
+        ${rows.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+            <th>Mês do pagamento</th>${multiHosp ? '<th>Hospital</th>' : ''}
+            <th class="num">Linhas</th><th class="num">Admissões</th><th class="num">Profissionais</th>
+            <th class="num">Recebido</th><th>Importado em</th><th></th>
+          </tr></thead><tbody>
+          ${rows.map(r => `<tr>
+            <td class="mono">${esc(Utilidades.compExibir(r.competencia))}</td>
+            ${multiHosp ? `<td>${esc(r.hospital)}</td>` : ''}
+            <td class="num mono">${n(r.linhas)}${r.glosadas ? ` <span class="texto-cinza" style="font-size:10.5px">(${n(r.glosadas)} glosa)</span>` : ''}</td>
+            <td class="num mono">${n(r.adms)}${r.semAdm ? ` <span class="texto-cinza" style="font-size:10.5px">(${n(r.semAdm)} sem admissão)</span>` : ''}</td>
+            <td class="num mono">${n(r.medicos)}</td>
+            <td class="num mono"><strong>${fmtR(r.recebido)}</strong></td>
+            <td class="texto-cinza" style="font-size:11px">${esc(quando(r.importada_em))}</td>
+            <td style="text-align:right;white-space:nowrap">
+              <button class="botao botao-mini" data-atualizar-med="${esc(r.competencia)}" data-hosp="${r.hospital_id}"
+                title="Lançar um relatório ATUALIZADO deste mês (sobrescreve só ele)">↻ Atualizar</button>
+              <button class="botao botao-mini botao-perigo" data-excluir-med="${esc(r.competencia)}" data-hosp="${r.hospital_id}">Excluir</button>
+            </td>
+          </tr>`).join('')}
+          </tbody></table></div>`
+        : `<div class="tabela-vazia">Nenhum relatório do médico importado ainda — escolha <strong>Médico</strong> acima e solte o arquivo.
+             É ele que fecha o triângulo: mostra o que o médico <strong>de fato recebeu</strong> contra o que o sistema diz que pagou.</div>`}
+      </div>`;
+
+    box.querySelectorAll('[data-atualizar-med]').forEach(b => b.addEventListener('click', () => {
+      st.tipo = 'MEDICO'; st.hospitalId = Number(b.dataset.hosp); st.competencia = b.dataset.atualizarMed;
+      st.arq = null; st.etapa = 1;
+      render();
+      const inp = el.querySelector('#imp-drop-input');
+      if (inp) inp.click();
+    }));
+    box.querySelectorAll('[data-excluir-med]').forEach(b => b.addEventListener('click', () =>
+      excluirMedico(Number(b.dataset.hosp), b.dataset.excluirMed)));
+  }
+
+  function excluirMedico(hospitalId, comp) {
+    const s = Banco.query(
+      `SELECT COUNT(*) AS qtd, COALESCE(SUM(valor), 0) AS total FROM linhas_medico
+        WHERE hospital_id = ? AND competencia = ?`, [hospitalId, comp])[0] || { qtd: 0, total: 0 };
+    if (!confirm(`Excluir o relatório do médico de ${Utilidades.compExibir(comp)} deste hospital?\n\n` +
+      `Serão removidas ${n(s.qtd)} linhas (${fmtR(s.total)}).\n\nNão dá para desfazer — para recuperar, reimporte o relatório.`)) return;
+    Banco.transacao(() => {
+      Banco.executar('DELETE FROM linhas_medico WHERE hospital_id = ? AND competencia = ?', [hospitalId, comp]);
+      Banco.executar(
+        `DELETE FROM importacoes WHERE tipo = 'MEDICO' AND hospital_id = ?
+           AND NOT EXISTS (SELECT 1 FROM linhas_medico lm WHERE lm.importacao_id = importacoes.id)`, [hospitalId]);
+    });
+    Banco.salvarDebounced();
+    Utilidades.toast(`Relatório do médico de ${Utilidades.compExibir(comp)} excluído.`, 'ok');
+    render();
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // MINI-ILHA "BASE TABELA" — as regras que mandam no cálculo do repasse.
+  // Clicar abre o pop-up com a tabela inteira do hospital.
+  // ────────────────────────────────────────────────────────────────────
+  function renderBase(hospitais) {
+    const box = el.querySelector('#imp-base');
+    if (!box) return;
+    const memo = window.__impBaseMemo || {};
+    if (memo.versao !== Banco._versao || memo.cliente !== cliente.id) {
+      window.__impBaseMemo = { versao: Banco._versao, cliente: cliente.id, rows: Banco.query(
+        `SELECT b.hospital_id, h.nome AS hospital, COUNT(*) AS regras,
+                COUNT(DISTINCT b.procedimento_norm) AS procs,
+                SUM(CASE WHEN b.origem = 'IMPORTADA' THEN 1 ELSE 0 END) AS importadas,
+                SUM(CASE WHEN b.origem = 'INFERIDA' THEN 1 ELSE 0 END) AS inferidas,
+                MAX(b.criado_em) AS criado_em
+           FROM base_tabela b JOIN hospitais h ON h.id = b.hospital_id
+          WHERE h.cliente_id = ?
+          GROUP BY b.hospital_id ORDER BY h.nome`, [cliente.id]) };
+    }
+    const rows = window.__impBaseMemo.rows;
+    const semBase = hospitais.filter(h => !rows.some(r => r.hospital_id === h.id));
+
+    box.innerHTML = `
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <span class="painel-titulo">Base Tabela</span>
+          <span class="painel-conta">as regras que mandam no cálculo — <strong>sem elas a ATLAS não cobra nada</strong></span>
+        </div>
+        <div class="painel-corpo">
+          <div class="imp-base-ilhas">
+            ${rows.map(r => `
+              <button class="imp-base-ilha" data-base-hosp="${r.hospital_id}" title="Ver a Base Tabela importada deste hospital">
+                <span class="imp-base-nome">📐 ${esc(r.hospital)}</span>
+                <span class="imp-base-num">${n(r.regras)}</span>
+                <span class="imp-base-sub">regra(s) · ${n(r.procs)} procedimento(s)</span>
+                <span class="imp-base-ver">ver a tabela →</span>
+              </button>`).join('')}
+            ${semBase.map(h => `
+              <div class="imp-base-ilha imp-base-vazia" title="Este hospital ainda não tem regras">
+                <span class="imp-base-nome">📐 ${esc(h.nome)}</span>
+                <span class="imp-base-num">—</span>
+                <span class="imp-base-sub">sem regras: nada é cobrado</span>
+                <span class="imp-base-ver">importe a Base Tabela</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+
+    box.querySelectorAll('[data-base-hosp]').forEach(b =>
+      b.addEventListener('click', () => popupBase(Number(b.dataset.baseHosp))));
+  }
+
+  /** Pop-up com a Base Tabela importada do hospital (busca "contém"). */
+  function popupBase(hospitalId, filtro) {
+    const hosp = App.listarHospitais(cliente.id).find(h => h.id === hospitalId);
+    const busca = String(filtro || '').trim();
+    const params = [hospitalId];
+    let where = 'hospital_id = ?';
+    if (busca) { where += ' AND (procedimento LIKE ? OR papel LIKE ?)'; params.push('%' + busca + '%', '%' + busca + '%'); }
+    const regras = Banco.query(
+      `SELECT * FROM base_tabela WHERE ${where} ORDER BY procedimento, papel, fonte`, params);
+    const totalGeral = Banco.escalar('SELECT COUNT(*) FROM base_tabela WHERE hospital_id = ?', [hospitalId]) || 0;
+    const ORIGEM = { MANUAL: 'digitada', IMPORTADA: 'importada', INFERIDA: 'padrão promovido' };
+
+    const antigo = document.querySelector('.modal-fundo[data-base]');
+    if (antigo) antigo.remove();
+    const ov = document.createElement('div');
+    ov.className = 'modal-fundo';
+    ov.dataset.base = String(hospitalId);
+    ov.innerHTML = `
+      <div class="modal modal-grande" style="max-width:95vw">
+        <div class="modal-cabecalho">
+          <span class="modal-titulo">📐 Base Tabela — ${esc(hosp ? hosp.nome : '')}</span>
+          <button class="modal-fechar">✕</button>
+        </div>
+        <div class="modal-corpo" style="max-height:70vh">
+          <div class="info-caixa">Estas são as regras que a ATLAS aplica: <strong>valor fixo</strong> (convênio/SUS) ou
+            <strong>percentual sobre o produzido</strong> (particular), por procedimento × papel × fonte.
+            Procedimento que não está aqui <strong>não é cobrado</strong> — aparece como SEM REGRA na Auditoria.</div>
+          <div class="linha-campos" style="margin:12px 0">
+            <div class="campo" style="flex:1"><span class="campo-rotulo">Buscar procedimento ou papel</span>
+              <input id="bt-pop-busca" placeholder="ex.: FACO, LAUDO…" value="${esc(busca)}"></div>
+            <span class="painel-conta">${n(regras.length)} de ${n(totalGeral)} regra(s)</span>
+          </div>
+          ${regras.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+              <th>Procedimento</th><th>Papel</th><th>Fonte</th><th class="num">Valor fixo</th>
+              <th class="num">Percentual</th><th>Origem</th>
+            </tr></thead><tbody>
+            ${regras.map(r => `<tr>
+              <td>${esc(r.procedimento)}</td>
+              <td>${esc(r.papel)}</td>
+              <td><span class="tag-fonte tag-${esc(r.fonte || 'TODAS')}">${esc(r.fonte || 'TODAS')}</span></td>
+              <td class="num mono">${r.valor != null && Number(r.valor) !== 0 ? fmtR(r.valor) : '—'}</td>
+              <td class="num mono">${r.percentual != null && Number(r.percentual) !== 0 ? Utilidades.formatarNumero(r.percentual, 1) + '%' : '—'}</td>
+              <td class="texto-cinza" style="font-size:11.5px">${esc(ORIGEM[r.origem] || r.origem || '—')}${
+                r.origem === 'INFERIDA' && r.confianca != null ? ` (conf. ${Math.round(r.confianca * 100)}%)` : ''}</td>
+            </tr>`).join('')}
+            </tbody></table></div>`
+            : `<div class="tabela-vazia">${busca
+                ? 'Nenhuma regra com esse texto.'
+                : 'Este hospital ainda não tem regras — importe a <strong>Base Tabela</strong> acima ou cadastre em <strong>Cadastros › Base Tabela</strong>.'}</div>`}
+        </div>
+        <div class="modal-rodape">
+          <button class="botao" id="bt-pop-tela" style="margin-right:auto">Abrir a tela Base Tabela</button>
+          <button class="botao botao-marinho" id="bt-pop-ok">Fechar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
+    ov.querySelector('#bt-pop-ok').addEventListener('click', fechar);
+    ov.querySelector('#bt-pop-tela').addEventListener('click', () => { fechar(); App.navegar('base'); });
+    const inp = ov.querySelector('#bt-pop-busca');
+    let timer = null;
+    inp.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => popupBase(hospitalId, inp.value), 220);
+    });
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
   }
 
   // ────────────────────────────────────────────────────────────────────
