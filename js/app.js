@@ -7,7 +7,9 @@
  * registrado em App.telas['id'] — convenção da casa.
  *
  * O CLIENTE ATIVO é o contexto de tudo: todas as telas de dados leem
- * App.clienteAtivo() e mostram só o que é daquele cliente.
+ * App.clienteAtivo() e mostram só o que é daquele cliente. Cada cliente tem
+ * o seu próprio cofre (banco SQLite) — trocar de cliente fecha um e abre o
+ * outro (Banco.abrirCliente); a lista vem do catálogo, sem abrir cofre.
  * ============================================================================
  */
 (function () {
@@ -38,22 +40,33 @@
   // CLIENTE ATIVO
   // ──────────────────────────────────────────────────────────────────────
 
+  /** O cliente cujo cofre está aberto ({ id, nome, tipo, documento, contato, … }) ou null. */
   App.clienteAtivo = function () {
-    const id = Number(Banco.configLer('cliente_ativo', 0)) || 0;
-    if (!id) return null;
-    const r = Banco.query('SELECT * FROM clientes WHERE id = ? AND ativo = 1', [id]);
-    return r.length ? r[0] : null;
+    return Banco.clienteAberto();
   };
 
-  App.setClienteAtivo = function (id) {
-    Banco.configGravar('cliente_ativo', Number(id) || 0);
-    Banco.salvarDebounced();
+  /** Troca o cliente ativo: salva o cofre atual, abre o outro e repinta. */
+  App.setClienteAtivo = async function (id) {
+    id = Number(id) || 0;
+    const atual = Banco.clienteAberto();
+    if ((atual ? atual.id : 0) !== id) {
+      Utilidades.loading.mostrar(id ? 'Abrindo o cofre do cliente…' : 'Fechando o cliente…');
+      try {
+        await Banco.abrirCliente(id, (m) => Utilidades.loading.mostrar(m));
+      } catch (e) {
+        console.error('[app] abrir cliente falhou:', e);
+        Utilidades.toast('Não foi possível abrir o cliente: ' + (e && e.message || e), 'erro', 6000);
+      } finally {
+        Utilidades.loading.esconder();
+      }
+    }
     App.renderShell();
     App.navegar(_telaAtual || 'visao');
   };
 
+  /** Clientes ativos do catálogo (sem abrir cofre nenhum). */
   App.listarClientes = function () {
-    return Banco.query('SELECT * FROM clientes WHERE ativo = 1 ORDER BY nome');
+    return Banco.clientes();
   };
 
   App.listarHospitais = function (clienteId) {

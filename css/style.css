@@ -159,6 +159,7 @@ html, body {
 /* ── Painéis e tabelas ───────────────────────────────────────────────── */
 .painel { background: var(--branco); border: 1px solid var(--borda);
   border-radius: var(--raio); margin-bottom: 16px; overflow: hidden; }
+.painel-ativo { border-color: var(--marinho); box-shadow: 0 0 0 2px rgba(20,51,82,.08); }
 .painel-cabecalho { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 12px 16px; border-bottom: 1px solid var(--borda-suave); }
 .painel-titulo { font-size: 13.5px; font-weight: 800; }
@@ -284,6 +285,11 @@ input.entrada:focus, select.entrada:focus { border-color: var(--azul-500); box-s
 #atlas-loading .al-box { background: var(--branco); border-radius: 14px;
   padding: 22px 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
 #atlas-loading .al-msg { margin-top: 10px; font-weight: 700; font-size: 12.5px; }
+#atlas-loading .al-barra { width: 280px; max-width: 70vw; height: 8px; margin: 12px auto 0;
+  background: rgba(20,51,82,.12); border-radius: 99px; overflow: hidden; }
+#atlas-loading .al-barra[hidden] { display: none; }
+#atlas-loading .al-barra-fill { height: 100%; width: 0; background: var(--marinho);
+  border-radius: 99px; transition: width .15s linear; }
 
 /* ── Miudezas ────────────────────────────────────────────────────────── */
 .texto-cinza { color: var(--cinza); }

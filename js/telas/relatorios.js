@@ -16,7 +16,8 @@ App.telas['relatorios'] = function () {
   const cliente = App.clienteAtivo();
   if (!cliente) { App.avisoSemCliente(el); return; }
 
-  if (!window.__rel) window.__rel = { hospitalId: 0, competencia: '', medicoAberto: null };
+  // competencia null = ainda não escolhida: abre no MÊS MAIS RECENTE ('' = todo o histórico)
+  if (!window.__rel) window.__rel = { hospitalId: 0, competencia: null, medicoAberto: null };
   const st = window.__rel;
 
   const temDados = (Banco.escalar('SELECT COUNT(*) FROM linhas_producao WHERE cliente_id=?', [cliente.id]) || 0) > 0;
@@ -33,6 +34,7 @@ App.telas['relatorios'] = function () {
 
     const hospitais = App.listarHospitais(cliente.id);
     const comps = Motor.listarCompetencias(cliente.id, st.hospitalId);
+    if (st.competencia == null || (st.competencia && !comps.includes(st.competencia))) st.competencia = comps[0] || '';
     const r = Motor.auditar({ clienteId: cliente.id, hospitalId: st.hospitalId, competencia: st.competencia });
 
     const medicos = [...r.porMedico.values()].sort((a, b) => b.falta - a.falta || b.esperado - a.esperado);
@@ -54,7 +56,7 @@ App.telas['relatorios'] = function () {
           </select></div>
         <div class="campo"><span class="campo-rotulo">Competência (produção)</span>
           <select class="entrada" id="f-comp">
-            <option value="">— todas —</option>
+            <option value="" ${!st.competencia ? 'selected' : ''}>— todo o histórico —</option>
             ${comps.map(c => `<option value="${c}" ${c === st.competencia ? 'selected' : ''}>${Utilidades.compExibir(c)}</option>`).join('')}
           </select></div>
       </div>

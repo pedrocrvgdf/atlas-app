@@ -246,12 +246,21 @@ App.telas['importar'] = function () {
     void opts;
   }
 
-  /** Lê a planilha com o overlay de trabalho. */
+  /**
+   * Abre o arquivo como FONTE de linhas (cabeça + lotes), com o overlay de
+   * trabalho. .xlsx é lido em fluxo (LeitorXlsx): 150 mil linhas em segundos,
+   * sem estourar a memória; .xls/.csv passam pelo SheetJS. A fonte tem
+   * `cabeca` (primeiras linhas), `percorrer(aoLote)` e `matriz()`.
+   */
   async function lerArquivo(f, msg) {
     Utilidades.loading.mostrar(msg || 'Lendo a planilha…');
     await respirar();
-    return Importador.lerPlanilha(await f.arrayBuffer());
+    return Importador.abrirFonte(f);
   }
+
+  /** Callback de progresso das importações em lotes: mensagem + barra. */
+  const progressoDe = (rotulo) => (info) => Utilidades.loading.mostrar(
+    `${rotulo} ${info.pct != null ? Math.round(info.pct * 100) + '% · ' : ''}${n(info.lidas)} linhas`, info.pct);
 
   /** Mapeamento automático: perfil do hospital primeiro, aliases completam. */
   function mapaAutomatico(cab, tipo) {
@@ -272,8 +281,9 @@ App.telas['importar'] = function () {
   }
 
   /** Layout não reconhecido: cai no mapeamento manual com o que foi possível. */
-  function cairNoMapeamento(f, lido, linhaCab, map, aviso) {
-    st.arq = { nome: f.name, matriz: lido.matriz, nomeAba: lido.nomeAba, linhaCab, map, usouPerfil: false, aviso };
+  function cairNoMapeamento(f, fonte, linhaCab, map, aviso) {
+    st.arq = { nome: f.name, fonte, cabeca: fonte.cabeca, nomeAba: fonte.nomeAba, total: fonte.total,
+      linhaCab, map, usouPerfil: false, aviso };
     st.etapa = 2;
     render();
     Utilidades.toast(aviso, 'aviso', 5200);
@@ -284,24 +294,23 @@ App.telas['importar'] = function () {
   // ────────────────────────────────────────────────────────────────────
   async function importarSistemaArquivo(f) {
     if (!st.competencia) { Utilidades.toast('Informe o MÊS DO PAGAMENTO antes do arquivo do sistema.', 'aviso', 4200); return; }
-    let lido = null;
     try {
-      lido = await lerArquivo(f);
-      const linhaCab = Importador.detectarCabecalho(lido.matriz, 'REPASSE');
-      const cab = (lido.matriz[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
+      const fonte = await lerArquivo(f);
+      const linhaCab = Importador.detectarCabecalho(fonte.cabeca, 'REPASSE');
+      const cab = (fonte.cabeca[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
       const { map } = mapaAutomatico(cab, 'REPASSE');
       const faltam = Importador.CAMPOS.REPASSE.filter(c => c.obrig && map[c.campo] == null);
       if (faltam.length) {
-        cairNoMapeamento(f, lido, linhaCab, map,
+        cairNoMapeamento(f, fonte, linhaCab, map,
           'Não reconheci a coluna de ' + faltam.map(c => c.rotulo.split(' (')[0].toUpperCase()).join(' nem a de ') + ' — aponte no mapeamento.');
         return;
       }
       Utilidades.loading.mostrar('Importando o relatório do sistema…');
       await respirar();
-      const r = Importador.aplicar({
-        tipo: 'REPASSE', matriz: lido.matriz, linhaCab, map, clienteId: cliente.id, hospitalId: st.hospitalId,
+      const r = await Importador.aplicarFonte({
+        tipo: 'REPASSE', linhaCab, map, clienteId: cliente.id, hospitalId: st.hospitalId,
         arquivo: f.name, competencia: st.competencia, substituir: true, origem: st.origem,
-      });
+      }, fonte, progressoDe('Importando o relatório do sistema…'));
       gravarPerfil('REPASSE', cab, map, linhaCab);
       Banco.salvarDebounced();
       render();
@@ -371,21 +380,21 @@ App.telas['importar'] = function () {
   // MÉDICO e BASE TABELA — diretos quando reconhecidos
   // ────────────────────────────────────────────────────────────────────
   async function importarMedicoArquivo(f) {
-    let lido = null;
     try {
-      lido = await lerArquivo(f);
-      const det = Importador.pareceRelatorioMedico(lido.matriz);
-      const comp = st.competencia || Importador.detectarCompetenciaRelatorio(lido.matriz);
+      const fonte = await lerArquivo(f);
+      const matriz = await fonte.matriz();   // o relatório do médico é pequeno: cabe inteiro
+      const det = Importador.pareceRelatorioMedico(matriz);
+      const comp = st.competencia || Importador.detectarCompetenciaRelatorio(matriz);
       if (!det.ok) {
         if (!comp) { Utilidades.toast('Não achei a competência no cabeçalho — informe o MÊS DO PAGAMENTO e escolha o arquivo de novo.', 'aviso', 5000); return; }
         st.competencia = comp;
-        cairNoMapeamento(f, lido, det.linhaCab, det.map, 'Não reconheci papel + valor + procedimento — aponte no mapeamento.');
+        cairNoMapeamento(f, fonte, det.linhaCab, det.map, 'Não reconheci papel + valor + procedimento — aponte no mapeamento.');
         return;
       }
       if (!comp) { Utilidades.toast('Não achei a competência no cabeçalho — informe o MÊS DO PAGAMENTO e escolha o arquivo de novo.', 'aviso', 5000); return; }
       Utilidades.loading.mostrar('Importando o relatório do médico…');
       await respirar();
-      const r = window.AtlasInspecao.importarRelatorioMedico(lido.matriz,
+      const r = window.AtlasInspecao.importarRelatorioMedico(matriz,
         { hospitalId: st.hospitalId, competencia: comp, arquivo: f.name, substituir: true, montarPauta: false });
       render();
       Utilidades.toast(`${n(r.inseridas)} linha(s) do relatório do médico em ${Utilidades.compExibir(comp)}` +
@@ -400,18 +409,18 @@ App.telas['importar'] = function () {
   }
 
   async function importarBaseArquivo(f) {
-    let lido = null;
     try {
-      lido = await lerArquivo(f);
-      const linhaCab = Importador.detectarCabecalho(lido.matriz, 'BASE_TABELA');
-      const cab = (lido.matriz[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
+      const fonte = await lerArquivo(f);
+      const matriz = await fonte.matriz();   // a base tabela é pequena
+      const linhaCab = Importador.detectarCabecalho(matriz, 'BASE_TABELA');
+      const cab = (matriz[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
       const { map } = mapaAutomatico(cab, 'BASE_TABELA');
       if (map.procedimento == null || (map.valor == null && map.percentual == null)) {
-        cairNoMapeamento(f, lido, linhaCab, map, 'Não reconheci procedimento + valor/percentual — aponte no mapeamento.');
+        cairNoMapeamento(f, fonte, linhaCab, map, 'Não reconheci procedimento + valor/percentual — aponte no mapeamento.');
         return;
       }
       const r = Importador.aplicar({
-        tipo: 'BASE_TABELA', matriz: lido.matriz, linhaCab, map, clienteId: cliente.id, hospitalId: st.hospitalId,
+        tipo: 'BASE_TABELA', matriz, linhaCab, map, clienteId: cliente.id, hospitalId: st.hospitalId,
         arquivo: f.name, competencia: '', substituir: true,
       });
       gravarPerfil('BASE_TABELA', cab, map, linhaCab);
@@ -516,24 +525,24 @@ App.telas['importar'] = function () {
 
   async function importarProducaoArquivo(f) {
     const alvo = st.alvo || '';
-    let lido = null;
+    let fonte = null;
     try {
-      lido = await lerArquivo(f);
+      fonte = await lerArquivo(f);
       Utilidades.loading.mostrar('Importando a produção…');
       await respirar();
-      const r = Importador.importarProducao({
-        matriz: lido.matriz, clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: f.name,
+      const r = await Importador.importarProducaoFonte({
+        clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: f.name,
         substituir: true, perfil: Importador.perfilLer(st.hospitalId, 'PRODUCAO'), escopo: st.escopo,
-      });
+      }, fonte, progressoDe('Importando a produção…'));
       Banco.salvarDebounced();
       st.alvo = ''; st.arq = null; st.etapa = 1; st.aguardando = false;
       render();
       resumoProducao(r, f.name, alvo);
     } catch (err) {
       st.aguardando = false;
-      if (err && err.precisaMapear && lido) {
+      if (err && err.precisaMapear && fonte) {
         // layout desconhecido: cai no mapeamento manual já com o que foi reconhecido
-        cairNoMapeamento(f, lido, err.linhaCab, Importador.nucleoDoMapa(err.map), err.message);
+        cairNoMapeamento(f, fonte, err.linhaCab, Importador.nucleoDoMapa(err.map), err.message);
         return;
       }
       console.error(err);
@@ -940,13 +949,17 @@ App.telas['importar'] = function () {
     const area = el.querySelector('#imp-area');
     const a = st.arq;
     const campos = Importador.CAMPOS[st.tipo];
-    const cab = (a.matriz[a.linhaCab] || []).map(c => String(c));
+    // a tela só precisa da CABEÇA do arquivo (cabeçalho + prévia); a importação percorre a fonte inteira
+    const cabeca = a.cabeca || (a.matriz || []).slice(0, Importador.CABECA_N);
+    const fonteDe = () => a.fonte || Importador.fonteDeMatriz(a.matriz || []);
+    const total = a.total != null ? a.total : (a.matriz ? a.matriz.length : null);
+    const cab = (cabeca[a.linhaCab] || []).map(c => String(c));
     const hosp = hospitais.find(h => h.id === st.hospitalId);
 
     // exemplo de valor: primeira célula não vazia abaixo do cabeçalho
     const exemplo = (idx) => {
-      for (let i = a.linhaCab + 1; i < Math.min(a.matriz.length, a.linhaCab + 12); i++) {
-        const v = (a.matriz[i] || [])[idx];
+      for (let i = a.linhaCab + 1; i < Math.min(cabeca.length, a.linhaCab + 12); i++) {
+        const v = (cabeca[i] || [])[idx];
         if (v != null && String(v).trim() !== '') return celTxt(v).slice(0, 28);
       }
       return '';
@@ -958,8 +971,8 @@ App.telas['importar'] = function () {
       .join('');
 
     const linhasPrev = [];
-    for (let i = a.linhaCab; i < Math.min(a.matriz.length, a.linhaCab + 5); i++) {
-      linhasPrev.push(a.matriz[i] || []);
+    for (let i = a.linhaCab; i < Math.min(cabeca.length, a.linhaCab + 5); i++) {
+      linhasPrev.push(cabeca[i] || []);
     }
 
     area.innerHTML = `
@@ -969,7 +982,7 @@ App.telas['importar'] = function () {
           <span class="painel-conta">${esc(hosp ? hosp.nome : '')} · ${esc(TIPO_ROTULO[st.tipo] || st.tipo)}
             ${st.tipo === 'REPASSE' ? '· ' + chipOrigem(st.origem) : ''}
             ${(st.tipo === 'REPASSE' || st.tipo === 'MEDICO') ? '· pagamento ' + esc(Utilidades.compExibir(st.competencia)) : ''}
-            · aba "${esc(a.nomeAba)}" · ${a.matriz.length} linhas</span>
+            · aba "${esc(a.nomeAba)}"${total != null ? ' · ' + n(total) + ' linhas' : ''}</span>
           <div class="painel-acoes">
             <button class="botao" id="map-voltar">← Trocar arquivo</button>
           </div>
@@ -979,7 +992,7 @@ App.telas['importar'] = function () {
           ${a.usouPerfil ? `<div class="info-caixa">Mapeamento salvo deste hospital reaplicado — confira e ajuste se algo mudou.</div>` : ''}
           <div class="linha-campos" style="margin-bottom:12px">
             <div class="campo" style="max-width:220px"><span class="campo-rotulo">Linha do cabeçalho</span>
-              <select id="map-linha-cab">${a.matriz.slice(0, Math.min(30, a.matriz.length)).map((l, i) =>
+              <select id="map-linha-cab">${cabeca.slice(0, 30).map((l, i) =>
                 `<option value="${i}" ${i === a.linhaCab ? 'selected' : ''}>linha ${i + 1}: ${esc((l || []).slice(0, 4).map(celTxt).join(' | ').slice(0, 40))}…</option>`).join('')}
               </select></div>
           </div>
@@ -1021,7 +1034,7 @@ App.telas['importar'] = function () {
 
     area.querySelector('#map-linha-cab').addEventListener('change', (e) => {
       a.linhaCab = Number(e.target.value);
-      const novoCab = (a.matriz[a.linhaCab] || []).map(c => String(c));
+      const novoCab = (cabeca[a.linhaCab] || []).map(c => String(c));
       a.map = st.tipo === 'PRODUCAO'
         ? Importador.nucleoDoMapa(Importador.mapearProducao(novoCab, null, null))
         : Importador.sugerirMapeamento(novoCab, st.tipo);
@@ -1038,7 +1051,7 @@ App.telas['importar'] = function () {
       });
     });
 
-    area.querySelector('#map-importar').addEventListener('click', () => {
+    area.querySelector('#map-importar').addEventListener('click', async () => {
       // valida obrigatórios (na produção automática só admissão e data importam)
       const obrig = st.tipo === 'PRODUCAO' ? campos.filter(c => c.campo === 'admissao' || c.campo === 'data') : campos.filter(c => c.obrig);
       for (const c of obrig) {
@@ -1049,12 +1062,13 @@ App.telas['importar'] = function () {
       }
       try {
         Utilidades.loading.mostrar('Importando linhas…');
+        await respirar();
+        const substituir = area.querySelector('#map-substituir').checked;
         if (st.tipo === 'PRODUCAO') {
-          const r = Importador.importarProducao({
-            matriz: a.matriz, clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: a.nome,
-            substituir: area.querySelector('#map-substituir').checked, linhaCab: a.linhaCab, nucleo: a.map,
-            escopo: st.escopo,
-          });
+          const r = await Importador.importarProducaoFonte({
+            clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: a.nome,
+            substituir, linhaCab: a.linhaCab, nucleo: a.map, escopo: st.escopo,
+          }, fonteDe(), progressoDe('Importando a produção…'));
           gravarPerfil('PRODUCAO', cab, a.map, a.linhaCab);
           Banco.salvarDebounced();
           const alvo = st.alvo || '';
@@ -1063,12 +1077,12 @@ App.telas['importar'] = function () {
           resumoProducao(r, a.nome, alvo);
           return;
         }
-        const r = Importador.aplicar({
-          tipo: st.tipo, matriz: a.matriz, linhaCab: a.linhaCab, map: a.map,
-          clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: a.nome,
-          competencia: st.competencia, origem: st.origem,
-          substituir: area.querySelector('#map-substituir').checked,
-        });
+        const base = { tipo: st.tipo, linhaCab: a.linhaCab, map: a.map, clienteId: cliente.id, hospitalId: st.hospitalId,
+          arquivo: a.nome, competencia: st.competencia, origem: st.origem, substituir };
+        // SISTEMA em lotes (pode ser pesado); MÉDICO e BASE cabem inteiros
+        const r = st.tipo === 'REPASSE'
+          ? await Importador.aplicarFonte(base, fonteDe(), progressoDe('Importando o relatório do sistema…'))
+          : Importador.aplicar({ ...base, matriz: await fonteDe().matriz() });
         gravarPerfil(st.tipo, cab, a.map, a.linhaCab);
         Banco.salvarDebounced();
 

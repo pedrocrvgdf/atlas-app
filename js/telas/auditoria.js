@@ -29,7 +29,9 @@ App.telas['auditoria'] = function () {
   if (!cliente) { App.avisoSemCliente(el); return; }
 
   if (!window.__aud) {
-    window.__aud = { hospitalId: 0, competencia: '', status: 'todos', medico: '', busca: '', aba: 'admissoes' };
+    // competencia null = ainda não escolhida: a tela abre no MÊS MAIS RECENTE
+    // ('' = todo o histórico, só quando o usuário pede — custa segundos na base grande)
+    window.__aud = { hospitalId: 0, competencia: null, status: 'todos', medico: '', busca: '', aba: 'admissoes' };
   }
   const st = window.__aud;
   if (st.medico === undefined) st.medico = '';   // state de versão antiga
@@ -70,6 +72,7 @@ App.telas['auditoria'] = function () {
 
     const hospitais = App.listarHospitais(cliente.id);
     const comps = Motor.listarCompetencias(cliente.id, st.hospitalId);
+    if (st.competencia == null || (st.competencia && !comps.includes(st.competencia))) st.competencia = comps[0] || '';
     const r = Motor.auditar({ clienteId: cliente.id, hospitalId: st.hospitalId, competencia: st.competencia });
 
     // médicos do resultado (nomes já resolvidos pelo De-Para), ordenados
@@ -96,7 +99,7 @@ App.telas['auditoria'] = function () {
           </select></div>
         <div class="campo"><span class="campo-rotulo">Competência (produção)</span>
           <select class="entrada" id="f-comp">
-            <option value="">— todas —</option>
+            <option value="" ${!st.competencia ? 'selected' : ''}>— todo o histórico —</option>
             ${comps.map(c => `<option value="${c}" ${c === st.competencia ? 'selected' : ''}>${Utilidades.compExibir(c)}</option>`).join('')}
           </select></div>
         <div class="campo"><span class="campo-rotulo">Médico</span>

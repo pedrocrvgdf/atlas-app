@@ -14,8 +14,10 @@
  *                             hospital × tipo (perfis_importacao) para as
  *                             próximas importações.
  *
- * aplicar() grava as linhas em transação, com opção de SUBSTITUIR as
+ * aplicar()/aplicarFonte() e importarProducao()/importarProducaoFonte()
+ * gravam as linhas em UMA transação, em lotes, com opção de SUBSTITUIR as
  * competências presentes no arquivo (reimportação segura, sem duplicar).
+ * Arquivo pesado (.xlsx) é lido em FLUXO — ver "FONTES DE LINHAS".
  * ============================================================================
  */
 (function () {
@@ -177,6 +179,72 @@
     return melhor;
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // FONTES DE LINHAS — matriz em memória OU arquivo lido em fluxo
+  //
+  // Quem importa não recebe mais a planilha inteira: recebe uma FONTE, com
+  // a `cabeca` (primeiras linhas — para achar o cabeçalho e mapear colunas)
+  // e um `percorrer(aoLote)` que entrega as linhas em lotes. Com .xlsx e
+  // navegador moderno o arquivo é descompactado e varrido em fluxo
+  // (LeitorXlsx): 150 mil linhas em segundos, sem estourar a memória e sem
+  // travar a tela; nos demais formatos (.xls, .csv) a planilha é lida
+  // inteira pelo SheetJS, como antes. `matriz()` materializa tudo para quem
+  // precisa (relatório do médico, base tabela — pequenos).
+  // ──────────────────────────────────────────────────────────────────────
+  const CABECA_N = 80;    // linhas da cabeça (o cabeçalho fica nas 30 primeiras)
+  const LOTE_N = 4000;    // linhas por lote (gravação + respiro da tela)
+  const respirar = () => new Promise(r => setTimeout(r, 0));
+
+  function fonteDeMatriz(matriz, extra) {
+    matriz = matriz || [];
+    return Object.assign({
+      origem: 'matriz', nomeAba: '', abas: [], total: matriz.length,
+      cabeca: matriz.slice(0, CABECA_N),
+      async percorrer(aoLote, porLote) {
+        const n = porLote || LOTE_N;
+        for (let i = 0; i < matriz.length; i += n) {
+          const fim = Math.min(i + n, matriz.length);
+          await aoLote(matriz.slice(i, fim), { lidas: fim, total: matriz.length, pct: Math.min(0.99, fim / matriz.length) });
+        }
+        return { lidas: matriz.length, total: matriz.length };
+      },
+      async matriz() { return matriz; },
+    }, extra || {});
+  }
+
+  async function fonteDeXlsx(file) {
+    const leitor = await window.LeitorXlsx.abrir(file);
+    // a aba: a primeira com 2+ linhas (senão a que mais tem) — como lerPlanilha
+    let aba = null, cab = null;
+    for (const a of leitor.abas) {
+      const c = await leitor.cabeca(a.caminho, CABECA_N);
+      if (!aba || c.linhas.length > cab.linhas.length) { aba = a; cab = c; }
+      if (c.linhas.length >= 2) break;
+    }
+    if (!cab || !cab.linhas.length) throw new Error('A planilha está vazia.');
+    const fonte = {
+      origem: 'xlsx', nomeAba: aba.nome, abas: leitor.abas.map(a => a.nome), total: cab.total, cabeca: cab.linhas,
+      async percorrer(aoLote, porLote) {
+        const r = await leitor.lerAba(aba.caminho, { aoLote, porLote: porLote || LOTE_N });
+        fonte.total = r.lidas;
+        return r;
+      },
+      async matriz() { const m = []; await fonte.percorrer((l) => { for (const x of l) m.push(x); }); return m; },
+    };
+    return fonte;
+  }
+
+  /** File → fonte de linhas (fluxo para .xlsx quando o navegador suporta; SheetJS nos demais). */
+  async function abrirFonte(file) {
+    const L = window.LeitorXlsx;
+    if (L && L.suportado() && await L.ehXlsx(file)) {
+      try { return await fonteDeXlsx(file); }
+      catch (e) { console.warn('[importador] leitura em fluxo falhou — lendo pelo SheetJS:', e); }
+    }
+    const lido = lerPlanilha(await file.arrayBuffer());
+    return fonteDeMatriz(lido.matriz, { nomeAba: lido.nomeAba, abas: lido.abas });
+  }
+
   /**
    * Acha a linha de cabeçalho: pontua as 30 primeiras linhas por células de
    * texto + casamentos com aliases conhecidos do tipo. Sem casamento decente,
@@ -281,54 +349,102 @@
   }
 
   /**
-   * Grava as linhas no banco.
-   * @param {object} p  { tipo, matriz, linhaCab, map (campo→índice),
-   *                      clienteId, hospitalId, arquivo,
-   *                      competencia (repasse: mês de pagamento 'YYYY-MM'),
-   *                      substituir (bool: apaga competências presentes) }
-   * @returns { inseridas, ignoradas, competencias, avisos[] }
+   * Importação genérica — SISTEMA, MÉDICO, BASE TABELA e a produção mapeada
+   * à mão. prepararAplicar() monta o conversor linha crua → registro e os
+   * acumuladores do resumo; a gravação corre em UMA transação, em lotes com
+   * statement preparado, de duas formas:
+   *   aplicar(p)                — síncrona, sobre p.matriz (tudo em memória)
+   *   aplicarFonte(p, fonte, …) — assíncrona, em lotes da FONTE (arquivo em
+   *                               fluxo), cedendo a tela entre os lotes
+   * @param {object} p  { tipo, linhaCab, map (campo→índice), clienteId,
+   *                      hospitalId, arquivo, competencia (sistema/médico:
+   *                      mês de pagamento 'YYYY-MM'), origem (sistema),
+   *                      substituir (bool: apaga o que já existia para as
+   *                      competências presentes — e a origem, no sistema) }
+   * @returns { inseridas, competencias, avisos, importacaoId, linhasLidas,
+   *            origem, divergentes, admissoes, produzido, repassado }
    */
-  function aplicar(p) {
+  const SQL_APLICAR = {
+    BASE_TABELA: `INSERT INTO base_tabela (hospital_id, procedimento, procedimento_norm, papel, fonte, valor, percentual, origem)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, 'IMPORTADA')`,
+    MEDICO: `INSERT INTO linhas_medico
+               (cliente_id, hospital_id, importacao_id, competencia, sistema, modulo, admissao, admissao_norm,
+                admissao_origem, data, paciente, paciente_norm, medico, medico_norm, papel,
+                papel_canon, fonte, convenio, procedimento, procedimento_norm, valor, linha_origem)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    PRODUCAO: `INSERT INTO linhas_producao
+               (cliente_id, hospital_id, importacao_id, competencia, admissao, admissao_norm, data, paciente, paciente_norm,
+                convenio, fonte, classificacao, procedimento, procedimento_norm, quantidade, valor,
+                executante, executante_norm, auxiliar, auxiliar_norm, indicante, indicante_norm,
+                solicitante, solicitante_norm, laudo, laudo_norm, linha_origem)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    REPASSE: `INSERT INTO linhas_repasse
+               (cliente_id, hospital_id, importacao_id, competencia, admissao, admissao_norm, data, paciente,
+                convenio, fonte, procedimento, procedimento_norm, papel, papel_canon,
+                medico, medico_norm, quantidade, produzido, repassado, status, linha_origem)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  };
+
+  function paramsAplicar(tipo, p, impId, l) {
+    const U_ = U();
+    if (tipo === 'BASE_TABELA') {
+      return [p.hospitalId, l.procedimento, l.procedimento_norm, l.papel, l.fonte, l.valor, l.percentual];
+    }
+    if (tipo === 'MEDICO') {
+      return [p.clienteId, p.hospitalId, impId, l.competencia, l.sistema, l.modulo, l.admissao, U_.normAdm(l.admissao),
+        l.admissao_origem, l.data, l.paciente, l.paciente_norm, l.medico, U_.normalizar(l.medico),
+        l.papel, l.papel_canon, l.fonte, l.convenio, l.procedimento, l.procedimento_norm, l.valor, l.linha_origem];
+    }
+    if (tipo === 'PRODUCAO') {
+      return [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, U_.normAdm(l.admissao), l.data, l.paciente, U_.normalizar(l.paciente),
+        l.convenio, l.fonte, l.classificacao, l.procedimento, l.procedimento_norm, l.quantidade, l.valor,
+        l.executante, U_.normalizar(l.executante), l.auxiliar, U_.normalizar(l.auxiliar),
+        l.indicante, U_.normalizar(l.indicante), l.solicitante, U_.normalizar(l.solicitante),
+        l.laudo, U_.normalizar(l.laudo), l.linha_origem];
+    }
+    return [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, U_.normAdm(l.admissao), l.data, l.paciente,
+      l.convenio, l.fonte, l.procedimento, l.procedimento_norm, l.papel, l.papel_canon,
+      l.medico, U_.normalizar(l.medico), l.quantidade, l.produzido, l.repassado, l.status, l.linha_origem];
+  }
+
+  function prepararAplicar(p) {
     const U_ = U();
     const tipo = p.tipo;
-    const avisos = [];
-    const linhas = [];
-    const compsNoArquivo = new Set();
     // SISTEMA: o relatório pode ser SÓ de Convênio, SÓ de Particular ou dos
     // dois juntos. Nos dois primeiros a fonte de toda linha é a declarada
     // (a coluna do arquivo, se disser outra coisa, vira aviso); no "juntos"
     // a fonte sai da coluna. A substituição respeita a origem: reimportar o
     // Particular de um mês não apaga o Convênio do mesmo mês.
     const origem = tipo === 'REPASSE' && (p.origem === 'CONVENIO' || p.origem === 'PARTICULAR') ? p.origem : null;
-    let divergentes = 0, produzido = 0, repassado = 0;
-    const admissoes = new Set();
+    const ctx = { tipo, origem, avisos: [], comps: new Set(), admissoes: new Set(),
+      divergentes: 0, produzido: 0, repassado: 0, lidas: 0, inseridas: 0, impId: null };
+    const avisos = ctx.avisos;
 
-    for (let i = p.linhaCab + 1; i < p.matriz.length; i++) {
-      const raw = p.matriz[i] || [];
-      if (!raw.some(c => String(c).trim() !== '')) continue;   // linha em branco
+    /** Linha crua (índice i na planilha) → registro, ou null quando não entra. */
+    ctx.converter = (raw, i) => {
+      if (!raw.some(c => c != null && String(c).trim() !== '')) return null;   // linha em branco
 
       if (tipo === 'BASE_TABELA') {
         const proc = String(celula(raw, p.map, 'procedimento')).trim();
-        if (!proc) continue;
+        if (!proc) return null;
         const valor = U_.paraNumero(celula(raw, p.map, 'valor'));
         const pct = U_.paraNumero(celula(raw, p.map, 'percentual'));
-        linhas.push({
+        return {
           procedimento: proc,
           procedimento_norm: U_.normalizar(proc),
           papel: U_.papelCanonico(celula(raw, p.map, 'papel')) || 'EXECUTANTE',
           fonte: celula(raw, p.map, 'fonte') !== '' ? U_.classificarFonte(celula(raw, p.map, 'fonte')) : 'TODAS',
           valor: valor || null,
           percentual: pct || null,
-        });
-        continue;
+        };
       }
 
       if (tipo === 'MEDICO') {
         const proc = String(celula(raw, p.map, 'procedimento')).trim();
         const papel = String(celula(raw, p.map, 'papel')).trim();
         const valorCel = celula(raw, p.map, 'valor');
-        if (!proc && !papel && valorCel === '') continue;
-        if (!papel && !proc) { avisos.push(`Linha ${i + 1}: sem papel/procedimento — ignorada.`); continue; }
+        if (!proc && !papel && valorCel === '') return null;
+        if (!papel && !proc) { avisos.push(`Linha ${i + 1}: sem papel/procedimento — ignorada.`); return null; }
         const fonteTxt = String(celula(raw, p.map, 'fonte')).trim();
         const fonte = fonteTxt ? U_.classificarFonte(fonteTxt) : 'CONVENIO';
         // gen 2 traz o NOME do convênio na mesma coluna de "recebimento":
@@ -352,16 +468,15 @@
           valor: U_.paraNumero(valorCel),
           linha_origem: i + 1,
         };
-        if (l.competencia) compsNoArquivo.add(l.competencia);
-        linhas.push(l);
-        continue;
+        if (l.competencia) ctx.comps.add(l.competencia);
+        return l;
       }
 
       const adm = String(celula(raw, p.map, 'admissao')).trim();
       const proc = String(celula(raw, p.map, 'procedimento')).trim();
-      if (!adm && !proc) continue;
-      if (!adm) { avisos.push(`Linha ${i + 1}: sem admissão — ignorada.`); continue; }
-      if (!proc) { avisos.push(`Linha ${i + 1}: sem procedimento — ignorada.`); continue; }
+      if (!adm && !proc) return null;
+      if (!adm) { avisos.push(`Linha ${i + 1}: sem admissão — ignorada.`); return null; }
+      if (!proc) { avisos.push(`Linha ${i + 1}: sem procedimento — ignorada.`); return null; }
 
       const dataISO = U_.paraDataISO(celula(raw, p.map, 'data'));
       const fonteTxt = celula(raw, p.map, 'fonte');
@@ -389,120 +504,121 @@
           laudo: String(celula(raw, p.map, 'laudo')).trim(),
           linha_origem: i + 1,
         };
-        if (l.competencia) compsNoArquivo.add(l.competencia);
-        linhas.push(l);
-      } else {  // REPASSE
-        const papel = String(celula(raw, p.map, 'papel')).trim();
-        if (origem && fonteTxt !== '' && U_.classificarFonte(fonteTxt) !== origem) divergentes++;
-        const l = {
-          admissao: adm, data: dataISO,
-          competencia: p.competencia || U_.competenciaDe(dataISO) || '',
-          paciente: String(celula(raw, p.map, 'paciente')).trim(),
-          convenio, fonte: origem || fonte,
-          procedimento: proc, procedimento_norm: U_.normalizar(proc),
-          papel, papel_canon: U_.papelCanonico(papel),
-          medico: String(celula(raw, p.map, 'medico')).trim(),
-          quantidade: qtd,
-          produzido: U_.paraNumero(celula(raw, p.map, 'produzido')),
-          repassado: U_.paraNumero(celula(raw, p.map, 'repassado')),
-          status: String(celula(raw, p.map, 'status')).trim(),
-          linha_origem: i + 1,
-        };
-        if (l.competencia) compsNoArquivo.add(l.competencia);
-        produzido += l.produzido; repassado += l.repassado; admissoes.add(U_.normAdm(adm));
-        linhas.push(l);
-      }
-    }
-
-    if (!linhas.length) throw new Error('Nenhuma linha válida encontrada abaixo do cabeçalho.');
-
-    let inseridas = 0, impId = null;
-    Banco.transacao(() => {
-      // substituir: apaga o que já existia para as mesmas competências
-      if (p.substituir) {
-        if (tipo === 'BASE_TABELA') {
-          Banco.executar('DELETE FROM base_tabela WHERE hospital_id = ?', [p.hospitalId]);
-        } else {
-          const tabela = tipo === 'PRODUCAO' ? 'linhas_producao'
-            : (tipo === 'MEDICO' ? 'linhas_medico' : 'linhas_repasse');
-          const comps = [...compsNoArquivo];
-          if (comps.length) {
-            const marcas = comps.map(() => '?').join(',');
-            Banco.executar(
-              `DELETE FROM ${tabela} WHERE hospital_id = ? AND competencia IN (${marcas})` +
-              (origem ? ' AND fonte = ?' : ''),
-              origem ? [p.hospitalId, ...comps, origem] : [p.hospitalId, ...comps]);
-          }
-        }
+        if (l.competencia) ctx.comps.add(l.competencia);
+        return l;
       }
 
-      Banco.executar(
-        `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas, origem)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [p.clienteId, p.hospitalId, tipo, p.arquivo || '', p.competencia || '', linhas.length,
-          tipo === 'REPASSE' ? (origem || 'TODAS') : null]);
-      impId = Banco.ultimoId();
+      // REPASSE (Sistema)
+      const papel = String(celula(raw, p.map, 'papel')).trim();
+      if (origem && fonteTxt !== '' && U_.classificarFonte(fonteTxt) !== origem) ctx.divergentes++;
+      const l = {
+        admissao: adm, data: dataISO,
+        competencia: p.competencia || U_.competenciaDe(dataISO) || '',
+        paciente: String(celula(raw, p.map, 'paciente')).trim(),
+        convenio, fonte: origem || fonte,
+        procedimento: proc, procedimento_norm: U_.normalizar(proc),
+        papel, papel_canon: U_.papelCanonico(papel),
+        medico: String(celula(raw, p.map, 'medico')).trim(),
+        quantidade: qtd,
+        produzido: U_.paraNumero(celula(raw, p.map, 'produzido')),
+        repassado: U_.paraNumero(celula(raw, p.map, 'repassado')),
+        status: String(celula(raw, p.map, 'status')).trim(),
+        linha_origem: i + 1,
+      };
+      if (l.competencia) ctx.comps.add(l.competencia);
+      ctx.produzido += l.produzido; ctx.repassado += l.repassado; ctx.admissoes.add(U_.normAdm(adm));
+      return l;
+    };
+    return ctx;
+  }
 
-      for (const l of linhas) {
-        if (tipo === 'BASE_TABELA') {
-          Banco.executar(
-            `INSERT INTO base_tabela (hospital_id, procedimento, procedimento_norm, papel, fonte, valor, percentual, origem)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'IMPORTADA')`,
-            [p.hospitalId, l.procedimento, l.procedimento_norm, l.papel, l.fonte, l.valor, l.percentual]);
-        } else if (tipo === 'MEDICO') {
-          Banco.executar(
-            `INSERT INTO linhas_medico
-               (cliente_id, hospital_id, importacao_id, competencia, sistema, modulo, admissao, admissao_norm,
-                admissao_origem, data, paciente, paciente_norm, medico, medico_norm, papel,
-                papel_canon, fonte, convenio, procedimento, procedimento_norm, valor, linha_origem)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [p.clienteId, p.hospitalId, impId, l.competencia, l.sistema, l.modulo, l.admissao, U_.normAdm(l.admissao),
-              l.admissao_origem, l.data, l.paciente, l.paciente_norm, l.medico, U_.normalizar(l.medico),
-              l.papel, l.papel_canon, l.fonte, l.convenio, l.procedimento, l.procedimento_norm,
-              l.valor, l.linha_origem]);
-        } else if (tipo === 'PRODUCAO') {
-          Banco.executar(
-            `INSERT INTO linhas_producao
-               (cliente_id, hospital_id, importacao_id, competencia, admissao, admissao_norm, data, paciente, paciente_norm,
-                convenio, fonte, classificacao, procedimento, procedimento_norm, quantidade, valor,
-                executante, executante_norm, auxiliar, auxiliar_norm, indicante, indicante_norm,
-                solicitante, solicitante_norm, laudo, laudo_norm, linha_origem)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, U_.normAdm(l.admissao), l.data, l.paciente, U_.normalizar(l.paciente),
-              l.convenio, l.fonte, l.classificacao, l.procedimento, l.procedimento_norm, l.quantidade, l.valor,
-              l.executante, U_.normalizar(l.executante), l.auxiliar, U_.normalizar(l.auxiliar),
-              l.indicante, U_.normalizar(l.indicante), l.solicitante, U_.normalizar(l.solicitante),
-              l.laudo, U_.normalizar(l.laudo), l.linha_origem]);
-        } else {
-          Banco.executar(
-            `INSERT INTO linhas_repasse
-               (cliente_id, hospital_id, importacao_id, competencia, admissao, admissao_norm, data, paciente,
-                convenio, fonte, procedimento, procedimento_norm, papel, papel_canon,
-                medico, medico_norm, quantidade, produzido, repassado, status, linha_origem)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, U_.normAdm(l.admissao), l.data, l.paciente,
-              l.convenio, l.fonte, l.procedimento, l.procedimento_norm, l.papel, l.papel_canon,
-              l.medico, U_.normalizar(l.medico), l.quantidade, l.produzido, l.repassado,
-              l.status, l.linha_origem]);
-        }
-        inseridas++;
+  /** Abre a importação (dentro da transação): registro em importacoes + base tabela anterior fora. */
+  function gravarInicioAplicar(ctx, p) {
+    // BASE TABELA não tem importacao_id nas linhas: a base anterior do hospital sai ANTES
+    if (p.substituir && ctx.tipo === 'BASE_TABELA') Banco.executar('DELETE FROM base_tabela WHERE hospital_id = ?', [p.hospitalId]);
+    Banco.executar(
+      `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas, origem)
+       VALUES (?, ?, ?, ?, ?, 0, ?)`,
+      [p.clienteId, p.hospitalId, ctx.tipo, p.arquivo || '', p.competencia || '',
+        ctx.tipo === 'REPASSE' ? (ctx.origem || 'TODAS') : null]);
+    ctx.impId = Banco.ultimoId();
+  }
+
+  function gravarLoteAplicar(ctx, p, linhas) {
+    ctx.inseridas += Banco.executarLote(SQL_APLICAR[ctx.tipo], linhas.map(l => paramsAplicar(ctx.tipo, p, ctx.impId, l)));
+  }
+
+  /** Fecha a importação (dentro da transação): substituição, contagem e histórico. */
+  function finalizarAplicar(ctx, p) {
+    if (!ctx.inseridas) throw new Error('Nenhuma linha válida encontrada abaixo do cabeçalho.');
+    const tipo = ctx.tipo;
+    Banco.executar('UPDATE importacoes SET n_linhas = ? WHERE id = ?', [ctx.inseridas, ctx.impId]);
+    if (tipo !== 'BASE_TABELA') {
+      const tabela = tipo === 'PRODUCAO' ? 'linhas_producao' : (tipo === 'MEDICO' ? 'linhas_medico' : 'linhas_repasse');
+      // substituir: o que já existia para as mesmas competências (e origem) sai — as linhas desta importação ficam
+      const comps = [...ctx.comps];
+      if (p.substituir && comps.length) {
+        Banco.executar(
+          `DELETE FROM ${tabela} WHERE hospital_id = ? AND competencia IN (${comps.map(() => '?').join(',')})` +
+          (ctx.origem ? ' AND fonte = ?' : '') + ' AND COALESCE(importacao_id, 0) <> ?',
+          ctx.origem ? [p.hospitalId, ...comps, ctx.origem, ctx.impId] : [p.hospitalId, ...comps, ctx.impId]);
       }
       // importações deste tipo/hospital que ficaram sem nenhuma linha
       // (sobrescritas) saem do histórico — ele mostra o que está na base
-      if (tipo !== 'BASE_TABELA') {
-        const tabela = tipo === 'PRODUCAO' ? 'linhas_producao' : (tipo === 'MEDICO' ? 'linhas_medico' : 'linhas_repasse');
-        Banco.executar(
-          `DELETE FROM importacoes WHERE tipo = ? AND hospital_id = ? AND id <> ?
-             AND NOT EXISTS (SELECT 1 FROM ${tabela} t WHERE t.importacao_id = importacoes.id)`,
-          [tipo, p.hospitalId, impId]);
-      }
-    });
+      Banco.executar(
+        `DELETE FROM importacoes WHERE tipo = ? AND hospital_id = ? AND id <> ?
+           AND NOT EXISTS (SELECT 1 FROM ${tabela} t WHERE t.importacao_id = importacoes.id)`,
+        [tipo, p.hospitalId, ctx.impId]);
+    }
+    return { inseridas: ctx.inseridas, competencias: [...ctx.comps].sort(), avisos: ctx.avisos, importacaoId: ctx.impId,
+      linhasLidas: ctx.lidas,
+      origem: tipo === 'REPASSE' ? (ctx.origem || 'TODAS') : null, divergentes: ctx.divergentes,
+      admissoes: ctx.admissoes.size, produzido: Math.round(ctx.produzido * 100) / 100,
+      repassado: Math.round(ctx.repassado * 100) / 100 };
+  }
 
-    return { inseridas, competencias: [...compsNoArquivo].sort(), avisos, importacaoId: impId,
-      linhasLidas: Math.max(0, p.matriz.length - p.linhaCab - 1),
-      origem: tipo === 'REPASSE' ? (origem || 'TODAS') : null, divergentes,
-      admissoes: admissoes.size, produzido: Math.round(produzido * 100) / 100,
-      repassado: Math.round(repassado * 100) / 100 };
+  /** Síncrona: p.matriz inteira em memória (testes, relatório do médico, base tabela). */
+  function aplicar(p) {
+    const ctx = prepararAplicar(p);
+    const matriz = p.matriz || [];
+    let r;
+    Banco.transacao(() => {
+      gravarInicioAplicar(ctx, p);
+      let lote = [];
+      for (let i = p.linhaCab + 1; i < matriz.length; i++) {
+        ctx.lidas++;
+        const l = ctx.converter(matriz[i] || [], i);
+        if (!l) continue;
+        lote.push(l);
+        if (lote.length >= LOTE_N) { gravarLoteAplicar(ctx, p, lote); lote = []; }
+      }
+      if (lote.length) gravarLoteAplicar(ctx, p, lote);
+      r = finalizarAplicar(ctx, p);
+    });
+    return r;
+  }
+
+  /** Assíncrona, em lotes da fonte: a tela respira e a barra de progresso anda. */
+  async function aplicarFonte(p, fonte, progresso) {
+    const ctx = prepararAplicar(p);
+    return Banco.transacaoAsync(async () => {
+      gravarInicioAplicar(ctx, p);
+      let i = 0;
+      await fonte.percorrer(async (linhas, info) => {
+        const lote = [];
+        for (const raw of linhas) {
+          const idx = i++;
+          if (idx <= p.linhaCab) continue;
+          ctx.lidas++;
+          const l = ctx.converter(raw || [], idx);
+          if (l) lote.push(l);
+        }
+        if (lote.length) gravarLoteAplicar(ctx, p, lote);
+        if (progresso) progresso(info, ctx);
+        await respirar();
+      });
+      return finalizarAplicar(ctx, p);
+    });
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -618,8 +734,15 @@
     'laudo', 'laudo_norm', 'linha_origem'];
 
   /**
-   * Importa a PRODUÇÃO automaticamente.
-   * p: { matriz, clienteId, hospitalId, arquivo, substituir (padrão true),
+   * Importa a PRODUÇÃO automaticamente — em lotes.
+   * prepararProducao() acha o cabeçalho na CABEÇA da fonte (a linha com
+   * "Cód. Admissão"), mapeia as colunas e devolve o contexto (conversor de
+   * linha + acumuladores do resumo); a gravação corre numa transação com
+   * statement preparado, em lotes:
+   *   importarProducao(p)                — síncrona, sobre p.matriz
+   *   importarProducaoFonte(p, fonte, …) — assíncrona, em lotes da FONTE
+   *                                        (arquivo em fluxo), cedendo a tela
+   * p: { clienteId, hospitalId, arquivo, substituir (padrão true),
    *      perfil (perfilLer), linhaCab e nucleo (só quando vem do mapeamento manual),
    *      escopo: { tipo: 'ANO'|'MES', ano: '2026', mes: '03' } — o período que
    *      o arquivo cobre, declarado pelo usuário: só as linhas desse período
@@ -634,11 +757,11 @@
    *   totalQuantidade, porCompetencia[{competencia, linhas, valor, quantidade}],
    *   reconhecidas, naoReconhecidas[] }.
    */
-  function importarProducao(p) {
+  function prepararProducao(p, cabeca) {
     const U_ = U();
-    const matriz = p.matriz || [];
-    const linhaCab = p.linhaCab != null ? p.linhaCab : detectarCabecalhoProducao(matriz);
-    const cab = (matriz[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
+    cabeca = cabeca || [];
+    const linhaCab = p.linhaCab != null ? p.linhaCab : detectarCabecalhoProducao(cabeca);
+    const cab = (cabeca[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
     const map = mapearProducao(cab, p.perfil || null, p.nucleo || null);
     const faltam = ['admissao', 'data'].filter(c => map[c] == null);
     if (faltam.length) {
@@ -664,29 +787,34 @@
     // Exportação cortada: o Power BI para em 150.000 linhas e escreve a nota
     // "Exported data limited to 150000 rows" acima do cabeçalho — quando o
     // relatório tem mais linhas que isso, o arquivo vem incompleto e o total
-    // do período NÃO fecha. Detecta pela nota ou pela contagem exata.
+    // do período NÃO fecha. Detecta pela nota (aqui) ou pela contagem exata
+    // (no fim, quando se sabe quantas linhas o arquivo tinha).
     let truncado = null;
     for (let i = 0; i < linhaCab; i++) {
-      for (const c of (matriz[i] || [])) {
+      for (const c of (cabeca[i] || [])) {
         const m = String(c == null ? '' : c).match(/limited to\s+([\d.,]+)\s+rows|limitad[oa]s?\s+a\s+([\d.,]+)\s+linhas/i);
         if (m) { truncado = { motivo: 'nota', limite: Number(String(m[1] || m[2]).replace(/\D/g, '')) || 150000, nota: String(c).trim() }; }
       }
     }
-    const nDados = Math.max(0, matriz.length - linhaCab - 1);
-    if (!truncado && nDados >= 150000 && nDados <= 150003) truncado = { motivo: 'contagem', limite: 150000, nota: '' };
 
-    const linhas = [];
-    const comps = new Set(), adms = new Set();
-    const porComp = new Map();   // competência → { linhas, valor, quantidade }
-    let vazias = 0, semData = 0, semAdmissao = 0, foraDoEscopo = 0, totalValor = 0, totalQuantidade = 0;
-    for (let i = linhaCab + 1; i < matriz.length; i++) {
-      const raw = matriz[i] || [];
-      if (!raw.some(c => c != null && String(c).trim() !== '')) { vazias++; continue; }
+    const colunas = COLUNAS_NUCLEO.concat(COLUNAS_INTEGRA);
+    const ctx = {
+      linhaCab, cab, map, escopo, rotuloEscopo, truncado, colunas,
+      sql: `INSERT INTO linhas_producao (cliente_id, hospital_id, importacao_id, ${colunas.join(', ')})
+            VALUES (?, ?, ?, ${colunas.map(() => '?').join(', ')})`,
+      comps: new Set(), adms: new Set(), porComp: new Map(),
+      vazias: 0, semData: 0, semAdmissao: 0, foraDoEscopo: 0, totalValor: 0, totalQuantidade: 0,
+      lidas: 0, inseridas: 0, impId: null,
+    };
+
+    /** Linha crua (índice i na planilha) → registro completo, ou null quando não entra. */
+    ctx.converter = (raw, i) => {
+      if (!raw.some(c => c != null && String(c).trim() !== '')) { ctx.vazias++; return null; }
       const dataISO = U_.paraDataISO(cel(raw, 'data'));
-      if (!dataISO) { semData++; continue; }              // sem data não há competência
-      if (!dentro(U_.competenciaDe(dataISO))) { foraDoEscopo++; continue; }   // fora do período declarado
+      if (!dataISO) { ctx.semData++; return null; }              // sem data não há competência
+      if (!dentro(U_.competenciaDe(dataISO))) { ctx.foraDoEscopo++; return null; }   // fora do período declarado
       const adm = txt(raw, 'admissao').replace(/\.0+$/, '');
-      if (!adm) { semAdmissao++; continue; }               // a auditoria é por admissão
+      if (!adm) { ctx.semAdmissao++; return null; }               // a auditoria é por admissão
       const proc = txt(raw, 'procedimento');
       const fonteTxt = txt(raw, 'fonte'), convenio = txt(raw, 'convenio');
       const cirurgiao = txt(raw, 'cirurgiao'), medico = txt(raw, 'medico');
@@ -718,65 +846,121 @@
         else if (col === 'idade_atendimento') l[col] = v === '' ? null : U_.paraNumero(v);
         else l[col] = String(v).trim();
       }
-      comps.add(l.competencia); adms.add(U_.normAdm(adm)); totalValor += valor; totalQuantidade += l.quantidade;
-      const pc = porComp.get(l.competencia) || { competencia: l.competencia, linhas: 0, valor: 0, quantidade: 0 };
-      pc.linhas++; pc.valor += valor; pc.quantidade += l.quantidade; porComp.set(l.competencia, pc);
-      linhas.push(l);
-    }
-    if (!linhas.length) {
-      if (escopo && foraDoEscopo) {
-        throw new Error(`O arquivo não tem nenhuma linha de ${rotuloEscopo} — as ${foraDoEscopo.toLocaleString('pt-BR')} linhas com data são de outro período. É o arquivo certo?`);
+      ctx.comps.add(l.competencia); ctx.adms.add(U_.normAdm(adm)); ctx.totalValor += valor; ctx.totalQuantidade += l.quantidade;
+      const pc = ctx.porComp.get(l.competencia) || { competencia: l.competencia, linhas: 0, valor: 0, quantidade: 0 };
+      pc.linhas++; pc.valor += valor; pc.quantidade += l.quantidade; ctx.porComp.set(l.competencia, pc);
+      return l;
+    };
+    return ctx;
+  }
+
+  function gravarInicioProducao(ctx, p) {
+    Banco.executar(
+      `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas)
+       VALUES (?, ?, 'PRODUCAO', ?, '', 0)`,
+      [p.clienteId, p.hospitalId, p.arquivo || '']);
+    ctx.impId = Banco.ultimoId();
+  }
+
+  function gravarLoteProducao(ctx, p, linhas) {
+    ctx.inseridas += Banco.executarLote(ctx.sql,
+      linhas.map(l => [p.clienteId, p.hospitalId, ctx.impId, ...ctx.colunas.map(c => l[c])]));
+  }
+
+  /** Fecha a importação (dentro da transação): substituição por competência, histórico e resumo. */
+  function finalizarProducao(ctx, p) {
+    if (!ctx.inseridas) {
+      if (ctx.escopo && ctx.foraDoEscopo) {
+        throw new Error(`O arquivo não tem nenhuma linha de ${ctx.rotuloEscopo} — as ${ctx.foraDoEscopo.toLocaleString('pt-BR')} linhas com data são de outro período. É o arquivo certo?`);
       }
       throw new Error('Nenhuma linha com admissão e data abaixo do cabeçalho — é o relatório de produção certo?');
     }
+    let truncado = ctx.truncado;
+    if (!truncado && ctx.lidas >= 150000 && ctx.lidas <= 150003) truncado = { motivo: 'contagem', limite: 150000, nota: '' };
+    const lista = [...ctx.comps].sort();
 
     // ano inteiro: meses do ano que já estão na base e NÃO vieram no arquivo
     // são mantidos (a ATLAS não apaga o que o arquivo não cobre) — o resumo avisa
     let mantidas = [];
-    if (escopo && escopo.tipo === 'ANO') {
+    if (ctx.escopo && ctx.escopo.tipo === 'ANO') {
       mantidas = Banco.query(
-        `SELECT DISTINCT competencia FROM linhas_producao WHERE hospital_id = ? AND competencia LIKE ? ORDER BY competencia`,
-        [p.hospitalId, escopo.ano + '-%']).map(r => r.competencia).filter(c => !comps.has(c));
+        `SELECT DISTINCT competencia FROM linhas_producao
+          WHERE hospital_id = ? AND competencia LIKE ? AND COALESCE(importacao_id, 0) <> ? ORDER BY competencia`,
+        [p.hospitalId, ctx.escopo.ano + '-%', ctx.impId]).map(r => r.competencia).filter(c => !ctx.comps.has(c));
     }
-
-    const colunas = COLUNAS_NUCLEO.concat(COLUNAS_INTEGRA);
-    const sql = `INSERT INTO linhas_producao (cliente_id, hospital_id, importacao_id, ${colunas.join(', ')})
-                 VALUES (?, ?, ?, ${colunas.map(() => '?').join(', ')})`;
-    const lista = [...comps].sort();
-    let inseridas = 0, impId = null;
-    Banco.transacao(() => {
-      if (p.substituir !== false) {
-        Banco.executar(
-          `DELETE FROM linhas_producao WHERE hospital_id = ? AND competencia IN (${lista.map(() => '?').join(',')})`,
-          [p.hospitalId, ...lista]);
-      }
+    // substituir: o que já existia do hospital para os meses do arquivo sai — as linhas desta importação ficam
+    if (p.substituir !== false) {
       Banco.executar(
-        `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas)
-         VALUES (?, ?, 'PRODUCAO', ?, ?, ?)`,
-        [p.clienteId, p.hospitalId, p.arquivo || '', lista.join(', '), linhas.length]);
-      impId = Banco.ultimoId();
-      inseridas = Banco.executarLote(sql, linhas.map(l => [p.clienteId, p.hospitalId, impId, ...colunas.map(c => l[c])]));
-      // importações de produção deste hospital que ficaram sem nenhuma linha
-      // (sobrescritas) saem do histórico — ele mostra o que está na base
-      Banco.executar(
-        `DELETE FROM importacoes WHERE tipo = 'PRODUCAO' AND hospital_id = ? AND id <> ?
-           AND NOT EXISTS (SELECT 1 FROM linhas_producao lp WHERE lp.importacao_id = importacoes.id)`,
-        [p.hospitalId, impId]);
-    });
+        `DELETE FROM linhas_producao WHERE hospital_id = ? AND competencia IN (${lista.map(() => '?').join(',')})
+           AND COALESCE(importacao_id, 0) <> ?`,
+        [p.hospitalId, ...lista, ctx.impId]);
+    }
+    Banco.executar('UPDATE importacoes SET competencia = ?, n_linhas = ? WHERE id = ?', [lista.join(', '), ctx.inseridas, ctx.impId]);
+    // importações de produção deste hospital que ficaram sem nenhuma linha
+    // (sobrescritas) saem do histórico — ele mostra o que está na base
+    Banco.executar(
+      `DELETE FROM importacoes WHERE tipo = 'PRODUCAO' AND hospital_id = ? AND id <> ?
+         AND NOT EXISTS (SELECT 1 FROM linhas_producao lp WHERE lp.importacao_id = importacoes.id)`,
+      [p.hospitalId, ctx.impId]);
 
-    const usados = new Set(Object.values(map));
+    const usados = new Set(Object.values(ctx.map));
     return {
-      importacaoId: impId,
-      linhaCab, cab, map, linhasLidas: Math.max(0, matriz.length - linhaCab - 1),
-      inseridas, vazias, semData, semAdmissao, foraDoEscopo, escopo, rotuloEscopo, mantidas, truncado,
-      competencias: lista, admissoes: adms.size,
-      totalValor: Math.round(totalValor * 100) / 100,
-      totalQuantidade: Math.round(totalQuantidade * 100) / 100,
-      porCompetencia: lista.map(c => { const pc = porComp.get(c); return { competencia: c, linhas: pc.linhas,
+      importacaoId: ctx.impId,
+      linhaCab: ctx.linhaCab, cab: ctx.cab, map: ctx.map, linhasLidas: ctx.lidas,
+      inseridas: ctx.inseridas, vazias: ctx.vazias, semData: ctx.semData, semAdmissao: ctx.semAdmissao,
+      foraDoEscopo: ctx.foraDoEscopo, escopo: ctx.escopo, rotuloEscopo: ctx.rotuloEscopo, mantidas, truncado,
+      competencias: lista, admissoes: ctx.adms.size,
+      totalValor: Math.round(ctx.totalValor * 100) / 100,
+      totalQuantidade: Math.round(ctx.totalQuantidade * 100) / 100,
+      porCompetencia: lista.map(c => { const pc = ctx.porComp.get(c); return { competencia: c, linhas: pc.linhas,
         valor: Math.round(pc.valor * 100) / 100, quantidade: Math.round(pc.quantidade * 100) / 100 }; }),
-      reconhecidas: Object.keys(map).length,
-      naoReconhecidas: cab.filter((c, i) => c && !usados.has(i)),
+      reconhecidas: Object.keys(ctx.map).length,
+      naoReconhecidas: ctx.cab.filter((c, i) => c && !usados.has(i)),
     };
+  }
+
+  /** Síncrona: p.matriz inteira em memória (testes e mapeamento com matriz). */
+  function importarProducao(p) {
+    const matriz = p.matriz || [];
+    const ctx = prepararProducao(p, matriz.slice(0, CABECA_N));
+    let r;
+    Banco.transacao(() => {
+      gravarInicioProducao(ctx, p);
+      let lote = [];
+      for (let i = ctx.linhaCab + 1; i < matriz.length; i++) {
+        ctx.lidas++;
+        const l = ctx.converter(matriz[i] || [], i);
+        if (!l) continue;
+        lote.push(l);
+        if (lote.length >= LOTE_N) { gravarLoteProducao(ctx, p, lote); lote = []; }
+      }
+      if (lote.length) gravarLoteProducao(ctx, p, lote);
+      r = finalizarProducao(ctx, p);
+    });
+    return r;
+  }
+
+  /** Assíncrona, em lotes da fonte (arquivo em fluxo): a tela respira e a barra anda. */
+  async function importarProducaoFonte(p, fonte, progresso) {
+    const ctx = prepararProducao(p, fonte.cabeca);
+    return Banco.transacaoAsync(async () => {
+      gravarInicioProducao(ctx, p);
+      let i = 0;
+      await fonte.percorrer(async (linhas, info) => {
+        const lote = [];
+        for (const raw of linhas) {
+          const idx = i++;
+          if (idx <= ctx.linhaCab) continue;
+          ctx.lidas++;
+          const l = ctx.converter(raw || [], idx);
+          if (l) lote.push(l);
+        }
+        if (lote.length) gravarLoteProducao(ctx, p, lote);
+        if (progresso) progresso(info, ctx);
+        await respirar();
+      });
+      return finalizarProducao(ctx, p);
+    });
   }
 
   const MESES = { JANEIRO: '01', FEVEREIRO: '02', MARCO: '03', ABRIL: '04', MAIO: '05', JUNHO: '06',
@@ -814,8 +998,9 @@
 
   window.Importador = {
     CAMPOS, lerPlanilha, detectarCabecalho, sugerirMapeamento,
-    perfilLer, perfilGravar, aplicarPerfil, aplicar,
+    perfilLer, perfilGravar, aplicarPerfil, aplicar, aplicarFonte,
     detectarCompetenciaRelatorio, pareceRelatorioMedico,
-    LAYOUT_PRODUCAO, detectarCabecalhoProducao, mapearProducao, nucleoDoMapa, importarProducao,
+    LAYOUT_PRODUCAO, detectarCabecalhoProducao, mapearProducao, nucleoDoMapa, importarProducao, importarProducaoFonte,
+    fonteDeMatriz, abrirFonte, CABECA_N, LOTE_N,
   };
 })();

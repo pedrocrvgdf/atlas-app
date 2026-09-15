@@ -11,7 +11,7 @@ App.telas['visao'] = function () {
   const esc = Utilidades.esc;
   const cliente = App.clienteAtivo();
 
-  const totCli = Banco.escalar('SELECT COUNT(*) FROM clientes WHERE ativo = 1') || 0;
+  const totCli = Banco.clientes().length;
 
   if (!cliente) {
     if (!totCli) {

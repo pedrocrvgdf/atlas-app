@@ -76,13 +76,26 @@
     return prev[lb];
   }
 
-  /** Similaridade 0..1 entre dois textos JÁ normalizados (1 = idênticos). */
+  /**
+   * Similaridade 0..1 entre dois textos JÁ normalizados (1 = idênticos).
+   * Memoizada: o motor e a Inspeção comparam os MESMOS pares de nomes a cada
+   * lote/render, e Levenshtein é O(n·m) — a base grande repete milhões de
+   * comparações. O cache é limitado (zera ao encher) para não crescer sem fim.
+   */
+  const _memoSim = new Map();
+  const MEMO_SIM_MAX = 200000;
   Utilidades.similaridade = function (a, b) {
     a = String(a || ''); b = String(b || '');
-    if (!a.length && !b.length) return 1;
+    if (a === b) return 1;
     const maior = Math.max(a.length, b.length);
     if (!maior) return 1;
-    return 1 - levenshtein(a, b) / maior;
+    const chave = a < b ? a + '\u0001' + b : b + '\u0001' + a;
+    let v = _memoSim.get(chave);
+    if (v !== undefined) return v;
+    v = 1 - levenshtein(a, b) / maior;
+    if (_memoSim.size >= MEMO_SIM_MAX) _memoSim.clear();
+    _memoSim.set(chave, v);
+    return v;
   };
 
   // ──────────────────────────────────────────────────────────────────────
@@ -234,17 +247,25 @@
   };
 
   /** Overlay de trabalho longo. mostrar('Calculando…') / esconder(). */
+  /** Overlay de trabalho; `pct` (0..1) mostra a barra de progresso das importações em lotes. */
   Utilidades.loading = {
-    mostrar(msg) {
+    mostrar(msg, pct) {
       let el = document.getElementById('atlas-loading');
       if (!el) {
         el = document.createElement('div');
         el.id = 'atlas-loading';
         el.innerHTML = '<div class="al-box"><div class="al-spin"></div>' +
-          '<div class="al-msg"></div></div>';
+          '<div class="al-msg"></div><div class="al-barra" hidden><div class="al-barra-fill"></div></div></div>';
         document.body.appendChild(el);
       }
       el.querySelector('.al-msg').textContent = msg || 'Trabalhando…';
+      const barra = el.querySelector('.al-barra');
+      if (typeof pct === 'number' && isFinite(pct)) {
+        barra.hidden = false;
+        barra.querySelector('.al-barra-fill').style.width = Math.max(0, Math.min(100, Math.round(pct * 100))) + '%';
+      } else {
+        barra.hidden = true;
+      }
       el.classList.add('mostrar');
     },
     esconder() {
