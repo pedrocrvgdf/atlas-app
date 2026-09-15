@@ -23,7 +23,11 @@
   const Banco = {
     SQL: null,          // módulo sql.js
     db: null,           // instância do banco aberto
-    _versao: 0,         // carimbo de gravação (bump a cada escrita)
+    _versao: 0,         // carimbo de gravação de DADOS (bump a cada escrita que muda resultados)
+    _versaoConfig: 0,   // carimbo de estado de tela (filtros, pauta, vigias…) — não invalida caches de dados
+    // chaves de config que mudam o RESULTADO do motor: gravar uma delas bumpa _versao
+    CONFIG_DADOS: new Set(['tolerancia_centavos', 'inferencia_min_amostras', 'inferencia_min_confianca',
+      'fuzzy_limiar', 'institucional_marca']),
     _salvarTimer: null,
     _pronto: false,
 
@@ -176,7 +180,11 @@
       for (const [nome, ddl] of [
         ['idx_prod_cli_admn', 'linhas_producao(cliente_id, admissao_norm)'],
         ['idx_rep_cli_admn', 'linhas_repasse(cliente_id, admissao_norm)'],
-        ['idx_med_cli_admn', 'linhas_medico(cliente_id, admissao_norm)']]) {
+        ['idx_med_cli_admn', 'linhas_medico(cliente_id, admissao_norm)'],
+        // índices parciais: "há linha sem admissao_norm?" custa O(1) em vez de varrer a tabela
+        ['idx_prod_norm_pend', 'linhas_producao(id) WHERE admissao_norm IS NULL'],
+        ['idx_rep_norm_pend', 'linhas_repasse(id) WHERE admissao_norm IS NULL'],
+        ['idx_med_norm_pend', 'linhas_medico(id) WHERE admissao_norm IS NULL']]) {
         try { this.db.exec(`CREATE INDEX IF NOT EXISTS ${nome} ON ${ddl}`); }
         catch (e) { console.warn('[banco] índice falhou:', nome, e); }
       }
@@ -260,7 +268,7 @@
 
     configGravar(chave, valor) {
       const txt = (typeof valor === 'string') ? valor : JSON.stringify(valor);
-      const sujo = this._sujoDados;
+      const sujo = this._sujoDados, versao = this._versao;
       this.executar(
         `INSERT INTO config (chave, valor, atualizado_em) VALUES (?, ?, CURRENT_TIMESTAMP)
          ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor, atualizado_em = CURRENT_TIMESTAMP`,
@@ -268,6 +276,10 @@
       // config tem gravação própria (leve): mexer num filtro não exporta a base inteira
       this._sujoDados = sujo;
       this._sujoConfig = true;
+      // estado de tela NÃO invalida os caches de dados (motor, lotes, agregações) —
+      // com a base grande cada invalidação custa segundos
+      if (!this.CONFIG_DADOS.has(chave)) this._versao = versao;
+      this._versaoConfig++;
     },
 
     _configJSON() {

@@ -524,8 +524,18 @@ window.AtlasInspecao = (function () {
     if (abrirLat) abrirLat.addEventListener('click', () => { st.latAberta = true; render(); });
 
     renderPrincipal(d);
-    renderLateral();
+    // a lateral agrega a base (médicos, produtos) — pinta a tela primeiro e
+    // monta a lateral em seguida, sem prender o clique
+    const lat = el.querySelector('#insp-lateral');
+    if (lat && st.latAberta) {
+      lat.innerHTML = '<div class="insp-painel-vazio">Montando a planilha do médico…</div>';
+      const marca = ++_renderSeq;
+      setTimeout(() => { if (marca === _renderSeq && el.querySelector('#insp-lateral') === lat) renderLateral(); }, 0);
+    } else {
+      renderLateral();
+    }
   }
+  let _renderSeq = 0;
 
   function buscar() {
     st.candidatas = null;

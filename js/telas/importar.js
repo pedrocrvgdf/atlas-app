@@ -89,11 +89,13 @@ App.telas['importar'] = function () {
       </div>
       <div id="imp-area"></div>
       <div id="imp-prod"></div>
+      <div id="imp-sis"></div>
       <div id="imp-lista"></div>`;
 
     if (st.etapa === 2 && st.arq) renderMapeamento(hospitais);
     else renderEscolha(hospitais);
     renderProducao(hospitais);
+    renderSistema(hospitais);
     renderLista();
   }
 
@@ -627,16 +629,21 @@ App.telas['importar'] = function () {
   /** Painel "Produção importada": competências por ano + filtro "contém". */
   function renderProducao(hospitais) {
     const box = el.querySelector('#imp-prod');
-    const rows = Banco.query(
-      `SELECT lp.hospital_id, h.nome AS hospital, lp.competencia,
-              SUM(COALESCE(lp.quantidade, 0)) AS qtd, COUNT(DISTINCT lp.admissao) AS adms,
-              SUM(COALESCE(lp.valor, 0)) AS valor, MAX(i.importada_em) AS importada_em
-         FROM linhas_producao lp
-         JOIN hospitais h ON h.id = lp.hospital_id
-         LEFT JOIN importacoes i ON i.id = lp.importacao_id
-        WHERE lp.cliente_id = ?
-        GROUP BY lp.hospital_id, lp.competencia
-        ORDER BY lp.competencia DESC, h.nome`, [cliente.id]);
+    // a agregação varre a produção inteira: memo por versão dos dados
+    const memo = window.__impProdMemo || {};
+    if (memo.versao !== Banco._versao || memo.cliente !== cliente.id) {
+      window.__impProdMemo = { versao: Banco._versao, cliente: cliente.id, rows: Banco.query(
+        `SELECT lp.hospital_id, h.nome AS hospital, lp.competencia,
+                SUM(COALESCE(lp.quantidade, 0)) AS qtd, COUNT(DISTINCT lp.admissao) AS adms,
+                SUM(COALESCE(lp.valor, 0)) AS valor, MAX(i.importada_em) AS importada_em
+           FROM linhas_producao lp
+           JOIN hospitais h ON h.id = lp.hospital_id
+           LEFT JOIN importacoes i ON i.id = lp.importacao_id
+          WHERE lp.cliente_id = ?
+          GROUP BY lp.hospital_id, lp.competencia
+          ORDER BY lp.competencia DESC, h.nome`, [cliente.id]) };
+    }
+    const rows = window.__impProdMemo.rows;
     const multiHosp = hospitais.length > 1;
 
     const grupos = [];
@@ -783,6 +790,111 @@ App.telas['importar'] = function () {
       e.stopPropagation();   // a linha do ano também recolhe/expande no clique
       excluirAno(b.dataset.excluirAno, multiHosp);
     }));
+  }
+
+  /** Painel "Sistema importado": mês do pagamento × origem, por ano. */
+  function renderSistema(hospitais) {
+    const box = el.querySelector('#imp-sis');
+    const memo = window.__impSisMemo || {};
+    if (memo.versao !== Banco._versao || memo.cliente !== cliente.id) {
+      window.__impSisMemo = { versao: Banco._versao, cliente: cliente.id, rows: Banco.query(
+        `SELECT lr.hospital_id, h.nome AS hospital, lr.competencia, COALESCE(lr.fonte, 'CONVENIO') AS fonte,
+                COUNT(*) AS linhas, COUNT(DISTINCT lr.admissao_norm) AS adms,
+                SUM(COALESCE(lr.produzido, 0)) AS produzido, SUM(COALESCE(lr.repassado, 0)) AS repassado,
+                MAX(i.importada_em) AS importada_em
+           FROM linhas_repasse lr
+           JOIN hospitais h ON h.id = lr.hospital_id
+           LEFT JOIN importacoes i ON i.id = lr.importacao_id
+          WHERE lr.cliente_id = ?
+          GROUP BY lr.hospital_id, lr.competencia, lr.fonte
+          ORDER BY lr.competencia DESC, h.nome, lr.fonte`, [cliente.id]) };
+    }
+    const rows = window.__impSisMemo.rows;
+    const multiHosp = hospitais.length > 1;
+    const grupos = [];
+    for (const r of rows) {
+      const ano = String(r.competencia || '').slice(0, 4) || '—';
+      let g = grupos.find(x => x.ano === ano);
+      if (!g) grupos.push(g = { ano, itens: [], linhas: 0, adms: 0, produzido: 0, repassado: 0 });
+      g.itens.push(r);
+      g.linhas += Number(r.linhas) || 0; g.adms += Number(r.adms) || 0;
+      g.produzido += Number(r.produzido) || 0; g.repassado += Number(r.repassado) || 0;
+    }
+    const nMeses = (g) => new Set(g.itens.map(c => c.competencia)).size;
+    if (!(st.anosAbertosSis instanceof Set)) st.anosAbertosSis = new Set(grupos.length ? [grupos[0].ano] : []);
+    const abertos = st.anosAbertosSis;
+    const totalRep = rows.reduce((a, r) => a + (Number(r.repassado) || 0), 0);
+
+    box.innerHTML = `
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <span class="painel-titulo">Sistema importado</span>
+          <span class="painel-conta">${rows.length} relatório(s) · ${fmtR(totalRep)} repassados</span>
+        </div>
+        ${rows.length ? `<div class="rolagem-x"><table class="tabela"><thead><tr>
+            <th>Mês do pagamento</th>${multiHosp ? '<th>Hospital</th>' : ''}<th>Origem</th>
+            <th class="num">Linhas</th><th class="num">Admissões</th><th class="num">Produzido</th><th class="num">Repassado</th>
+            <th>Importado em</th><th></th>
+          </tr></thead><tbody>
+          ${grupos.map(g => `
+            <tr class="imp-ano-sis clique" data-ano="${esc(g.ano)}" title="${abertos.has(g.ano) ? 'Recolher' : 'Expandir'} os meses de ${esc(g.ano)}">
+              <td colspan="${multiHosp ? 3 : 2}"><strong>${abertos.has(g.ano) ? '▾' : '▸'} ${esc(g.ano)}</strong>
+                <span class="texto-cinza">(${nMeses(g)} ${nMeses(g) === 1 ? 'mês' : 'meses'})</span></td>
+              <td class="num mono">${n(g.linhas)}</td><td class="num mono">${n(g.adms)}</td>
+              <td class="num mono">${fmtR(g.produzido)}</td><td class="num mono"><strong>${fmtR(g.repassado)}</strong></td>
+              <td></td><td></td>
+            </tr>
+            ${abertos.has(g.ano) ? g.itens.map(c => `<tr class="imp-mes-sis">
+              <td class="mono" style="padding-left:28px">${esc(Utilidades.compExibir(c.competencia))}</td>
+              ${multiHosp ? `<td>${esc(c.hospital)}</td>` : ''}
+              <td>${chipOrigem(c.fonte)}</td>
+              <td class="num mono">${n(c.linhas)}</td><td class="num mono">${n(c.adms)}</td>
+              <td class="num mono">${fmtR(c.produzido)}</td><td class="num mono"><strong>${fmtR(c.repassado)}</strong></td>
+              <td class="texto-cinza" style="font-size:11px">${esc(quando(c.importada_em))}</td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="botao botao-mini" data-atualizar-sis="${esc(c.competencia)}" data-hosp="${c.hospital_id}" data-fonte="${esc(c.fonte)}"
+                  title="Lançar um relatório ATUALIZADO deste mês e origem (sobrescreve só eles)">↻ Atualizar</button>
+                <button class="botao botao-mini botao-perigo" data-excluir-sis="${esc(c.competencia)}" data-hosp="${c.hospital_id}" data-fonte="${esc(c.fonte)}">Excluir</button>
+              </td>
+            </tr>`).join('') : ''}`).join('')}
+          </tbody></table></div>`
+        : `<div class="tabela-vazia">Nenhum relatório do sistema importado ainda — escolha <strong>Sistema</strong> acima, a origem, o mês do pagamento e solte o arquivo.</div>`}
+      </div>`;
+
+    box.querySelectorAll('.imp-ano-sis').forEach(tr => tr.addEventListener('click', () => {
+      const ano = tr.dataset.ano;
+      if (abertos.has(ano)) abertos.delete(ano); else abertos.add(ano);
+      renderSistema(hospitais);
+    }));
+    box.querySelectorAll('[data-atualizar-sis]').forEach(b => b.addEventListener('click', () => {
+      st.tipo = 'REPASSE'; st.hospitalId = Number(b.dataset.hosp); st.competencia = b.dataset.atualizarSis;
+      st.origem = ['CONVENIO', 'PARTICULAR'].includes(b.dataset.fonte) ? b.dataset.fonte : 'TODAS';
+      st.arq = null; st.etapa = 1;
+      render();
+      const inp = el.querySelector('#imp-drop-input');
+      if (inp) inp.click();
+    }));
+    box.querySelectorAll('[data-excluir-sis]').forEach(b => b.addEventListener('click', () => {
+      excluirSistema(Number(b.dataset.hosp), b.dataset.excluirSis, b.dataset.fonte);
+    }));
+  }
+
+  function excluirSistema(hospitalId, comp, fonte) {
+    const s = Banco.query(
+      `SELECT COUNT(*) AS qtd, COALESCE(SUM(repassado), 0) AS total FROM linhas_repasse
+        WHERE hospital_id = ? AND competencia = ? AND COALESCE(fonte, 'CONVENIO') = ?`, [hospitalId, comp, fonte])[0] || { qtd: 0, total: 0 };
+    if (!confirm(`Excluir o relatório do sistema de ${Utilidades.compExibir(comp)} · ${ORIGEM_ROTULO[fonte] || fonte} deste hospital?\n\n` +
+      `Serão removidas ${n(s.qtd)} linhas (${fmtR(s.total)} repassados).\n\n` +
+      `Não dá para desfazer — para recuperar, reimporte o relatório.`)) return;
+    Banco.transacao(() => {
+      Banco.executar(`DELETE FROM linhas_repasse WHERE hospital_id = ? AND competencia = ? AND COALESCE(fonte, 'CONVENIO') = ?`, [hospitalId, comp, fonte]);
+      Banco.executar(
+        `DELETE FROM importacoes WHERE tipo = 'REPASSE' AND hospital_id = ?
+           AND NOT EXISTS (SELECT 1 FROM linhas_repasse lr WHERE lr.importacao_id = importacoes.id)`, [hospitalId]);
+    });
+    Banco.salvarDebounced();
+    Utilidades.toast(`Sistema de ${Utilidades.compExibir(comp)} · ${ORIGEM_ROTULO[fonte] || fonte} excluído.`, 'ok');
+    render();
   }
 
   function excluirAno(ano, multiHosp) {

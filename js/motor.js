@@ -62,7 +62,16 @@
     'TAXA', 'OPME', 'GAS', 'DIARIA',
   ]);
 
-  let _cache = { chave: null, resultado: null };
+  // cache de resultados com várias entradas: Visão, Auditoria, Relatórios e
+  // Inspeção pedem recortes diferentes e não podem se expulsar do cache
+  const _caches = new Map();
+  const MAX_CACHES = 8;
+  const cacheLer = (chave) => _caches.get(chave) || null;
+  const cacheGravar = (chave, resultado) => {
+    if (_caches.size >= MAX_CACHES) _caches.delete(_caches.keys().next().value);
+    _caches.set(chave, resultado);
+  };
+  let _cacheSemProd = { chave: null, lista: null };
   let _cacheInfer = { chave: null, padroes: null };
   let _cacheSin = { chave: null, mapa: null };
 
@@ -267,15 +276,16 @@
       ? [...new Set(f.admissoes.map(a => U_.normAdm(a)).filter(Boolean))] : null;
     const chave = [f.clienteId, f.hospitalId || 0, f.competencia || '', Banco._versao,
       admFiltro ? admFiltro.join(',') : '*'].join('|');
-    if (_cache.chave === chave) return _cache.resultado;
+    const emCache = cacheLer(chave);
+    if (emCache) return emCache;
     Banco.garantirNormalizados();
 
-    // consulta por lotes de admissões quando há filtro (IN de até 800 por vez)
-    const consultar = (sqlBase, params, ordem) => {
-      if (!admFiltro) return Banco.query(sqlBase + ordem, params);
+    // consulta por lotes de admissões (IN de até 800 por vez)
+    const consultar = (sqlBase, params, ordem, adms) => {
+      if (!adms) return Banco.query(sqlBase + ordem, params);
       const out = [];
-      for (let i = 0; i < admFiltro.length; i += 800) {
-        const lote = admFiltro.slice(i, i + 800);
+      for (let i = 0; i < adms.length; i += 800) {
+        const lote = adms.slice(i, i + 800);
         out.push(...Banco.query(sqlBase + ` AND admissao_norm IN (${lote.map(() => '?').join(',')})` + ordem,
           params.concat(lote)));
       }
@@ -292,12 +302,19 @@
     const pProd = [f.clienteId];
     if (f.hospitalId) { sqlProd += ' AND hospital_id = ?'; pProd.push(f.hospitalId); }
     if (f.competencia) { sqlProd += ' AND competencia = ?'; pProd.push(f.competencia); }
-    const prod = consultar(sqlProd, pProd, ' ORDER BY admissao, id');
+    const prod = consultar(sqlProd, pProd, ' ORDER BY admissao, id', admFiltro);
 
+    // o SISTEMA só das admissões em jogo: com filtro de competência, as da
+    // produção do mês (o pagamento pode cair em qualquer mês, mas a admissão é
+    // a mesma) — nunca a tabela inteira a cada tela
+    let admsRep = admFiltro;
+    if (!admsRep && f.competencia) {
+      admsRep = [...new Set(prod.map(l => l.admissao_norm || U_.normAdm(l.admissao)).filter(Boolean))];
+    }
     let sqlRep = 'SELECT * FROM linhas_repasse WHERE cliente_id = ?';
     const pRep = [f.clienteId];
     if (f.hospitalId) { sqlRep += ' AND hospital_id = ?'; pRep.push(f.hospitalId); }
-    const rep = consultar(sqlRep, pRep, ' ORDER BY admissao, id');
+    const rep = consultar(sqlRep, pRep, ' ORDER BY admissao, id', admsRep);
 
     // regras e padrões por hospital (pode haver mais de um no filtro "todos")
     const hospitais = new Set(prod.map(l => l.hospital_id).concat(rep.map(l => l.hospital_id)));
@@ -559,19 +576,19 @@
       (b.falta - a.falta) || String(a.admissao).localeCompare(String(b.admissao)));
 
     // repasses pagos de admissões que NÃO EXISTEM na produção do cliente
-    // (avaliado contra toda a produção, não só a filtrada; com filtro de
-    // admissões, só as pedidas)
-    const todasAdmProd = admFiltro
-      ? new Set(prodPorAdm.keys())
-      : new Set(Banco.query('SELECT DISTINCT admissao_norm FROM linhas_producao WHERE cliente_id = ?',
-          [f.clienteId]).map(r => r.admissao_norm));
-    const semProducao = [];
-    for (const [adm, linhas] of repPorAdm) {
-      if (todasAdmProd.has(adm)) continue;
-      const pagoTot = linhas.reduce((s, l) => s + (Number(l.repassado) || 0), 0);
-      if (pagoTot > 0) {
-        semProducao.push({ admissao: String(linhas[0].admissao || adm).trim(),
-          pago: pagoTot, nLinhas: linhas.length });
+    // (avaliado contra toda a produção, não só a filtrada). Com filtro de
+    // admissões, só as pedidas; sem filtro, é PREGUIÇOSO (SQL, cache
+    // próprio) — quem não abre a aba "sem lastro" não paga por ela.
+    let semProducao = null;
+    if (admFiltro) {
+      semProducao = [];
+      for (const [adm, linhas] of repPorAdm) {
+        if (prodPorAdm.has(adm)) continue;
+        const pagoTot = linhas.reduce((s, l) => s + (Number(l.repassado) || 0), 0);
+        if (pagoTot > 0) {
+          semProducao.push({ admissao: String(linhas[0].admissao || adm).trim(),
+            pago: pagoTot, nLinhas: linhas.length });
+        }
       }
     }
 
@@ -587,13 +604,35 @@
 
     const resultado = {
       kpis, admissoes, porMedico,
-      semProducao,
       padroesPorHosp,
       filtros: { clienteId: f.clienteId, hospitalId: f.hospitalId || 0, competencia: f.competencia || '' },
       geradoEm: new Date().toISOString(),
     };
-    _cache = { chave, resultado };
+    if (semProducao) resultado.semProducao = semProducao;
+    else Object.defineProperty(resultado, 'semProducao', { enumerable: true,
+      get: () => semProducaoDe(f.clienteId, f.hospitalId || 0) });
+    cacheGravar(chave, resultado);
     return resultado;
+  }
+
+  /**
+   * Admissões pagas no sistema que não existem na produção do cliente (em
+   * nenhum mês) — calculado no SQLite pelo índice de admissao_norm.
+   */
+  function semProducaoDe(clienteId, hospitalId) {
+    const chave = [clienteId, hospitalId || 0, Banco._versao].join('|');
+    if (_cacheSemProd.chave === chave) return _cacheSemProd.lista;
+    Banco.garantirNormalizados();
+    const params = [clienteId];
+    let sql = `SELECT MIN(r.admissao) AS admissao, r.admissao_norm AS k, SUM(r.repassado) AS pago, COUNT(*) AS n
+                 FROM linhas_repasse r WHERE r.cliente_id = ?`;
+    if (hospitalId) { sql += ' AND r.hospital_id = ?'; params.push(hospitalId); }
+    sql += ` AND NOT EXISTS (SELECT 1 FROM linhas_producao p WHERE p.cliente_id = r.cliente_id AND p.admissao_norm = r.admissao_norm)
+             GROUP BY r.admissao_norm HAVING SUM(r.repassado) > 0`;
+    const lista = Banco.query(sql, params).map(r => ({
+      admissao: String(r.admissao || r.k || '').trim(), pago: Number(r.pago) || 0, nLinhas: Number(r.n) || 0 }));
+    _cacheSemProd = { chave, lista };
+    return lista;
   }
 
   /** Competências (YYYY-MM) disponíveis na produção do cliente, recentes primeiro. */
