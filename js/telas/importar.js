@@ -433,13 +433,29 @@ App.telas['importar'] = function () {
 
   async function importarBaseArquivo(f) {
     try {
-      const fonte = await lerArquivo(f);
-      const matriz = await fonte.matriz();   // a base tabela é pequena
+      Utilidades.loading.mostrar('Lendo a Base Tabela…');
+      await respirar();
+      // a Base Tabela vem no formato LARGO (uma coluna por papel) quando é a
+      // exportada pela ferramenta; o FORMATO da célula separa R$ de %
+      const lido = Importador.lerPlanilhaComFormato(await f.arrayBuffer());
+      const layout = Importador.detectarBaseLarga(lido.matriz);
+      if (layout) {
+        const r = Importador.importarBaseLarga({
+          matriz: lido.matriz, formatos: lido.formatos, layout,
+          clienteId: cliente.id, hospitalId: st.hospitalId, arquivo: f.name, substituir: true,
+        });
+        Banco.salvarDebounced();
+        render();
+        resumoBase(r, f.name);
+        return;
+      }
+      const matriz = lido.matriz;            // formato longo (procedimento/papel/valor por linha)
       const linhaCab = Importador.detectarCabecalho(matriz, 'BASE_TABELA');
       const cab = (matriz[linhaCab] || []).map(c => String(c == null ? '' : c).trim());
       const { map } = mapaAutomatico(cab, 'BASE_TABELA');
       if (map.procedimento == null || (map.valor == null && map.percentual == null)) {
-        cairNoMapeamento(f, fonte, linhaCab, map, 'Não reconheci procedimento + valor/percentual — aponte no mapeamento.');
+        cairNoMapeamento(f, Importador.fonteDeMatriz(matriz, { nomeAba: lido.nomeAba }), linhaCab, map,
+          'Não reconheci procedimento + valor/percentual — aponte no mapeamento.');
         return;
       }
       const r = Importador.aplicar({
@@ -458,6 +474,64 @@ App.telas['importar'] = function () {
       Utilidades.loading.esconder();
     }
   }
+
+
+  /** Resumo da BASE TABELA importada: o que virou regra e o que ficou de fora. */
+  function resumoBase(r, nome) {
+    const ov = document.createElement('div');
+    ov.className = 'modal-fundo';
+    ov.innerHTML = `
+      <div class="modal" style="width:680px;max-width:95vw">
+        <div class="modal-cabecalho">
+          <span class="modal-titulo">✓ Base Tabela importada</span>
+          <button class="modal-fechar">✕</button>
+        </div>
+        <div class="modal-corpo">
+          <div class="info-caixa"><strong>${esc(nome)}</strong> · cabeçalho na linha ${r.layout.linhaCab + 1}
+            · ${r.layout.papeis.length} coluna(s) de papel: ${esc(r.layout.papeis.map(p => p.rotulo).join(', '))}</div>
+          <div class="cards" style="margin:12px 0">
+            <div class="card"><div class="card-rotulo">Linhas lidas</div><div class="card-valor">${n(r.linhasLidas)}</div></div>
+            <div class="card card-ok"><div class="card-rotulo">Regras criadas</div><div class="card-valor">${n(r.inseridas)}</div>
+              <div class="card-extra">${n(r.fixas)} em R$ · ${n(r.percentuais)} em %</div></div>
+            <div class="card"><div class="card-rotulo">Procedimentos</div><div class="card-valor">${n(r.procedimentos)}</div></div>
+          </div>
+          <div class="rolagem-x"><table class="tabela"><thead><tr><th>Fonte</th><th class="num">Regras</th>
+            <th>Papel</th><th class="num">Regras</th></tr></thead><tbody>
+            ${(() => {
+              const linhas = Math.max(r.porFonte.length, r.porPapel.length);
+              let html = '';
+              for (let i = 0; i < linhas; i++) {
+                const f = r.porFonte[i], p = r.porPapel[i];
+                html += `<tr><td>${f ? `<span class="tag-fonte tag-${esc(f.fonte)}">${esc(f.fonte)}</span>` : ''}</td>
+                  <td class="num mono">${f ? n(f.n) : ''}</td>
+                  <td>${p ? esc(PAPEL_BASE[p.papel] || p.papel) : ''}</td>
+                  <td class="num mono">${p ? n(p.n) : ''}</td></tr>`;
+              }
+              return html;
+            })()}
+          </tbody></table></div>
+          ${(r.ignoradasUsar || r.ignoradasSemFonte || r.semValor) ? `<div class="texto-cinza" style="font-size:11.5px;margin-top:10px">
+            Ficaram de fora: ${r.ignoradasUsar ? `${n(r.ignoradasUsar)} linha(s) com <em>Usar = Não</em> · ` : ''}
+            ${r.ignoradasSemFonte ? `${n(r.ignoradasSemFonte)} sem fonte (“—”, procedimento sem regra) · ` : ''}
+            ${r.semValor ? `${n(r.semValor)} papel(éis) zerados (a tabela não remunera).` : ''}</div>` : ''}
+          <div class="info-caixa" style="margin-top:12px">O formato da célula decide o tipo da regra:
+            <strong>R$</strong> vira valor fixo e <strong>%</strong> vira percentual sobre o produzido — é como a
+            planilha sai da ferramenta.</div>
+        </div>
+        <div class="modal-rodape">
+          <button class="botao" id="rb-ver" style="margin-right:auto">📐 Ver a Base Tabela</button>
+          <button class="botao botao-marinho" id="rb-ok">Fechar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('.modal-fechar').addEventListener('click', fechar);
+    ov.querySelector('#rb-ok').addEventListener('click', fechar);
+    ov.querySelector('#rb-ver').addEventListener('click', () => { fechar(); popupBase(st.hospitalId); });
+  }
+
+  const PAPEL_BASE = { EXECUTANTE: 'Executante', AUXILIAR: 'Auxiliar', INDICANTE: 'Indicante',
+    SOLICITANTE: 'Solicitante', LAUDO: 'Médico Laudo', ANESTESISTA: 'Anestesista' };
 
   // ────────────────────────────────────────────────────────────────────
   // PRODUÇÃO — pop-up do período + importação automática

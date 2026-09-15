@@ -234,6 +234,9 @@ CREATE TABLE IF NOT EXISTS base_tabela (
   valor         REAL,                                 -- R$ fixo (null = não usa)
   percentual    REAL,                                 -- % sobre produzido (null = não usa)
   origem        TEXT DEFAULT 'MANUAL',
+  nomenclatura  TEXT,                                 -- nome canônico do exame (agrupa grafias)
+  categoria     TEXT,                                 -- Exames, Cirurgias, Consultas…
+  subespecialidade TEXT,
   amostras      INTEGER,                              -- nº de amostras (regra inferida)
   confianca     REAL,                                 -- 0..1 (regra inferida)
   criado_em     TEXT DEFAULT CURRENT_TIMESTAMP,

@@ -306,15 +306,32 @@
   }
 
   /**
+   * INDICANTE e SOLICITANTE são O MESMO PAPEL (regra da ferramenta de origem:
+   * "só existe um dos dois; o padrão de exibição é sempre Indicante"). Um
+   * pagamento de solicitante quita a exigência de indicante e vice-versa, e a
+   * tabela nunca cobra os dois.
+   */
+  const ehIndSol = (p) => p === 'INDICANTE' || p === 'SOLICITANTE';
+
+  /**
    * Papéis que a Base REMUNERA para (procedimento, fonte) — são eles, e só
    * eles, que a auditoria cobra. Vazio = a tabela não cobre este procedimento.
+   * INDICANTE/SOLICITANTE entram UMA vez, sob o rótulo INDICANTE, com a regra
+   * do indicante (ou a do solicitante, quando só ela existe).
    */
   function papeisDaBase(base, proc, fonte) {
     const out = [];
+    let indSol = null;
     for (const papel of U().PAPEIS) {
       const r = acharRegra(base, proc, papel, fonte);
-      if (remunera(r)) out.push({ papel, regra: r });
+      if (!remunera(r)) continue;
+      if (ehIndSol(papel)) {
+        if (!indSol || papel === 'INDICANTE') indSol = { papel: 'INDICANTE', regra: r };
+        continue;
+      }
+      out.push({ papel, regra: r });
     }
+    if (indSol) out.push(indSol);
     return out;
   }
 
@@ -336,7 +353,7 @@
   // colunas da produção que o cruzamento usa (a íntegra tem 57 — não carregar tudo)
   const COLS_PROD = `id, hospital_id, competencia, admissao, admissao_norm, data, paciente, convenio, fonte,
     classificacao, procedimento, procedimento_norm, quantidade, valor, executante, auxiliar, indicante,
-    solicitante, laudo`;
+    solicitante, laudo, cirurgiao, medico`;
 
   /**
    * @param {object} f  { clienteId, hospitalId (0 = todos), competencia ('' = todas),
@@ -503,10 +520,40 @@
           continue;
         }
 
-        const execDaLinha = resolverMedico(lp.executante, sinonimos);
-        const nomeDaProducao = (papel) => {
+        const cru = (col) => String(lp[col] || '').trim();
+        // EXECUTANTE da produção: a coluna do executante; se vazia, o cirurgião;
+        // se vazia, o médico (a mesma cadeia da ferramenta de origem)
+        const execDaLinha = resolverMedico(cru('executante') || cru('cirurgiao') || cru('medico'), sinonimos);
+
+        /**
+         * A QUEM PERTENCE O PAPEL — as regras do módulo Auditoria da ferramenta
+         * de origem, na letra. O papel que a Base exige e o sistema não pagou
+         * tem dono: a PRODUÇÃO diz quem é, pelas colunas de papel.
+         *
+         *   EXECUTANTE  executante → cirurgião → médico
+         *   AUXILIAR    o EXECUTANTE do procedimento (o valor do auxiliar é
+         *               sempre dele); sem executante, o nome da coluna auxiliar
+         *   INDICANTE   indicante → solicitante → (nenhum dos dois: o valor vai
+         *               para o EXECUTANTE, marcado como "indicante não informado")
+         *   demais      a coluna do próprio papel (laudo, anestesista…)
+         *
+         * Devolve { nome, motivo } — o motivo só existe quando a atribuição
+         * precisa aparecer escrita no relatório.
+         */
+        const donoDoPapel = (papel) => {
+          if (papel === 'EXECUTANTE') return { nome: execDaLinha, motivo: null };
+          if (papel === 'AUXILIAR') {
+            return { nome: execDaLinha || resolverMedico(cru('auxiliar'), sinonimos), motivo: null };
+          }
+          if (ehIndSol(papel)) {
+            const ind = cru('indicante') || cru('solicitante');
+            if (ind) return { nome: resolverMedico(ind, sinonimos), motivo: null };
+            // indicante não informado no sistema: o valor é repassado ao executante
+            if (execDaLinha) return { nome: execDaLinha, motivo: 'indicante_ao_executante' };
+            return { nome: '', motivo: null };
+          }
           const par = PAPEIS_PROD.find(([p]) => p === papel);
-          return par ? String(lp[par[1]] || '').trim() : '';
+          return { nome: par ? resolverMedico(cru(par[1]), sinonimos) : '', motivo: null };
         };
 
         /**
@@ -529,7 +576,7 @@
          * tabela não remunera não é divergência, é o desenho dela.
          */
         const candidatos = papeisDaBase(base, procN, lp.fonte)
-          .map(({ papel }) => ({ papel, nome: nomeDaProducao(papel) }));
+          .map(({ papel }) => Object.assign({ papel }, donoDoPapel(papel)));
 
         // procedimento fora da Base: nada a cobrar. O que o sistema pagou
         // aparece como SEM REGRA (por papel); nada pago vira um item só.
@@ -546,8 +593,7 @@
           // — a menos que o executante seja INSTITUCIONAL, que nunca tem
           // repasse (procedimento dele não precisa de regra)
           if (!algum && !(execDaLinha && ehInst(execDaLinha))) {
-            itens.push(registrarSemRegra(itemSemRegra('EXECUTANTE',
-              execDaLinha || resolverMedico(nomeDaProducao('EXECUTANTE'), sinonimos), 0)));
+            itens.push(registrarSemRegra(itemSemRegra('EXECUTANTE', execDaLinha, 0)));
           }
           continue;
         }
@@ -557,13 +603,8 @@
           const esperadoBruto = valorEsperado(regra, lp.valor, lp.quantidade);
           if (esperadoBruto === 0 && regra) continue;   // papel não remunerado
 
-          /**
-           * O AUXILIAR acompanha o EXECUTANTE — o destinatário do valor
-           * de auxiliar é o executante do procedimento, não o nome da coluna.
-           */
-          const nomeDono = cand.papel === 'AUXILIAR'
-            ? (execDaLinha || resolverMedico(cand.nome, sinonimos))
-            : resolverMedico(cand.nome, sinonimos);
+          // o dono do papel já veio resolvido pela PRODUÇÃO (donoDoPapel)
+          const nomeDono = cand.nome;
 
           // institucional é isento — e executante institucional
           // isenta o auxiliar junto
@@ -596,8 +637,11 @@
             }
           };
           // 1º: procedimento + papel canônico — quita se sem nome, sem dono ou nome certo
+          // (INDICANTE e SOLICITANTE são o mesmo papel: um quita o outro)
+          const papelCasa = (lr) => lr.papel_canon === cand.papel ||
+            (ehIndSol(cand.papel) && ehIndSol(lr.papel_canon));
           consumir(
-            lr => procCasa(lr) && lr.papel_canon && lr.papel_canon === cand.papel,
+            lr => procCasa(lr) && lr.papel_canon && papelCasa(lr),
             lr => !String(lr.medico || '').trim() || !nomeDono || mesmoMedico(lr.medico));
           // 2º: procedimento + médico certo (repasse sem coluna de papel)
           if (!pago && !pagoOutro) {
@@ -628,7 +672,10 @@
           } else if (temGlosa && esperado != null) {
             // glosado não é dívida — visível, valendo zero
             status = 'GLOSA';
-            motivo = glosaPorProc.get(procN).has(cand.papel) ? 'glosa' : 'glosa_do_procedimento';
+            const papeisGlosados = glosaPorProc.get(procN);
+            const glosaDoPapel = papeisGlosados.has(cand.papel) ||
+              (ehIndSol(cand.papel) && (papeisGlosados.has('INDICANTE') || papeisGlosados.has('SOLICITANTE')));
+            motivo = glosaDoPapel ? 'glosa' : 'glosa_do_procedimento';
             esperadoGlosa = esperado;   // o que a regra pagaria se não fosse a recusa
             esperado = 0;
           } else if (pagoOutro > 0 && esperado != null) {
@@ -656,6 +703,10 @@
             falta = esperado;
             dif = esperado;
           }
+
+          // "indicante não informado no sistema — o valor foi para o executante"
+          // só precisa ser dito quando o valor está sendo cobrado
+          if (cand.motivo && (falta > 0 || status === 'AGUARDANDO')) motivo = cand.motivo;
 
           const item = {
             admissao: adm, hospital_id: lp.hospital_id, competencia: lp.competencia,

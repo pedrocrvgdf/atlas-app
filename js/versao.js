@@ -4,7 +4,7 @@
  */
 window.ATLAS_VERSAO = {
   produto: 'ATLAS — Auditoria de Contas',
-  pacote: 'v0.8.3',
-  numero: 17,
+  pacote: 'v0.9.1',
+  numero: 19,
   gerado: '2026-09-15',
 };

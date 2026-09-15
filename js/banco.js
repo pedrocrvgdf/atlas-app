@@ -372,6 +372,11 @@
       // e a regra da glosa por recebido não se aplica a elas.
       addCol('linhas_repasse', 'recebido', 'recebido REAL');
       addCol('linhas_repasse', 'honorario', 'honorario REAL');
+      // v0.9.1: a Base Tabela exportada pela ferramenta traz o nome canônico do
+      // exame e a classificação dele junto com as regras
+      addCol('base_tabela', 'nomenclatura', 'nomenclatura TEXT');
+      addCol('base_tabela', 'categoria', 'categoria TEXT');
+      addCol('base_tabela', 'subespecialidade', 'subespecialidade TEXT');
       // v0.7.2: admissão normalizada (índice de busca) + paciente normalizado na produção.
       // Os índices ficam AQUI (não no SCHEMA_SQL) porque a coluna pode não existir
       // ainda num banco antigo na hora em que o schema roda.

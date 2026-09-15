@@ -791,6 +791,191 @@
     'auxiliar', 'auxiliar_norm', 'indicante', 'indicante_norm', 'solicitante', 'solicitante_norm',
     'laudo', 'laudo_norm', 'linha_origem'];
 
+
+  // ──────────────────────────────────────────────────────────────────────
+  // BASE TABELA LARGA — o formato exportado pela ferramenta de origem
+  //
+  //   Procedimento | Categoria | Subespecialidade | Nomenclatura | Usar |
+  //   Fonte | Executante | Indicante | Solicitante | Auxiliar | Médico Laudo
+  //
+  // Uma linha por procedimento × fonte, e UMA COLUNA POR PAPEL com o valor.
+  // O próprio Excel diz o que o número é, pelo FORMATO da célula:
+  //   "R$ #,##0.00" → valor fixo    ·    "0.0%" → percentual (fração: 0,1 = 10%)
+  // Sem o formato (csv, xls antigo), vale a regra que a ferramenta usa ao
+  // gravar: fração entre 0 e 1 é percentual; acima de 1 é R$.
+  // Valor ZERO = papel não remunerado (não vira regra), "Usar" = Não e fonte
+  // "—" descartam a linha inteira. É o mesmo critério do `remunera` da origem.
+  // ──────────────────────────────────────────────────────────────────────
+
+  /** Cabeçalho de coluna → papel canônico da ATLAS. */
+  const COLUNA_PAPEL = new Map([
+    ['EXECUTANTE', 'EXECUTANTE'], ['CIRURGIAO', 'EXECUTANTE'], ['MEDICO EXECUTANTE', 'EXECUTANTE'],
+    ['INDICANTE', 'INDICANTE'], ['SOLICITANTE', 'SOLICITANTE'],
+    ['AUXILIAR', 'AUXILIAR'], ['AUXILIAR 1', 'AUXILIAR'],
+    ['MEDICO LAUDO', 'LAUDO'], ['MEDICO DE LAUDO', 'LAUDO'], ['LAUDO', 'LAUDO'],
+    ['ANESTESISTA', 'ANESTESISTA'],
+  ]);
+
+  /**
+   * É a Base Tabela larga? Devolve o layout ou null.
+   * Regra de reconhecimento: uma linha com PROCEDIMENTO e 2+ colunas de papel.
+   */
+  function detectarBaseLarga(matriz) {
+    const ate = Math.min((matriz || []).length, 30);
+    for (let i = 0; i < ate; i++) {
+      const linha = (matriz[i] || []).map(c => U().normalizar(c));
+      const papeis = [];
+      let colProc = -1, colFonte = -1, colUsar = -1, colNom = -1, colCat = -1, colEsp = -1;
+      for (let c = 0; c < linha.length; c++) {
+        const n = linha[c];
+        if (!n) continue;
+        if (colProc < 0 && (n === 'PROCEDIMENTO' || n === 'PROCEDIMENTOS')) { colProc = c; continue; }
+        if (colFonte < 0 && (n === 'FONTE' || n === 'FONTE PAGADORA' || n === 'ORIGEM')) { colFonte = c; continue; }
+        if (colUsar < 0 && (n === 'USAR' || n === 'REPASSAVEL' || n === 'ATIVO')) { colUsar = c; continue; }
+        if (colNom < 0 && n === 'NOMENCLATURA') { colNom = c; continue; }
+        if (colCat < 0 && n === 'CATEGORIA') { colCat = c; continue; }
+        if (colEsp < 0 && (n === 'SUBESPECIALIDADE' || n === 'ESPECIALIDADE')) { colEsp = c; continue; }
+        const papel = COLUNA_PAPEL.get(n);
+        if (papel && !papeis.some(p => p.col === c)) papeis.push({ col: c, papel, rotulo: String(matriz[i][c]).trim() });
+      }
+      if (colProc >= 0 && papeis.length >= 2) {
+        return { linhaCab: i, colProc, colFonte, colUsar, colNom, colCat, colEsp, papeis };
+      }
+    }
+    return null;
+  }
+
+  /** O formato da célula diz percentual? (numFmt do Excel, ex.: "0.0%") */
+  const formatoPct = (fmt) => typeof fmt === 'string' && fmt.indexOf('%') >= 0;
+
+  /**
+   * Importa a Base Tabela no formato largo.
+   * p: { matriz, formatos (matriz paralela de numFmt, opcional), layout (opcional),
+   *      clienteId, hospitalId, arquivo, substituir (padrão true) }
+   * Devolve { inseridas, linhasLidas, procedimentos, porFonte, porPapel,
+   *           fixas, percentuais, ignoradasUsar, ignoradasSemFonte, semValor, layout }
+   */
+  function importarBaseLarga(p) {
+    const U_ = U();
+    const matriz = p.matriz || [];
+    const formatos = p.formatos || null;
+    const L = p.layout || detectarBaseLarga(matriz);
+    if (!L) throw new Error('Não reconheci o layout da Base Tabela (esperava colunas Procedimento + papéis).');
+
+    const regras = [];
+    const procs = new Set(), porFonte = new Map(), porPapel = new Map();
+    let lidas = 0, fixas = 0, percentuais = 0, ignoradasUsar = 0, ignoradasSemFonte = 0, semValor = 0;
+
+    for (let i = L.linhaCab + 1; i < matriz.length; i++) {
+      const raw = matriz[i] || [];
+      if (!raw.some(c => c != null && String(c).trim() !== '')) continue;
+      lidas++;
+      const proc = String(raw[L.colProc] == null ? '' : raw[L.colProc]).trim();
+      if (!proc) continue;
+
+      // "Usar = Não" tira o procedimento da cobrança (o mesmo `repassavel` da origem)
+      if (L.colUsar >= 0) {
+        const u = U_.normalizar(raw[L.colUsar]);
+        if (u && (u === 'NAO' || u === 'N' || u === 'FALSE' || u === '0')) { ignoradasUsar++; continue; }
+      }
+      // fonte "—" (ou vazia) = linha de inventário, sem regra nenhuma
+      const fonteTxt = L.colFonte >= 0 ? String(raw[L.colFonte] == null ? '' : raw[L.colFonte]).trim() : '';
+      const fonteN = U_.normalizar(fonteTxt);
+      if (L.colFonte >= 0 && (!fonteN || fonteN === '—' || fonteTxt === '—')) { ignoradasSemFonte++; continue; }
+      const fonte = L.colFonte >= 0 ? U_.classificarFonte(fonteTxt) : 'TODAS';
+
+      const nomenclatura = L.colNom >= 0 ? String(raw[L.colNom] == null ? '' : raw[L.colNom]).trim() : '';
+      const categoria = L.colCat >= 0 ? String(raw[L.colCat] == null ? '' : raw[L.colCat]).trim() : '';
+      const subesp = L.colEsp >= 0 ? String(raw[L.colEsp] == null ? '' : raw[L.colEsp]).trim() : '';
+
+      let algum = false;
+      for (const pp of L.papeis) {
+        const cel = raw[pp.col];
+        if (cel == null || String(cel).trim() === '') continue;
+        const num = U_.paraNumero(cel);
+        if (!(num > 0)) { semValor++; continue; }   // zero = papel não remunerado
+        const fmt = formatos && formatos[i] ? formatos[i][pp.col] : null;
+        // percentual quando o Excel formata como %, ou (sem formato) quando é fração
+        const ehPct = fmt ? formatoPct(fmt) : (num > 0 && num <= 1);
+        const r = {
+          procedimento: proc, procedimento_norm: U_.normalizar(proc),
+          papel: pp.papel, fonte,
+          valor: ehPct ? null : Math.round(num * 100) / 100,
+          percentual: ehPct ? Math.round(num * 10000) / 100 : null,
+          nomenclatura, categoria, subespecialidade: subesp,
+        };
+        if (ehPct) percentuais++; else fixas++;
+        porPapel.set(pp.papel, (porPapel.get(pp.papel) || 0) + 1);
+        porFonte.set(fonte, (porFonte.get(fonte) || 0) + 1);
+        regras.push(r);
+        algum = true;
+      }
+      if (algum) procs.add(U_.normalizar(proc));
+    }
+
+    if (!regras.length) throw new Error('Nenhuma regra com valor encontrada na Base Tabela — confira o arquivo.');
+
+    let inseridas = 0, impId = null;
+    Banco.transacao(() => {
+      if (p.substituir !== false) Banco.executar('DELETE FROM base_tabela WHERE hospital_id = ?', [p.hospitalId]);
+      Banco.executar(
+        `INSERT INTO importacoes (cliente_id, hospital_id, tipo, arquivo, competencia, n_linhas)
+         VALUES (?, ?, 'BASE_TABELA', ?, '', ?)`,
+        [p.clienteId, p.hospitalId, p.arquivo || '', regras.length]);
+      impId = Banco.ultimoId();
+      inseridas = Banco.executarLote(
+        `INSERT INTO base_tabela (hospital_id, procedimento, procedimento_norm, papel, fonte, valor, percentual,
+           origem, nomenclatura, categoria, subespecialidade)
+         VALUES (?,?,?,?,?,?,?, 'IMPORTADA', ?,?,?)`,
+        regras.map(r => [p.hospitalId, r.procedimento, r.procedimento_norm, r.papel, r.fonte,
+          r.valor, r.percentual, r.nomenclatura, r.categoria, r.subespecialidade]));
+    });
+
+    return {
+      inseridas, importacaoId: impId, linhasLidas: lidas,
+      procedimentos: procs.size, fixas, percentuais,
+      ignoradasUsar, ignoradasSemFonte, semValor,
+      porFonte: [...porFonte.entries()].map(([fonte, n]) => ({ fonte, n })).sort((a, b) => b.n - a.n),
+      porPapel: [...porPapel.entries()].map(([papel, n]) => ({ papel, n })).sort((a, b) => b.n - a.n),
+      layout: L, competencias: [], avisos: [],
+    };
+  }
+
+  /**
+   * Lê a planilha guardando também o FORMATO de cada célula (numFmt) — é ele
+   * que separa "R$ 20,15" de "10,0%" na Base Tabela. Só para arquivos pequenos.
+   */
+  function lerPlanilhaComFormato(arrayBuffer) {
+    if (typeof XLSX === 'undefined') throw new Error('Biblioteca de planilha ainda carregando — tente novamente em instantes.');
+    const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true, cellNF: true });
+    let melhor = null;
+    for (const nome of wb.SheetNames) {
+      const ws = wb.Sheets[nome];
+      podarIntervalo(ws);
+      const matriz = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false });
+      if (!melhor || matriz.length > melhor.matriz.length) melhor = { matriz, nomeAba: nome, ws };
+      if (matriz.length >= 2) { melhor = { matriz, nomeAba: nome, ws }; break; }
+    }
+    if (!melhor || !melhor.matriz.length) throw new Error('A planilha está vazia.');
+    // matriz paralela com o numFmt de cada célula (sheet_to_json pula linhas em
+    // branco, então a varredura acompanha o mesmo salto)
+    const ref = XLSX.utils.decode_range(melhor.ws['!ref']);
+    const formatos = [];
+    let destino = 0;
+    for (let r = ref.s.r; r <= ref.e.r; r++) {
+      const linha = [];
+      let vazia = true;
+      for (let c = ref.s.c; c <= ref.e.c; c++) {
+        const cel = melhor.ws[XLSX.utils.encode_cell({ r, c })];
+        linha[c - ref.s.c] = cel ? (cel.z || null) : null;
+        if (cel && cel.v != null && String(cel.v) !== '') vazia = false;
+      }
+      if (vazia) continue;            // blankrows: false — a matriz também pulou
+      formatos[destino++] = linha;
+    }
+    return { matriz: melhor.matriz, nomeAba: melhor.nomeAba, abas: wb.SheetNames, formatos };
+  }
+
   /**
    * Importa a PRODUÇÃO automaticamente — em lotes.
    * prepararProducao() acha o cabeçalho na CABEÇA da fonte (a linha com
@@ -1059,6 +1244,7 @@
     perfilLer, perfilGravar, aplicarPerfil, aplicar, aplicarFonte,
     detectarCompetenciaRelatorio, pareceRelatorioMedico,
     LAYOUT_PRODUCAO, detectarCabecalhoProducao, mapearProducao, nucleoDoMapa, importarProducao, importarProducaoFonte,
+    detectarBaseLarga, importarBaseLarga, lerPlanilhaComFormato,
     fonteDeMatriz, abrirFonte, CABECA_N, LOTE_N,
   };
 })();

@@ -54,6 +54,7 @@ App.telas['auditoria'] = function () {
     sem_medico: 'papel remunerado sem profissional em base nenhuma',
     recebido_sem_repasse: 'o pagador pagou e o repasse não saiu',
     nao_conciliado: 'ainda no caminho — o convênio não pagou ou a conciliação não quitou',
+    indicante_ao_executante: 'indicante não informado no sistema — o valor é do executante',
     pago_sem_regra: 'o sistema pagou, mas sem regra não dá para conferir o valor',
     glosa: 'procedimento glosado pelo pagador (recebido = 0)',
     glosa_do_procedimento: 'herda a glosa do procedimento',
