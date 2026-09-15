@@ -45,8 +45,12 @@ App.telas['visao'] = function () {
   // resumo da auditoria (todas as competências) — só quando já há dados dos 2 lados
   let kpisHTML = '';
   if (nProd && nRep) {
-    const r = Motor.auditar({ clienteId: cid, hospitalId: 0, competencia: '' });
+    // a competência mais recente (a base inteira pode ter centenas de milhares de linhas)
+    const compKpi = (Motor.listarCompetencias(cid, 0) || [])[0] || '';
+    const r = Motor.auditar({ clienteId: cid, hospitalId: 0, competencia: compKpi });
     kpisHTML = `
+      <div class="texto-cinza" style="font-size:11.5px;margin-bottom:6px">Resumo da auditoria —
+        competência <strong>${Utilidades.compExibir(compKpi)}</strong> (a mais recente; as outras estão na Auditoria)</div>
       <div class="cards">
         <div class="card"><div class="card-rotulo">Produzido</div>
           <div class="card-valor mono">${Utilidades.moeda(r.kpis.produzido)}</div></div>

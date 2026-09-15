@@ -96,8 +96,10 @@ CREATE TABLE IF NOT EXISTS linhas_producao (
   importacao_id INTEGER,
   competencia   TEXT,                       -- YYYY-MM (derivada da data)
   admissao      TEXT,
+  admissao_norm TEXT,                       -- só dígitos, sem zeros à esquerda (índice de busca)
   data          TEXT,                       -- YYYY-MM-DD
   paciente      TEXT,
+  paciente_norm TEXT,
   convenio      TEXT,
   fonte         TEXT DEFAULT 'CONVENIO',    -- CONVENIO | PARTICULAR | SUS
   classificacao TEXT,                       -- PROCEDIMENTO/EXAME/CONSULTA/OPME/TAXA/...
@@ -144,6 +146,7 @@ CREATE TABLE IF NOT EXISTS linhas_repasse (
   importacao_id INTEGER,
   competencia   TEXT,                       -- YYYY-MM do PAGAMENTO (informada no import)
   admissao      TEXT,
+  admissao_norm TEXT,                       -- só dígitos (índice de busca)
   data          TEXT,                       -- data da admissão/atendimento se houver
   paciente      TEXT,
   convenio      TEXT,
@@ -182,6 +185,7 @@ CREATE TABLE IF NOT EXISTS linhas_medico (
   sistema       TEXT,                       -- QVIS / Medical / Ajustes / Desempenho / GLOSA…
   modulo        TEXT,                       -- Repasse / LIO / OPME… (gen 3)
   admissao      TEXT,                       -- vazia na gen 1 (resolvida por paciente+data)
+  admissao_norm TEXT,                       -- só dígitos (índice de busca)
   admissao_origem TEXT,                     -- RELATORIO | RESOLVIDA | ''
   data          TEXT,                       -- YYYY-MM-DD
   paciente      TEXT,

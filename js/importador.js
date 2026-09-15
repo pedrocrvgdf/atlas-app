@@ -452,23 +452,23 @@
         } else if (tipo === 'MEDICO') {
           Banco.executar(
             `INSERT INTO linhas_medico
-               (cliente_id, hospital_id, importacao_id, competencia, sistema, modulo, admissao,
+               (cliente_id, hospital_id, importacao_id, competencia, sistema, modulo, admissao, admissao_norm,
                 admissao_origem, data, paciente, paciente_norm, medico, medico_norm, papel,
                 papel_canon, fonte, convenio, procedimento, procedimento_norm, valor, linha_origem)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [p.clienteId, p.hospitalId, impId, l.competencia, l.sistema, l.modulo, l.admissao,
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [p.clienteId, p.hospitalId, impId, l.competencia, l.sistema, l.modulo, l.admissao, U_.normAdm(l.admissao),
               l.admissao_origem, l.data, l.paciente, l.paciente_norm, l.medico, U_.normalizar(l.medico),
               l.papel, l.papel_canon, l.fonte, l.convenio, l.procedimento, l.procedimento_norm,
               l.valor, l.linha_origem]);
         } else if (tipo === 'PRODUCAO') {
           Banco.executar(
             `INSERT INTO linhas_producao
-               (cliente_id, hospital_id, importacao_id, competencia, admissao, data, paciente,
+               (cliente_id, hospital_id, importacao_id, competencia, admissao, admissao_norm, data, paciente, paciente_norm,
                 convenio, fonte, classificacao, procedimento, procedimento_norm, quantidade, valor,
                 executante, executante_norm, auxiliar, auxiliar_norm, indicante, indicante_norm,
                 solicitante, solicitante_norm, laudo, laudo_norm, linha_origem)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, l.data, l.paciente,
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, U_.normAdm(l.admissao), l.data, l.paciente, U_.normalizar(l.paciente),
               l.convenio, l.fonte, l.classificacao, l.procedimento, l.procedimento_norm, l.quantidade, l.valor,
               l.executante, U_.normalizar(l.executante), l.auxiliar, U_.normalizar(l.auxiliar),
               l.indicante, U_.normalizar(l.indicante), l.solicitante, U_.normalizar(l.solicitante),
@@ -476,11 +476,11 @@
         } else {
           Banco.executar(
             `INSERT INTO linhas_repasse
-               (cliente_id, hospital_id, importacao_id, competencia, admissao, data, paciente,
+               (cliente_id, hospital_id, importacao_id, competencia, admissao, admissao_norm, data, paciente,
                 convenio, fonte, procedimento, procedimento_norm, papel, papel_canon,
                 medico, medico_norm, quantidade, produzido, repassado, status, linha_origem)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, l.data, l.paciente,
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [p.clienteId, p.hospitalId, impId, l.competencia, l.admissao, U_.normAdm(l.admissao), l.data, l.paciente,
               l.convenio, l.fonte, l.procedimento, l.procedimento_norm, l.papel, l.papel_canon,
               l.medico, U_.normalizar(l.medico), l.quantidade, l.produzido, l.repassado,
               l.status, l.linha_origem]);
@@ -612,7 +612,7 @@
     'observacao_admissao', 'sala', 'profissional_admissao', 'tipo_paciente', 'cod_paciente',
     'data_nascimento', 'idade_atendimento', 'faixa_etaria', 'cid_alta', 'descricao_cid', 'consultor',
     'medico', 'cirurgiao', 'instrumentador', 'contatologa', 'ortoptista', 'auxiliar_sadt', 'auxiliar2'];
-  const COLUNAS_NUCLEO = ['competencia', 'admissao', 'data', 'paciente', 'convenio', 'fonte', 'classificacao',
+  const COLUNAS_NUCLEO = ['competencia', 'admissao', 'admissao_norm', 'data', 'paciente', 'paciente_norm', 'convenio', 'fonte', 'classificacao',
     'procedimento', 'procedimento_norm', 'quantidade', 'valor', 'executante', 'executante_norm',
     'auxiliar', 'auxiliar_norm', 'indicante', 'indicante_norm', 'solicitante', 'solicitante_norm',
     'laudo', 'laudo_norm', 'linha_origem'];
@@ -694,9 +694,10 @@
       const auxiliar = txt(raw, 'auxiliar'), indicante = txt(raw, 'indicante');
       const solicitante = txt(raw, 'solicitante'), laudo = txt(raw, 'laudo');
       const valor = U_.paraNumero(cel(raw, 'valor'));
+      const paciente = txt(raw, 'paciente');
       const l = {
-        competencia: U_.competenciaDe(dataISO), admissao: adm, data: dataISO,
-        paciente: txt(raw, 'paciente'), convenio,
+        competencia: U_.competenciaDe(dataISO), admissao: adm, admissao_norm: U_.normAdm(adm), data: dataISO,
+        paciente, paciente_norm: U_.normalizar(paciente), convenio,
         fonte: fonteTxt ? U_.classificarFonte(fonteTxt) : (convenio ? U_.classificarFonte(convenio) : 'CONVENIO'),
         classificacao: U_.normalizar(cel(raw, 'classificacao')),
         procedimento: proc, procedimento_norm: U_.normalizar(proc),

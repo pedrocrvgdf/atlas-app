@@ -30,11 +30,14 @@
     IDB_NOME: 'atlas_auditoria',
     IDB_STORE: 'banco',
     IDB_CHAVE: 'principal',
+    IDB_CHAVE_CFG: 'config',     // configuração à parte (gravação leve)
+    _sujoDados: false, _sujoConfig: false, _jaSalvouDados: false,
 
     // ──────────────────────────────────────────────────────────────────
     // BOOT
     // ──────────────────────────────────────────────────────────────────
-    async inicializar() {
+    async inicializar(opts = {}) {
+      const progresso = typeof opts.progresso === 'function' ? opts.progresso : () => {};
       if (typeof initSqlJs === 'undefined') {
         throw new Error('sql.js não carregou (libs/sql-wasm.js ausente?)');
       }
@@ -48,17 +51,93 @@
       }
       this.SQL = await initSqlJs(cfg);
 
-      const salvo = await this._idbLer();
+      progresso('Abrindo a base…');
+      const salvo = await this._idbLer(this.IDB_CHAVE);
       this.db = salvo ? new this.SQL.Database(salvo) : new this.SQL.Database();
+      this._jaSalvouDados = !!salvo;
 
       // Schema idempotente + migrações defensivas + seeds
+      progresso('Preparando as tabelas…');
       this.db.exec(window.SCHEMA_SQL);
       this._migrar();
       if (window.SCHEMA_SEEDS) this.db.exec(window.SCHEMA_SEEDS);
+      // a configuração tem gravação própria (leve) — o que está lá é o mais novo
+      await this._aplicarConfigSalva();
 
       this._pronto = true;
-      if (!salvo) await this.salvar({ imediato: true });
+      // índice de admissão normalizada em linhas de versões antigas (uma vez só)
+      const normalizadas = await this.normalizarPendentes(progresso);
+      if (!salvo || normalizadas) await this.salvar({ tudo: true });
+      this._sujoDados = false; this._sujoConfig = false;
       return this;
+    },
+
+    // ──────────────────────────────────────────────────────────────────
+    // ADMISSÃO NORMALIZADA — toda busca por admissão passa por admissao_norm
+    // (só dígitos, sem zeros à esquerda — Utilidades.normAdm) com índice.
+    // Linhas antigas (ou inseridas por SQL cru) são preenchidas aqui.
+    // ──────────────────────────────────────────────────────────────────
+    _normVersao: -1,
+    TABELAS_ADM: ['linhas_producao', 'linhas_repasse', 'linhas_medico'],
+
+    _temPendentes() {
+      for (const t of this.TABELAS_ADM) {
+        if (this.escalar(`SELECT 1 FROM ${t} WHERE admissao_norm IS NULL LIMIT 1`) != null) return true;
+      }
+      return false;
+    },
+
+    /** Preenche um lote (a partir de um id) e devolve { n, ultimoId }. */
+    _normalizarLote(tabela, aPartirDe, limite) {
+      const U = window.Utilidades;
+      const comPac = tabela === 'linhas_producao';
+      const rows = this.query(
+        `SELECT id, admissao${comPac ? ', paciente' : ''} FROM ${tabela}
+          WHERE id > ? AND admissao_norm IS NULL ORDER BY id LIMIT ${limite}`, [aPartirDe]);
+      if (!rows.length) return { n: 0, ultimoId: aPartirDe };
+      const sql = comPac
+        ? `UPDATE ${tabela} SET admissao_norm = ?, paciente_norm = ? WHERE id = ?`
+        : `UPDATE ${tabela} SET admissao_norm = ? WHERE id = ?`;
+      this.db.exec('BEGIN');
+      try {
+        this.executarLote(sql, rows.map(r => comPac
+          ? [U.normAdm(r.admissao), U.normalizar(r.paciente), r.id]
+          : [U.normAdm(r.admissao), r.id]));
+        this.db.exec('COMMIT');
+      } catch (e) { this.db.exec('ROLLBACK'); throw e; }
+      return { n: rows.length, ultimoId: rows[rows.length - 1].id };
+    },
+
+    /** Boot: preenche em lotes cedendo a tela entre eles. Devolve quantas linhas preencheu. */
+    async normalizarPendentes(progresso) {
+      const p = typeof progresso === 'function' ? progresso : () => {};
+      let total = 0;
+      for (const t of this.TABELAS_ADM) {
+        const pend = this.escalar(`SELECT COUNT(*) FROM ${t} WHERE admissao_norm IS NULL`) || 0;
+        if (!pend) continue;
+        let feitas = 0, ultimoId = 0;
+        while (feitas < pend) {
+          const r = this._normalizarLote(t, ultimoId, 5000);
+          if (!r.n) break;
+          feitas += r.n; ultimoId = r.ultimoId; total += r.n;
+          p(`Preparando o índice de admissões… ${Math.min(100, Math.round(feitas / pend * 100))}%`);
+          await new Promise(res => setTimeout(res, 0));
+        }
+      }
+      this._normVersao = this._versao;
+      return total;
+    },
+
+    /** Síncrono, para quem consulta por admissão: garante que nada ficou sem admissao_norm. */
+    garantirNormalizados() {
+      if (this._normVersao === this._versao) return;
+      if (this._temPendentes()) {
+        for (const t of this.TABELAS_ADM) {
+          let ultimoId = 0;
+          for (;;) { const r = this._normalizarLote(t, ultimoId, 20000); if (!r.n) break; ultimoId = r.ultimoId; }
+        }
+      }
+      this._normVersao = this._versao;
     },
 
     /**
@@ -87,6 +166,20 @@
       addCol('linhas_producao', 'idade_atendimento', 'idade_atendimento REAL');
       // v0.7: origem do relatório do SISTEMA (Convênio / Particular / os dois)
       addCol('importacoes', 'origem', 'origem TEXT');
+      // v0.7.2: admissão normalizada (índice de busca) + paciente normalizado na produção.
+      // Os índices ficam AQUI (não no SCHEMA_SQL) porque a coluna pode não existir
+      // ainda num banco antigo na hora em que o schema roda.
+      addCol('linhas_producao', 'admissao_norm', 'admissao_norm TEXT');
+      addCol('linhas_producao', 'paciente_norm', 'paciente_norm TEXT');
+      addCol('linhas_repasse', 'admissao_norm', 'admissao_norm TEXT');
+      addCol('linhas_medico', 'admissao_norm', 'admissao_norm TEXT');
+      for (const [nome, ddl] of [
+        ['idx_prod_cli_admn', 'linhas_producao(cliente_id, admissao_norm)'],
+        ['idx_rep_cli_admn', 'linhas_repasse(cliente_id, admissao_norm)'],
+        ['idx_med_cli_admn', 'linhas_medico(cliente_id, admissao_norm)']]) {
+        try { this.db.exec(`CREATE INDEX IF NOT EXISTS ${nome} ON ${ddl}`); }
+        catch (e) { console.warn('[banco] índice falhou:', nome, e); }
+      }
     },
 
     // ──────────────────────────────────────────────────────────────────
@@ -119,6 +212,7 @@
       const stmt = this.db.prepare(sql);
       try { stmt.bind(params); stmt.step(); } finally { stmt.free(); }
       this._versao++;
+      this._sujoDados = true;
     },
 
     /**
@@ -139,6 +233,7 @@
         }
       } finally { stmt.free(); }
       this._versao++;
+      this._sujoDados = true;
       return n;
     },
 
@@ -153,6 +248,7 @@
       try { fn(); this.db.exec('COMMIT'); }
       catch (e) { this.db.exec('ROLLBACK'); throw e; }
       this._versao++;
+      this._sujoDados = true;
     },
 
     /** Lê config (JSON ou texto puro). */
@@ -164,23 +260,69 @@
 
     configGravar(chave, valor) {
       const txt = (typeof valor === 'string') ? valor : JSON.stringify(valor);
+      const sujo = this._sujoDados;
       this.executar(
         `INSERT INTO config (chave, valor, atualizado_em) VALUES (?, ?, CURRENT_TIMESTAMP)
          ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor, atualizado_em = CURRENT_TIMESTAMP`,
         [chave, txt]);
+      // config tem gravação própria (leve): mexer num filtro não exporta a base inteira
+      this._sujoDados = sujo;
+      this._sujoConfig = true;
+    },
+
+    _configJSON() {
+      return JSON.stringify(this.query('SELECT chave, valor, atualizado_em FROM config'));
+    },
+
+    /** A config gravada à parte é sempre a mais nova: reaplica sobre a tabela do banco. */
+    async _aplicarConfigSalva() {
+      const txt = await this._idbLer(this.IDB_CHAVE_CFG);
+      if (!txt) return;
+      let rows = [];
+      try { rows = JSON.parse(txt) || []; } catch (_) { return; }
+      if (!Array.isArray(rows) || !rows.length) return;
+      this.db.exec('BEGIN');
+      try {
+        this.executarLote(
+          `INSERT INTO config (chave, valor, atualizado_em) VALUES (?, ?, ?)
+           ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor, atualizado_em = excluded.atualizado_em`,
+          rows.map(r => [r.chave, r.valor, r.atualizado_em || null]));
+        this.db.exec('COMMIT');
+      } catch (e) { this.db.exec('ROLLBACK'); console.warn('[banco] config salva não pôde ser aplicada:', e); }
     },
 
     // ──────────────────────────────────────────────────────────────────
     // PERSISTÊNCIA (IndexedDB)
     // ──────────────────────────────────────────────────────────────────
 
+    /**
+     * Persiste no IndexedDB. A base (export inteiro do SQLite — pesado com
+     * centenas de milhares de linhas) só vai quando houve gravação de DADOS;
+     * a configuração vai sempre, como JSON pequeno. opts.tudo força a base.
+     */
     async salvar(opts = {}) {
       if (!this.db || !this._pronto) return;
       clearTimeout(this._salvarTimer);
       this._salvarTimer = null;
-      const bytes = this.db.export();
-      await this._idbGravar(bytes);
-      void opts;
+      // gravações em FILA: duas salvas sobrepostas nunca chegam ao IndexedDB
+      // fora de ordem (a mais antiga não pode vencer a mais nova)
+      const fila = (this._filaSalvar || Promise.resolve())
+        .then(() => this._salvarAgora(opts))
+        .catch(e => console.error('[banco] salvar falhou:', e));
+      this._filaSalvar = fila;
+      await fila;
+    },
+
+    async _salvarAgora(opts) {
+      if (opts.tudo || this._sujoDados || !this._jaSalvouDados) {
+        const bytes = this.db.export();
+        this._sujoDados = false;   // ANTES de aguardar: gravação durante o await suja de novo
+        await this._idbGravar(this.IDB_CHAVE, bytes);
+        this._jaSalvouDados = true;
+      }
+      const cfg = this._configJSON();
+      this._sujoConfig = false;
+      await this._idbGravar(this.IDB_CHAVE_CFG, cfg);
     },
 
     /** Versão coalescida: várias edições em sequência = 1 gravação. */
@@ -191,25 +333,35 @@
       }, ms);
     },
 
+    /** Uma conexão só com o IndexedDB (reaberta se o navegador a fechar). */
     _idbAbrir() {
-      return new Promise((resolve, reject) => {
+      if (this._idbConexao) return Promise.resolve(this._idbConexao);
+      if (this._idbAbrindo) return this._idbAbrindo;
+      this._idbAbrindo = new Promise((resolve, reject) => {
         const req = indexedDB.open(this.IDB_NOME, 1);
         req.onupgradeneeded = () => {
           if (!req.result.objectStoreNames.contains(this.IDB_STORE)) {
             req.result.createObjectStore(this.IDB_STORE);
           }
         };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const idb = req.result;
+          idb.onclose = () => { this._idbConexao = null; };
+          idb.onversionchange = () => { idb.close(); this._idbConexao = null; };
+          this._idbConexao = idb; this._idbAbrindo = null;
+          resolve(idb);
+        };
+        req.onerror = () => { this._idbAbrindo = null; reject(req.error); };
       });
+      return this._idbAbrindo;
     },
 
-    async _idbLer() {
+    async _idbLer(chave) {
       try {
         const idb = await this._idbAbrir();
         return await new Promise((resolve, reject) => {
           const tx = idb.transaction(this.IDB_STORE, 'readonly');
-          const rq = tx.objectStore(this.IDB_STORE).get(this.IDB_CHAVE);
+          const rq = tx.objectStore(this.IDB_STORE).get(chave || this.IDB_CHAVE);
           rq.onsuccess = () => resolve(rq.result || null);
           rq.onerror = () => reject(rq.error);
         });
@@ -219,12 +371,12 @@
       }
     },
 
-    async _idbGravar(bytes) {
+    async _idbGravar(chave, valor) {
       try {
         const idb = await this._idbAbrir();
         await new Promise((resolve, reject) => {
           const tx = idb.transaction(this.IDB_STORE, 'readwrite');
-          tx.objectStore(this.IDB_STORE).put(bytes, this.IDB_CHAVE);
+          tx.objectStore(this.IDB_STORE).put(valor, chave);
           tx.oncomplete = () => resolve();
           tx.onerror = () => reject(tx.error);
         });
@@ -253,16 +405,19 @@
       this.db.exec(window.SCHEMA_SQL);   // garante tabelas novas em banco antigo
       this._migrar();
       this._versao++;
-      await this.salvar({ imediato: true });
+      await this.normalizarPendentes();
+      await this.salvar({ tudo: true });   // a config passa a ser a do arquivo restaurado
     },
 
     async resetar() {
       if (this.db) this.db.close();
       this.db = new this.SQL.Database();
       this.db.exec(window.SCHEMA_SQL);
+      this._migrar();
       if (window.SCHEMA_SEEDS) this.db.exec(window.SCHEMA_SEEDS);
       this._versao++;
-      await this.salvar({ imediato: true });
+      this._normVersao = this._versao;
+      await this.salvar({ tudo: true });
     },
   };
 

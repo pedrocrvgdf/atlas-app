@@ -110,39 +110,85 @@ window.AtlasInspecao = (function () {
 
   // ────────────────────────────────────────────────────────────────────
   // DADOS (memoizados por Banco._versao — convenção da casa)
+  //
+  // A base real tem centenas de milhares de linhas: a Inspeção NUNCA carrega
+  // tabelas inteiras. dados() só guarda contagens leves; as linhas das três
+  // bases e o resultado do motor vêm por LOTE, só das admissões pedidas
+  // (busca ou pauta), pelo índice de admissao_norm.
   // ────────────────────────────────────────────────────────────────────
   let _memo = { versao: -1, cliente: 0 };
+  const loteVazio = () => ({ versao: -1, cliente: 0, prodPor: new Map(), repPor: new Map(),
+    medPor: new Map(), motorPor: new Map(), cobertas: new Set() });
+  let _lote = loteVazio();
 
-  /** Mapas por admissão NORMALIZADA das bases (produção, sistema, médico) + resultado do motor. */
+  /** Contagens leves do cliente (sem carregar a base). */
   function dados() {
     // robustez: quem chamar o módulo por fora da tela ainda resolve o cliente
     const ativo = App.clienteAtivo && App.clienteAtivo();
     if (ativo) clienteId = ativo.id;
     if (_memo.versao === Banco._versao && _memo.cliente === clienteId) return _memo;
-    const norm = U().normAdm;
-    const agrupar = (rows) => {
-      const m = new Map();
-      for (const r of rows) {
-        const k = norm(r.admissao);
-        if (!k) continue;
-        if (!m.has(k)) m.set(k, []);
-        m.get(k).push(r);
-      }
-      return m;
-    };
-    const prodPor = agrupar(Banco.query(
-      'SELECT * FROM linhas_producao WHERE cliente_id = ? ORDER BY id', [clienteId]));
-    const repPor = agrupar(Banco.query(
-      'SELECT * FROM linhas_repasse WHERE cliente_id = ? ORDER BY id', [clienteId]));
-    const r = Motor.auditar({ clienteId, hospitalId: 0, competencia: '' });
-    const motorPor = new Map(r.admissoes.map(a => [U().normAdm(a.admissao), a]));
-    // relatório do MÉDICO (o que ele de fato recebeu) — só linhas com admissão
-    const medRows = Banco.query('SELECT * FROM linhas_medico WHERE cliente_id = ? ORDER BY id', [clienteId]);
-    const medPor = agrupar(medRows.filter(l => String(l.admissao || '').trim()));
-    const medNaoResolvidas = medRows.filter(l => !String(l.admissao || '').trim()).length;
-    _memo = { versao: Banco._versao, cliente: clienteId, prodPor, repPor, motorPor, resultado: r,
-      medPor, temBaseMedico: medRows.length > 0, medTotal: medRows.length, medNaoResolvidas };
+    Banco.garantirNormalizados();
+    const medTotal = Banco.escalar('SELECT COUNT(*) FROM linhas_medico WHERE cliente_id = ?', [clienteId]) || 0;
+    const medNaoResolvidas = medTotal ? (Banco.escalar(
+      `SELECT COUNT(*) FROM linhas_medico WHERE cliente_id = ? AND TRIM(COALESCE(admissao, '')) = ''`, [clienteId]) || 0) : 0;
+    const temDados = Banco.escalar('SELECT 1 FROM linhas_producao WHERE cliente_id = ? LIMIT 1', [clienteId]) != null ||
+      Banco.escalar('SELECT 1 FROM linhas_repasse WHERE cliente_id = ? LIMIT 1', [clienteId]) != null;
+    _memo = { versao: Banco._versao, cliente: clienteId, temBaseMedico: medTotal > 0, medTotal, medNaoResolvidas, temDados };
     return _memo;
+  }
+
+  /**
+   * Garante no lote as linhas (produção, sistema, médico) e o resultado do
+   * motor das admissões pedidas — em consultas por lotes de 800 códigos.
+   */
+  function carregarLote(adms) {
+    dados();
+    if (_lote.versao !== Banco._versao || _lote.cliente !== clienteId) {
+      _lote = loteVazio(); _lote.versao = Banco._versao; _lote.cliente = clienteId;
+    }
+    const faltam = [...new Set(adms.map(a => U().normAdm(a)).filter(k => k && !_lote.cobertas.has(k)))];
+    if (!faltam.length) return _lote;
+    const agrupar = (rows, mapa) => {
+      for (const r of rows) {
+        const k = r.admissao_norm || U().normAdm(r.admissao);
+        if (!mapa.has(k)) mapa.set(k, []);
+        mapa.get(k).push(r);
+      }
+    };
+    for (let i = 0; i < faltam.length; i += 800) {
+      const lote = faltam.slice(i, i + 800), marcas = lote.map(() => '?').join(',');
+      agrupar(Banco.query(`SELECT * FROM linhas_producao WHERE cliente_id = ? AND admissao_norm IN (${marcas}) ORDER BY id`, [clienteId, ...lote]), _lote.prodPor);
+      agrupar(Banco.query(`SELECT * FROM linhas_repasse WHERE cliente_id = ? AND admissao_norm IN (${marcas}) ORDER BY id`, [clienteId, ...lote]), _lote.repPor);
+      agrupar(Banco.query(`SELECT * FROM linhas_medico WHERE cliente_id = ? AND admissao_norm IN (${marcas}) ORDER BY id`, [clienteId, ...lote]), _lote.medPor);
+    }
+    const r = Motor.auditar({ clienteId, hospitalId: 0, competencia: '', admissoes: faltam });
+    for (const a of r.admissoes) _lote.motorPor.set(U().normAdm(a.admissao), a);
+    for (const k of faltam) _lote.cobertas.add(k);
+    return _lote;
+  }
+
+  /** Médicos do cliente (nome oficial pelo De-Para) — para o recorte da lateral. */
+  let _medMemo = { versao: -1, cliente: 0, lista: null };
+  function medicosDoCliente() {
+    if (_medMemo.versao === Banco._versao && _medMemo.cliente === clienteId && _medMemo.lista) return _medMemo.lista;
+    const sin = Motor.mapaSinonimos(clienteId);
+    const nomes = new Map();
+    const add = (rows) => {
+      for (const r of rows) {
+        const cru = String(r.nome || '').trim();
+        if (!cru) continue;
+        const nome = sin.get(U().normalizar(cru)) || cru;
+        const k = U().normalizar(nome);
+        if (k && !nomes.has(k)) nomes.set(k, nome);
+      }
+    };
+    for (const col of ['executante', 'auxiliar', 'indicante', 'solicitante', 'laudo']) {
+      add(Banco.query(`SELECT ${col} AS nome FROM linhas_producao WHERE cliente_id = ? AND ${col} <> '' GROUP BY ${col} LIMIT 1500`, [clienteId]));
+    }
+    add(Banco.query(`SELECT medico AS nome FROM linhas_repasse WHERE cliente_id = ? AND medico <> '' GROUP BY medico LIMIT 1500`, [clienteId]));
+    _medMemo = { versao: Banco._versao, cliente: clienteId,
+      lista: [...nomes.entries()].map(([k, nome]) => ({ k, nome })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')) };
+    return _medMemo.lista;
   }
 
   /**
@@ -191,8 +237,8 @@ window.AtlasInspecao = (function () {
           if (comProc.length === 1) escolhida = comProc[0];
         }
         if (!escolhida) continue;
-        Banco.executar(`UPDATE linhas_medico SET admissao = ?, admissao_origem = 'RESOLVIDA' WHERE id = ?`,
-          [escolhida.adm, x.id]);
+        Banco.executar(`UPDATE linhas_medico SET admissao = ?, admissao_norm = ?, admissao_origem = 'RESOLVIDA' WHERE id = ?`,
+          [escolhida.adm, U().normAdm(escolhida.adm), x.id]);
         n++;
       }
     });
@@ -203,10 +249,11 @@ window.AtlasInspecao = (function () {
   function inspecionar(admInput) {
     const d = dados();
     const adm = U().normAdm(admInput);
-    const prod = d.prodPor.get(adm) || [];
-    const rep = d.repPor.get(adm) || [];
-    const mAdm = d.motorPor.get(adm) || null;
-    const med = d.medPor.get(adm) || [];
+    const L = carregarLote([adm]);
+    const prod = L.prodPor.get(adm) || [];
+    const rep = L.repPor.get(adm) || [];
+    const mAdm = L.motorPor.get(adm) || null;
+    const med = L.medPor.get(adm) || [];
 
     const totalRepassado = rep.reduce((s, l) =>
       s + (/glosa/i.test(String(l.status || '')) ? 0 : (Number(l.repassado) || 0)), 0);
@@ -349,16 +396,15 @@ window.AtlasInspecao = (function () {
   function buscarPorNome(nome, dataISO) {
     const palavras = U().normalizar(nome).split(' ').filter(Boolean);
     if (!palavras.length) return [];
-    // LIKE largo pela 1ª palavra (barato) + refino JS com TODAS as palavras
+    // todas as palavras no SQL, sobre paciente_norm (sem acento/caixa)
+    dados();   // garante paciente_norm preenchido
     const rows = Banco.query(
       `SELECT admissao, data, paciente, procedimento, classificacao FROM linhas_producao
-        WHERE cliente_id = ? AND paciente LIKE ? LIMIT 8000`,
-      [clienteId, '%' + palavras[0] + '%']);
+        WHERE cliente_id = ? ${palavras.map(() => 'AND paciente_norm LIKE ?').join(' ')}${dataISO ? ' AND data = ?' : ''}
+        LIMIT 8000`,
+      [clienteId, ...palavras.map(p => '%' + p + '%'), ...(dataISO ? [dataISO] : [])]);
     const porAdm = new Map();
     for (const r of rows) {
-      const pn = U().normalizar(r.paciente);
-      if (!palavras.every(p => pn.includes(p))) continue;
-      if (dataISO && r.data !== dataISO) continue;
       const k = U().normAdm(r.admissao);
       if (!porAdm.has(k)) {
         porAdm.set(k, { adm: k, admRotulo: String(r.admissao).trim(), data: r.data,
@@ -388,6 +434,7 @@ window.AtlasInspecao = (function () {
     const d = dados();
 
     // stats da pauta (referência visual: fileira de cards, o último escuro)
+    carregarLote(pauta.map(p => p.admissao));   // uma ida ao banco para a pauta inteira
     let stPagas = 0, stAguard = 0, stFalta = 0, stNaoChegou = 0, stNaoChegouN = 0;
     for (const p of pauta) {
       const i = inspecionar(p.admissao);
@@ -521,7 +568,7 @@ window.AtlasInspecao = (function () {
     }
 
     if (!st.admAtual) {
-      const temDados = d.prodPor.size || d.repPor.size;
+      const temDados = d.temDados;
       box.innerHTML = `<div class="painel"><div class="insp-painel-vazio">
         ${temDados
           ? 'Busque uma admissão pelo código ou pelo paciente — ou clique numa admissão da <strong>planilha do médico</strong> ao lado.'
@@ -761,9 +808,8 @@ window.AtlasInspecao = (function () {
 
     // produtos repassáveis do cliente (para vigias/coluna/situação)
     const produtos = produtosDoCliente();
-    const medicos = [...d.resultado.porMedico.entries()]
-      .filter(([k]) => k !== 'SEM PROFISSIONAL')
-      .map(([k, r]) => ({ k, nome: r.medico })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const medicos = medicosDoCliente();
+    const L = carregarLote(pauta.map(p => p.admissao));
 
     const busca = (id) => st.buscas[id] || '';
     const filtra = (lista, id, campo) => {
@@ -828,7 +874,7 @@ window.AtlasInspecao = (function () {
         <div class="lat-bloco-titulo">Admissões da pauta<span class="n">${pauta.length}</span></div>
         <div class="lat-lista" style="max-height:320px">
           ${pauta.length ? pauta.map((p, i) => {
-            const pend = !d.repPor.has(U().normAdm(p.admissao));
+            const pend = !(L.repPor.get(U().normAdm(p.admissao)) || []).length;
             return `<button class="lat-pauta-item ${pend ? 'pendente' : ''} ${st.admAtual === U().normAdm(p.admissao) ? 'ativa' : ''}"
               data-pauta="${i}" ${pend ? `title="${DICA_PENDENTE}"` : ''}>
               <span class="cod mono">${esc(p.admissao)}</span>
@@ -1099,10 +1145,10 @@ window.AtlasInspecao = (function () {
 
   /** paciente/data resolvidos pela produção (ou repasse). */
   function resolverPelaProducao(adms) {
-    const d = dados();
+    const L = carregarLote(adms.map(a => a.admissao));
     return adms.map(a => {
       const k = U().normAdm(a.admissao);
-      const p = (d.prodPor.get(k) || [])[0] || (d.repPor.get(k) || [])[0] || {};
+      const p = (L.prodPor.get(k) || [])[0] || (L.repPor.get(k) || [])[0] || {};
       return { admissao: String(a.admissao).trim(), paciente: p.paciente || '', data: p.data || '' };
     });
   }
@@ -1136,6 +1182,7 @@ window.AtlasInspecao = (function () {
 
   /** Monta o Workbook (separado do download para os testes conferirem). */
   async function gerarExtracao(pauta, progresso) {
+    carregarLote(pauta.map(p => p.admissao));   // as três bases + motor só da pauta
     const comFaltante = flagFaltante();
     const vigias = lerVigias();
     const prodSel = [...lerSet(CFG.prodSel)];

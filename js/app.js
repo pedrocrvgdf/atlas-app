@@ -176,8 +176,10 @@
   // ──────────────────────────────────────────────────────────────────────
 
   async function boot() {
+    const mensagem = (t) => { const m = document.querySelector('.loading-overlay .message'); if (m) m.textContent = t; };
     try {
-      await Banco.inicializar();
+      await Banco.inicializar({ progresso: mensagem });
+      mensagem('Montando a tela…');
       App.renderShell();
       App.navegar('inspecao');   // a Inspeção é a base da ferramenta
     } catch (e) {

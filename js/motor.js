@@ -128,49 +128,58 @@
     if (_cacheInfer.chave === chave) return _cacheInfer.padroes;
 
     const minAmostras = cfgNum('inferencia_min_amostras', 3);
-    const linhas = Banco.query(
-      `SELECT procedimento_norm AS proc, papel_canon AS papel, fonte,
-              quantidade, produzido, repassado
-         FROM linhas_repasse
-        WHERE hospital_id = ? AND repassado > 0`, [hospitalId]);
-
-    // agrupa observações por proc × papel × fonte
+    // O SQLite agrega (proc × papel × fonte × valor) — chega ao JS só o
+    // histograma, não as centenas de milhares de linhas do histórico.
+    const chaveDe = (r) => r.proc + '|' + (r.papel || 'EXECUTANTE') + '|' + (r.fonte || 'CONVENIO');
     const grupos = new Map();
-    for (const l of linhas) {
-      const papel = l.papel || 'EXECUTANTE';
-      const k = l.proc + '|' + papel + '|' + (l.fonte || 'CONVENIO');
-      let g = grupos.get(k);
-      if (!g) { g = { valores: [], razoes: [] }; grupos.set(k, g); }
-      const qtd = Number(l.quantidade) || 1;
-      // valor unitário pago (linhas com quantidade > 1 normalizadas)
-      g.valores.push(Math.round((Number(l.repassado) / qtd) * 100) / 100);
-      const prod = Number(l.produzido) || 0;
-      if (prod > 0) g.razoes.push(Number(l.repassado) / prod);
+    const grupo = (k) => { let g = grupos.get(k); if (!g) { g = { n: 0, valores: new Map(), razoes: [] }; grupos.set(k, g); } return g; };
+    // valor unitário pago (linhas com quantidade > 1 normalizadas), com frequência
+    for (const r of Banco.query(
+      `SELECT procedimento_norm AS proc, papel_canon AS papel, fonte,
+              ROUND(repassado / (CASE WHEN quantidade > 0 THEN quantidade ELSE 1 END), 2) AS unit, COUNT(*) AS f
+         FROM linhas_repasse WHERE hospital_id = ? AND repassado > 0
+        GROUP BY 1, 2, 3, 4`, [hospitalId])) {
+      const g = grupo(chaveDe(r));
+      const v = Number(r.unit) || 0, f = Number(r.f) || 0;
+      g.n += f; g.valores.set(v, (g.valores.get(v) || 0) + f);
+    }
+    // razão pago/produzido (4 casas), com frequência
+    for (const r of Banco.query(
+      `SELECT procedimento_norm AS proc, papel_canon AS papel, fonte,
+              ROUND(repassado * 1.0 / produzido, 4) AS razao, COUNT(*) AS f
+         FROM linhas_repasse WHERE hospital_id = ? AND repassado > 0 AND produzido > 0
+        GROUP BY 1, 2, 3, 4`, [hospitalId])) {
+      grupo(chaveDe(r)).razoes.push([Number(r.razao) || 0, Number(r.f) || 0]);
     }
 
     const padroes = new Map();
     for (const [k, g] of grupos) {
-      const n = g.valores.length;
+      const n = g.n;
       if (n < minAmostras) continue;
 
       // hipótese VALOR FIXO: moda dos valores unitários
-      const freq = new Map();
-      for (const v of g.valores) freq.set(v, (freq.get(v) || 0) + 1);
       let moda = 0, fModa = 0;
-      for (const [v, f] of freq) if (f > fModa || (f === fModa && v > moda)) { moda = v; fModa = f; }
+      for (const [v, f] of g.valores) if (f > fModa || (f === fModa && v > moda)) { moda = v; fModa = f; }
       const forcaFixo = fModa / n;
 
-      // hipótese PERCENTUAL: mediana das razões pago/produzido + dispersão
+      // hipótese PERCENTUAL: mediana (ponderada) das razões pago/produzido + dispersão
       let forcaPct = 0, pctMediana = 0;
-      if (g.razoes.length >= minAmostras) {
-        const r = [...g.razoes].sort((a, b) => a - b);
-        pctMediana = r[Math.floor(r.length / 2)];
+      const nRaz = g.razoes.reduce((s, [, f]) => s + f, 0);
+      if (nRaz >= minAmostras) {
+        const r = [...g.razoes].sort((a, b) => a[0] - b[0]);
+        const medianaPonderada = (pares) => {   // pares [valor, freq] ordenados por valor
+          const tot = pares.reduce((s, [, f]) => s + f, 0);
+          let acc = 0;
+          for (const [v, f] of pares) { acc += f; if (acc > tot / 2 || (acc === tot / 2 && f)) return v; }
+          return pares.length ? pares[pares.length - 1][0] : 0;
+        };
+        pctMediana = medianaPonderada(r);
         if (pctMediana > 0 && pctMediana <= 1.5) {
-          const desvios = r.map(x => Math.abs(x - pctMediana)).sort((a, b) => a - b);
-          const mad = desvios[Math.floor(desvios.length / 2)];
+          const desvios = r.map(([v, f]) => [Math.abs(v - pctMediana), f]).sort((a, b) => a[0] - b[0]);
+          const mad = medianaPonderada(desvios);
           const dispersao = mad / pctMediana;             // 0 = perfeitamente estável
-          const dentro = r.filter(x => Math.abs(x - pctMediana) / pctMediana <= 0.02).length;
-          forcaPct = (dispersao <= 0.05) ? dentro / r.length : 0;
+          const dentro = r.reduce((s, [v, f]) => s + (Math.abs(v - pctMediana) / pctMediana <= 0.02 ? f : 0), 0);
+          forcaPct = (dispersao <= 0.05) ? dentro / nRaz : 0;
         }
       }
 
@@ -184,7 +193,7 @@
       } else if (forcaPct >= 0.6) {
         padroes.set(k, {
           tipo: 'PCT', valor: null, percentual: Math.round(pctMediana * 10000) / 100,
-          amostras: g.razoes.length, confianca: Math.round(forcaPct * pesoAmostras * 100) / 100,
+          amostras: nRaz, confianca: Math.round(forcaPct * pesoAmostras * 100) / 100,
         });
       }
     }
@@ -240,15 +249,38 @@
   // AUDITORIA — o cruzamento
   // ──────────────────────────────────────────────────────────────────────
 
+  // colunas da produção que o cruzamento usa (a íntegra tem 57 — não carregar tudo)
+  const COLS_PROD = `id, hospital_id, competencia, admissao, admissao_norm, data, paciente, convenio, fonte,
+    classificacao, procedimento, procedimento_norm, quantidade, valor, executante, auxiliar, indicante,
+    solicitante, laudo`;
+
   /**
-   * @param {object} f  { clienteId, hospitalId (0 = todos), competencia ('' = todas) }
+   * @param {object} f  { clienteId, hospitalId (0 = todos), competencia ('' = todas),
+   *                      admissoes (opcional: só estas admissões — códigos em
+   *                      qualquer grafia; é o caminho da Inspeção, que nunca
+   *                      carrega a base inteira) }
    * @returns { kpis, admissoes[], porMedico Map, semProducao[], geradoEm }
    */
   function auditar(f) {
-    const chave = [f.clienteId, f.hospitalId || 0, f.competencia || '', Banco._versao].join('|');
-    if (_cache.chave === chave) return _cache.resultado;
-
     const U_ = U();
+    const admFiltro = Array.isArray(f.admissoes)
+      ? [...new Set(f.admissoes.map(a => U_.normAdm(a)).filter(Boolean))] : null;
+    const chave = [f.clienteId, f.hospitalId || 0, f.competencia || '', Banco._versao,
+      admFiltro ? admFiltro.join(',') : '*'].join('|');
+    if (_cache.chave === chave) return _cache.resultado;
+    Banco.garantirNormalizados();
+
+    // consulta por lotes de admissões quando há filtro (IN de até 800 por vez)
+    const consultar = (sqlBase, params, ordem) => {
+      if (!admFiltro) return Banco.query(sqlBase + ordem, params);
+      const out = [];
+      for (let i = 0; i < admFiltro.length; i += 800) {
+        const lote = admFiltro.slice(i, i + 800);
+        out.push(...Banco.query(sqlBase + ` AND admissao_norm IN (${lote.map(() => '?').join(',')})` + ordem,
+          params.concat(lote)));
+      }
+      return out;
+    };
     const tol = cfgNum('tolerancia_centavos', 0.05);
     const minConf = cfgNum('inferencia_min_confianca', 0.6);
     const limiarFuzzy = cfgNum('fuzzy_limiar', 0.88);
@@ -256,16 +288,16 @@
     const ehInst = fnInstitucional();
 
     // ── carrega produção (filtrada) e repasse (por admissão, sem filtro de mês)
-    let sqlProd = 'SELECT * FROM linhas_producao WHERE cliente_id = ?';
+    let sqlProd = `SELECT ${COLS_PROD} FROM linhas_producao WHERE cliente_id = ?`;
     const pProd = [f.clienteId];
     if (f.hospitalId) { sqlProd += ' AND hospital_id = ?'; pProd.push(f.hospitalId); }
     if (f.competencia) { sqlProd += ' AND competencia = ?'; pProd.push(f.competencia); }
-    const prod = Banco.query(sqlProd + ' ORDER BY admissao, id', pProd);
+    const prod = consultar(sqlProd, pProd, ' ORDER BY admissao, id');
 
     let sqlRep = 'SELECT * FROM linhas_repasse WHERE cliente_id = ?';
     const pRep = [f.clienteId];
     if (f.hospitalId) { sqlRep += ' AND hospital_id = ?'; pRep.push(f.hospitalId); }
-    const rep = Banco.query(sqlRep + ' ORDER BY admissao, id', pRep);
+    const rep = consultar(sqlRep, pRep, ' ORDER BY admissao, id');
 
     // regras e padrões por hospital (pode haver mais de um no filtro "todos")
     const hospitais = new Set(prod.map(l => l.hospital_id).concat(rep.map(l => l.hospital_id)));
@@ -527,10 +559,12 @@
       (b.falta - a.falta) || String(a.admissao).localeCompare(String(b.admissao)));
 
     // repasses pagos de admissões que NÃO EXISTEM na produção do cliente
-    // (avaliado contra toda a produção, não só a filtrada)
-    const todasAdmProd = new Set(
-      Banco.query('SELECT DISTINCT admissao FROM linhas_producao WHERE cliente_id = ?',
-        [f.clienteId]).map(r => U_.normAdm(r.admissao)));
+    // (avaliado contra toda a produção, não só a filtrada; com filtro de
+    // admissões, só as pedidas)
+    const todasAdmProd = admFiltro
+      ? new Set(prodPorAdm.keys())
+      : new Set(Banco.query('SELECT DISTINCT admissao_norm FROM linhas_producao WHERE cliente_id = ?',
+          [f.clienteId]).map(r => r.admissao_norm));
     const semProducao = [];
     for (const [adm, linhas] of repPorAdm) {
       if (todasAdmProd.has(adm)) continue;
@@ -571,5 +605,5 @@
     return Banco.query(sql + ' ORDER BY competencia DESC', p).map(r => r.competencia);
   }
 
-  window.Motor = { auditar, inferirPadroes, listarCompetencias, SEVERIDADE };
+  window.Motor = { auditar, inferirPadroes, listarCompetencias, mapaSinonimos, SEVERIDADE };
 })();
