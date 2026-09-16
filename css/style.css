@@ -1214,31 +1214,34 @@ td.valor-oculto::after { justify-content: flex-end; padding-right: 2px; }
    Aplica em TODOS os títulos do app (fichários, telas de cadastro,
    importação, etc). Use `.no-deco` no título pra desativar quando precisar.
    ───────────────────────────────────────────────────────────────────── */
-/* ATLAS v1.1: TÍTULO-BANNER limpo — a marca redonda ao lado de uma pílula
-   navy com o título. Saíram as camadas sobrepostas (círculo atrás, aro,
-   pílula clara, círculo por cima) da V329, que deixavam a logo cortada e
-   mal encaixada. O decorador aplicar() monta só .tb-marca + .tb-texto. */
+/* ATLAS v1.1.1: TÍTULO-BANNER no modelo do Pedro — um retângulo claro
+   arredondado com a marca redonda à esquerda, um divisor vertical e o título
+   em caixa alta, tudo nas cores da logo: fundo azul-100 (#e4ecf4), texto e
+   divisor marinho (#143352). Sem sobreposição, sem gradiente, sem sombra
+   pesada. O decorador aplicar() monta .tb-marca + .tb-div + .tb-texto. */
 h2.titulo-banner,
 h1.titulo-banner {
-  display: inline-flex; align-items: center; gap: 12px; position: relative;
-  min-height: 48px; padding: 0; margin: 0;
-  background: none; color: inherit; border-radius: 0; letter-spacing: normal;
+  display: inline-flex; align-items: center; gap: 14px; position: relative;
+  min-height: 64px; padding: 9px 24px 9px 11px; margin: 0;
+  background: var(--azul-100); color: var(--marinho);
+  border-radius: 16px; letter-spacing: normal;
   font-family: var(--font-display);
+  box-shadow: 0 2px 6px rgba(20, 51, 82, .06);
 }
 h2.titulo-banner::before,
 h1.titulo-banner::before { content: none; }
 .titulo-banner .tb-marca {
-  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%;
   background: #f6f4ef url("../assets/atlas-mark.png") center / cover no-repeat;
-  box-shadow: 0 6px 16px rgba(20, 51, 82, .22);
+}
+.titulo-banner .tb-div {
+  flex: 0 0 auto; width: 2px; height: 30px; border-radius: 2px;
+  background: var(--marinho); opacity: .85;
 }
 .titulo-banner .tb-texto {
-  display: inline-block;
-  background: linear-gradient(90deg, #0b2340 0%, #143352 55%, #1d4470 100%);
-  color: #f6f4ef; border-radius: 999px; padding: 10px 24px;
-  font-size: 15px; font-weight: 800; letter-spacing: .08em; line-height: 1;
+  display: inline-block; color: var(--marinho);
+  font-size: 18px; font-weight: 800; letter-spacing: .06em; line-height: 1;
   text-transform: uppercase; white-space: nowrap;
-  box-shadow: 0 10px 24px rgba(20, 51, 82, .18);
 }
 /* hover discreto na peça toda */
 .titulo-banner { transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); }

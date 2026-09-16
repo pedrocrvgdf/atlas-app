@@ -407,9 +407,11 @@ const App = {
         if (titulo) {
           h.dataset.banner = '1';
           h.classList.add('titulo-banner');
-          // ATLAS v1.1: banner limpo — a marca redonda ao lado de uma pílula
-          // navy com o título (as camadas sobrepostas círculo/aro/pílula saíram)
-          h.innerHTML = '<span class="tb-marca" aria-hidden="true"></span><span class="tb-texto"></span>';
+          // ATLAS v1.1.1: o modelo do Pedro — retângulo claro arredondado com a
+          // marca redonda, um divisor vertical e o título em caixa alta, nas
+          // cores da logo (fundo azul-100, texto e divisor marinho)
+          h.innerHTML = '<span class="tb-marca" aria-hidden="true"></span>'
+            + '<span class="tb-div" aria-hidden="true"></span><span class="tb-texto"></span>';
           h.querySelector('.tb-texto').textContent = titulo;
           // botão informativo (ⓘ) some e clicar no banner abre o informativo
           const bloco = h.closest('.fic-titulo-wrap, .page-header, .fel-header, .per-header') || h.parentNode;
