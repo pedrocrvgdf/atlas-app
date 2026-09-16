@@ -670,6 +670,30 @@
     invalidar();
     return true;
   }
+  // ATLAS v1.3.3: o MÉDICO AUDITADO — a auditoria é de um médico por vez. Os
+  // meses da ferramenta usam só as linhas dele no Consolidado, e um relatório
+  // importado de outro médico é avisado. Vazio = todos os médicos.
+  const AUD_CHAVE = 'RELATORIO_FINAL_MEDICO_AUDITADO';
+  function medicoAuditado() {
+    try {
+      const r = Banco.queryUnica(`SELECT valor FROM config_sistema WHERE chave = ?`, [AUD_CHAVE]);
+      return r && r.valor ? String(r.valor).trim() : '';
+    } catch (e) { return ''; }
+  }
+  function definirMedicoAuditado(nome) {
+    const v = String(nome || '').trim();
+    const oficial = v ? nomeOficial(v) : '';
+    try { Banco.executar(`INSERT OR REPLACE INTO config_sistema (chave, valor) VALUES (?, ?)`, [AUD_CHAVE, oficial]); } catch (e) { return ''; }
+    Banco.salvarDebounced(1500);
+    return oficial;
+  }
+  /** médicos conhecidos: cadastro + os dos relatórios importados */
+  function medicosConhecidos() {
+    const set = new Map();
+    try { for (const m of Banco.query(`SELECT nome_oficial FROM medicos WHERE ativo = 1 ORDER BY nome_oficial`) || []) if (m.nome_oficial) set.set(normNome(m.nome_oficial), m.nome_oficial); } catch (e) {}
+    for (const r of listar()) if (r.medico && !set.has(r.medico_norm)) set.set(r.medico_norm, r.medico);
+    return [...set.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
   /** o mês é da ferramenta (o Consolidado é o relatório final) e está calculado? */
   function mesDaFerramenta(comp) {
     return !!comp && String(comp) >= desdeFerramenta() && temSnapshot(comp);
@@ -684,6 +708,24 @@
     } catch (e) { return []; }
   }
   function listarTodos() { return listar().concat(mesesDaFerramenta()); }
+  // ATLAS v1.3.3: recorte do Consolidado de um mês pelo médico auditado
+  // (linhas + total dele) — cache por versão do banco; cada mês é calculado
+  // uma vez e só quando a lista pede (assíncrono, sem travar a aba)
+  let _resumoAud = { versao: -1, medNorm: '', porComp: new Map() };
+  function resumoDoMedicoNoMes(comp, medNorm) {
+    const v = Banco._versao || 0;
+    if (_resumoAud.versao !== v || _resumoAud.medNorm !== medNorm) _resumoAud = { versao: v, medNorm, porComp: new Map() };
+    if (_resumoAud.porComp.has(comp)) return _resumoAud.porComp.get(comp);
+    let n = 0, total = 0;
+    for (const l of deveriaDaCompetencia(comp)) {
+      if (medNormDeLinhaCons(l) !== medNorm) continue;
+      n++;
+      if (!/glosa/i.test(String(l.status || ''))) total += Number(l.valor) || 0;
+    }
+    const r = { n, total };
+    _resumoAud.porComp.set(comp, r);
+    return r;
+  }
   /** há relatório final (arquivo ou virtual) para este médico neste mês? */
   function temRelatorioPara(medNorm, comp) {
     return temRelatorio(medNorm, comp) || mesDaFerramenta(comp);
@@ -1106,15 +1148,24 @@
       devCache.set(comp, ent);
       return ent;
     };
+    // ATLAS v1.3.3: o médico auditado recorta os meses da ferramenta; relatório
+    // importado de outro médico entra, mas avisado
+    const auditado = medicoAuditado();
+    const audNorm = normNome(auditado);
     // ATLAS v1.3.2: mês virtual (Consolidado da ferramenta) vira um relatório
     // por médico; arquivo importado do mesmo médico × mês vence o virtual
     const sel = [];
     for (const r of selBruta) {
       const v = idVirtual(r.id);
-      if (!v) { sel.push(r); continue; }
+      if (!v) {
+        if (audNorm && r.medico_norm !== audNorm) avisos.push(`"${r.arquivo}" (${r.medico} · ${fmtComp(r.competencia)}) é de OUTRO médico — o médico auditado é ${auditado}`);
+        sel.push(r); continue;
+      }
       const ent = await getDeveria(v.comp);
+      if (audNorm && !(ent.porMed.get(audNorm) || []).length) avisos.push(`Consolidado de ${fmtComp(v.comp)}: nenhuma linha do médico auditado (${auditado})`);
       for (const [medNorm, itensDev] of ent.porMed) {
         if (!medNorm || !itensDev.length) continue;
+        if (audNorm && medNorm !== audNorm) continue;
         const importado = listar().find(x => x.medico_norm === medNorm && x.competencia === v.comp);
         if (importado) { if (!sel.some(x => x.id === importado.id)) sel.push(importado); continue; }
         sel.push({ id: 'f|' + v.comp + '|' + medNorm, virtual: true, medico: itensDev[0].medico, medico_norm: medNorm,
@@ -1235,7 +1286,7 @@
     invalidar();   // um cálculo pode ter gravado snapshot → listas por versão
     progresso({ fase: 'fim', n: sel.length });
     return { itens, porRelatorio, totais: totais(itens), avisos, geradoEm: new Date().toISOString(),
-      competencias: [...new Set(sel.map(r => r.competencia))].sort(), relatorios: sel.map(r => r.id) };
+      competencias: [...new Set(sel.map(r => r.competencia))].sort(), relatorios: sel.map(r => r.id), medicoAuditado: auditado };
   }
   function totais(itens) {
     const t = { deveria: 0, recebido: 0, falta: 0, semLastro: 0, n: itens.length, porCategoria: {} };
@@ -1389,6 +1440,7 @@
             <div class="rf-barra"><div class="rf-barra-fill" id="rf-barra-fill"></div></div>
             <div class="rf-prog-tx" id="rf-prog-tx"></div>
           </div>
+          <div class="rf-auditado" id="rf-auditado"></div>
           <div class="rf-filtros" id="rf-filtros"></div>
           <div class="rf-lista" id="rf-lista"></div>
           <div class="rf-lista-acoes">
@@ -1482,18 +1534,56 @@
   }
   function filtrados() {
     const b = normNome(ui.busca);
-    return listar().filter(r => (!ui.filtroMed || r.medico === ui.filtroMed) && (!ui.filtroComp || r.competencia === ui.filtroComp)
+    const fm = normNome(ui.filtroMed);   // ATLAS v1.3.3: pelo nome normalizado (duas grafias = um médico)
+    return listar().filter(r => (!fm || r.medico_norm === fm) && (!ui.filtroComp || r.competencia === ui.filtroComp)
       && (!b || normNome(r.medico + ' ' + r.arquivo + ' ' + r.competencia).includes(b)));
+  }
+  // ATLAS v1.3.3: o médico auditado (gravado no banco) — recorta os meses da
+  // ferramenta e avisa relatórios de outros médicos
+  function pintarAuditado() {
+    const alvo = $('rf-auditado');
+    if (!alvo) return;
+    const aud = medicoAuditado();
+    const meds = medicosConhecidos();
+    alvo.innerHTML = `
+      <div class="rf-aud-linha">
+        <label class="rf-aud-lbl" for="rf-medico-aud"><i class="ti ti-user-search"></i> Médico auditado</label>
+        <input type="text" id="rf-medico-aud" class="rf-aud-input" list="rf-dl-medicos-aud" placeholder="todos os médicos" value="${esc(aud)}" autocomplete="off">
+        <datalist id="rf-dl-medicos-aud">${meds.map(m => `<option value="${esc(m)}"></option>`).join('')}</datalist>
+        <button type="button" class="rf-mini" id="rf-medico-aud-ok" title="Gravar o médico auditado">Aplicar</button>
+        ${aud ? '<button type="button" class="rf-mini" id="rf-medico-aud-limpar" title="Auditar todos os médicos">todos</button>' : ''}
+        <span class="rf-aud-hint">${aud
+          ? `A auditoria é de <b>${esc(CodigoMedico.exibir(aud))}</b>: os meses da ferramenta usam só as linhas dele no Consolidado; relatório importado de outro médico é avisado.`
+          : 'Sem médico auditado, os meses da ferramenta auditam <b>todos</b> os médicos do Consolidado. Escolha o médico para restringir.'}</span>
+      </div>`;
+    const aplicar = () => {
+      const v = $('rf-medico-aud').value.trim();
+      const oficial = definirMedicoAuditado(v);
+      const on = normNome(oficial);
+      ui.filtroMed = on && listar().some(r => r.medico_norm === on) ? oficial : '';
+      ui.sel = new Set();
+      pintarLista();
+      Utilidades.toast?.(oficial ? `✓ Médico auditado: ${oficial}` : '✓ Auditando todos os médicos', 'success', 3000);
+    };
+    $('rf-medico-aud-ok')?.addEventListener('click', aplicar);
+    $('rf-medico-aud')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); aplicar(); } });
+    $('rf-medico-aud-limpar')?.addEventListener('click', () => { $('rf-medico-aud').value = ''; aplicar(); });
   }
   function pintarLista() {
     const alvo = $('rf-lista'), filt = $('rf-filtros');
     if (!alvo) return;
+    pintarAuditado();
+    const audNorm = normNome(medicoAuditado());
     const lista = listar();
-    const meds = [...new Set(lista.map(r => r.medico))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    // ATLAS v1.3.3: um médico por nome normalizado (a 1ª grafia representa)
+    const medsMap = new Map();
+    for (const r of lista) if (r.medico_norm && !medsMap.has(r.medico_norm)) medsMap.set(r.medico_norm, r.medico);
+    const meds = [...medsMap.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const fmSel = normNome(ui.filtroMed);
     const comps = [...new Set(lista.map(r => r.competencia))].sort().reverse();
     filt.innerHTML = lista.length ? `
       <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Médico</span><span class="atlas-ff-divr"></span>
-        <select class="atlas-ff-sel" id="rf-f-med"><option value="">todos</option>${meds.map(m => `<option value="${esc(m)}" ${ui.filtroMed === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+        <select class="atlas-ff-sel" id="rf-f-med"><option value="">todos</option>${meds.map(m => `<option value="${esc(m)}" ${fmSel && normNome(m) === fmSel ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
       <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Mês</span><span class="atlas-ff-divr"></span>
         <select class="atlas-ff-sel" id="rf-f-comp"><option value="">todos</option>${comps.map(c => `<option value="${esc(c)}" ${ui.filtroComp === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
       <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Buscar</span><span class="atlas-ff-divr"></span>
@@ -1511,9 +1601,9 @@
             <th>Médico</th><th>Mês</th><th>Layout</th><th class="num">Linhas</th><th class="num">Total recebido</th><th>Arquivo</th><th>Importado em</th><th></th>
           </tr></thead>
           <tbody>${vis.map(r => `
-            <tr data-id="${r.id}" class="${ui.sel.has(r.id) ? 'sel' : ''}">
+            <tr data-id="${r.id}" class="${ui.sel.has(r.id) ? 'sel' : ''} ${audNorm && r.medico_norm !== audNorm ? 'rf-outro' : ''}">
               <td class="rf-chk"><input type="checkbox" class="rf-sel" data-id="${r.id}" ${ui.sel.has(r.id) ? 'checked' : ''}></td>
-              <td class="rf-med">${esc(CodigoMedico.exibir(r.medico))}</td>
+              <td class="rf-med">${esc(CodigoMedico.exibir(r.medico))}${audNorm && r.medico_norm !== audNorm ? ' <span class="rf-outro-tag" title="Não é o médico auditado">outro médico</span>' : ''}</td>
               <td class="mono">${esc(r.competencia)}${r.competencia_arquivo && r.competencia_arquivo !== r.competencia
                 ? ` <span class="rf-comp-arq" title="O arquivo indica ${esc(fmtComp(r.competencia_arquivo))}; as admissões estão no sistema de ${esc(fmtComp(r.competencia))}">arquivo: ${esc(fmtComp(r.competencia_arquivo))}</span>` : ''}</td>
               <td><span class="rf-layout rf-layout-${esc(r.layout || '')}">${esc(rotuloLayout(r.layout))}</span></td>
@@ -1531,6 +1621,9 @@
     // ATLAS v1.3.2: os meses em que o relatório final é o da própria ferramenta
     const desde = desdeFerramenta();
     const meses = mesesFiltrados();
+    // ATLAS v1.3.3: com médico auditado, cada mês mostra as linhas e o total DELE
+    // no Consolidado (calculado em seguida, mês a mês, sem travar) e o "Ver" abre só ele
+    const audNome = medicoAuditado();
     alvo.insertAdjacentHTML('beforeend', `
       <div class="rf-ferr" id="rf-ferr">
         <div class="rf-ferr-head">
@@ -1539,18 +1632,33 @@
         </div>
         ${meses.length ? `
         <div class="rf-tab-wrap"><table class="rf-tab">
-          <thead><tr><th class="rf-chk"></th><th>Mês</th><th>Fonte</th><th class="num">Linhas do Consolidado</th><th class="num">Total repassado</th><th></th></tr></thead>
+          <thead><tr><th class="rf-chk"></th><th>Mês</th><th>Fonte</th><th class="num">${audNorm ? 'Linhas do médico auditado' : 'Linhas do Consolidado'}</th><th class="num">${audNorm ? 'Total repassado a ele' : 'Total repassado'}</th><th></th></tr></thead>
           <tbody>${meses.map(r => `
             <tr data-id="${esc(r.id)}" class="${ui.sel.has(r.id) ? 'sel' : ''}">
               <td class="rf-chk"><input type="checkbox" class="rf-sel-v" data-id="${esc(r.id)}" ${ui.sel.has(r.id) ? 'checked' : ''}></td>
               <td class="mono">${esc(r.competencia)}</td>
-              <td><span class="rf-layout rf-layout-ferramenta">Consolidado da ferramenta</span></td>
-              <td class="num mono">${r.n_linhas}</td>
-              <td class="num mono" data-ocultavel>R$ ${fmtN(r.total)}</td>
-              <td class="rf-row-acoes"><button type="button" class="rf-mini" data-ver-v="${esc(r.id)}" title="Ver as linhas do Consolidado deste mês">Ver</button></td>
+              <td><span class="rf-layout rf-layout-ferramenta">Consolidado da ferramenta</span>${audNorm ? ` <span class="rf-aud-tag" title="Só as linhas do médico auditado">${esc(CodigoMedico.exibir(audNome))}</span>` : ''}</td>
+              <td class="num mono" data-aud-n="${esc(r.competencia)}">${audNorm ? '…' : r.n_linhas}</td>
+              <td class="num mono" data-ocultavel data-aud-total="${esc(r.competencia)}">${audNorm ? '…' : 'R$ ' + fmtN(r.total)}</td>
+              <td class="rf-row-acoes"><button type="button" class="rf-mini" data-ver-v="${esc(audNorm ? r.id + '|' + audNorm : r.id)}" title="${audNorm ? 'Ver as linhas do médico auditado no Consolidado deste mês' : 'Ver as linhas do Consolidado deste mês'}">Ver</button></td>
             </tr>`).join('')}
           </tbody></table></div>` : `<div class="rf-vazio rf-vazio-mini">Nenhum mês calculado a partir de ${esc(fmtComp(desde))}. Importe o relatório do sistema e calcule (ou ajuste o mês de início).</div>`}
       </div>`);
+    if (audNorm && meses.length) {
+      const fila = meses.map(r => r.competencia);
+      const passo = () => {
+        const comp = fila.shift();
+        if (!comp || !alvo.isConnected || normNome(medicoAuditado()) !== audNorm) return;
+        const res = resumoDoMedicoNoMes(comp, audNorm);
+        const k = String(comp).replace(/[^0-9-]/g, '');   // AAAA-MM (a constante CSS do módulo faz sombra ao window.CSS)
+        const cN = alvo.querySelector(`[data-aud-n="${k}"]`), cT = alvo.querySelector(`[data-aud-total="${k}"]`);
+        if (cN) { cN.textContent = String(res.n); if (!res.n) cN.closest('tr')?.classList.add('rf-outro'); }
+        if (cT) cT.textContent = 'R$ ' + fmtN(res.total);
+        if (fila.length) setTimeout(passo, 0);
+        else Utilidades.aplicarMascaraValores?.();
+      };
+      setTimeout(passo, 0);
+    }
     const n = ui.sel.size;
     const btnN = $('rf-auditar-n');
     const nVis = vis.length + meses.length;
@@ -1590,14 +1698,16 @@
   function rotuloLayout(l) { return l === 'ferramenta' ? 'ferramenta' : l === 'manual2' ? 'manual (c/ admissão)' : l === 'manual1' ? 'manual (s/ admissão)' : (l || '—'); }
 
   function verLinhas(id) {
-    const r = listarTodos().find(x => String(x.id) === String(id));
-    if (!r) return;
-    const linhas = linhasDoRelatorio(r.id);
+    const vid = idVirtual(id);   // ATLAS v1.3.3: 'f|AAAA-MM|medNorm' → o mês, só as linhas daquele médico
+    const r0 = listarTodos().find(x => String(x.id) === String(vid && vid.medNorm ? 'f|' + vid.comp : id));
+    if (!r0) return;
+    const linhas = linhasDoRelatorio(id);
+    const r = vid && vid.medNorm ? Object.assign({}, r0, { medico: (linhas[0] && linhas[0].medico) || CodigoMedico.exibir(medicoAuditado()), arquivo: 'Consolidado da ferramenta · só o médico auditado' }) : r0;
     const ov = document.createElement('div');
     ov.className = 'rf-modal-ov';
     ov.innerHTML = `
       <div class="rf-modal rf-modal-larga" role="dialog" aria-modal="true">
-        <div class="rf-modal-head"><strong>${esc(r.virtual ? 'Consolidado da ferramenta' : CodigoMedico.exibir(r.medico))} · ${esc(r.competencia)}</strong>
+        <div class="rf-modal-head"><strong>${esc(r.virtual ? (vid && vid.medNorm ? CodigoMedico.exibir(r.medico) + ' · Consolidado da ferramenta' : 'Consolidado da ferramenta') : CodigoMedico.exibir(r.medico))} · ${esc(r.competencia)}</strong>
           <span>${esc(r.arquivo)} · ${linhas.length} linhas · ${r.virtual ? 'repassado' : 'recebido'} R$ ${fmtN(linhas.reduce((s, l) => s + (l.glosa ? 0 : (Number(l.valor) || 0)), 0))}${r.periodo_ini ? ` · pagamentos de ${dataBR(r.periodo_ini)} a ${dataBR(r.periodo_fim)}` : ''}</span>
           <button type="button" class="rf-modal-x" data-fechar>×</button></div>
         <div class="rf-tab-wrap rf-modal-scroll"><table class="rf-tab">
@@ -1677,7 +1787,7 @@
       <div class="rf-head">
         <div>
           <h3>O que falta pagar</h3>
-          <p>Deveria (Consolidado da ferramenta) × recebido (relatório final), por admissão e papel. ${res.porRelatorio.length} relatório${res.porRelatorio.length !== 1 ? 's' : ''} · ${res.competencias.join(', ')}.</p>
+          <p>Deveria (Consolidado da ferramenta) × recebido (relatório final), por admissão e papel. ${res.porRelatorio.length} relatório${res.porRelatorio.length !== 1 ? 's' : ''} · ${res.competencias.join(', ')}.${res.medicoAuditado ? ` Médico auditado: <strong>${esc(CodigoMedico.exibir(res.medicoAuditado))}</strong>.` : ''}</p>
         </div>
         <div class="rf-acoes">
           <button type="button" class="btn" id="rf-pauta-falta" title="Manda para a pauta da aba Admissão as admissões com valor faltante">Pauta do que falta</button>
@@ -1785,6 +1895,15 @@
     .rf-arq { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft, #585d62); }
     .rf-layout { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #eef2f6; color: #3f6489; white-space: nowrap; }
     .rf-layout-manual1, .rf-layout-manual2 { background: #fbf3e3; color: #8a6d2f; }
+    .rf-auditado { margin: 0 0 12px; }
+    .rf-aud-linha { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border-radius: 14px; background: var(--accent-soft, #e4eaf1); }
+    .rf-aud-lbl { font-size: 12px; font-weight: 700; color: var(--accent-text, #3f6489); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .rf-aud-input { font-family: inherit; font-size: 12.5px; padding: 6px 10px; border: 1px solid var(--border, #eef0f2); border-radius: 10px; min-width: 280px; background: #fff; }
+    .rf-aud-hint { font-size: 11.5px; color: var(--ink-soft, #585d62); line-height: 1.4; }
+    .rf-aud-hint b { color: var(--ink, #1d1f20); }
+    tr.rf-outro td { color: var(--ink-faint, #8a9096); }
+    .rf-aud-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #eef2f6; color: #3f6489; margin-left: 4px; white-space: nowrap; }
+    .rf-outro-tag { display: inline-block; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; padding: 1px 6px; border-radius: 999px; background: #fbf3e3; color: #8a6d2f; margin-left: 4px; }
     .rf-ferr { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border, #eef0f2); }
     .rf-ferr-head { margin-bottom: 8px; }
     .rf-ferr-tit { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
@@ -1852,6 +1971,7 @@
     CATEGORIAS, CATS_FALTA, garantirXLSX, garantirExcelJS,
     competenciaPelosDados, mesesDasAdmissoes,
     desdeFerramenta, definirDesdeFerramenta, mesesDaFerramenta, listarTodos, temRelatorioPara, linhasFinaisDaAdmissao, mesDaFerramenta,
+    medicoAuditado, definirMedicoAuditado, medicosConhecidos,
     _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook },
   };
 })();
