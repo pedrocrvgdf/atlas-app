@@ -663,7 +663,8 @@ CREATE TABLE IF NOT EXISTS relatorio_final (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   medico          TEXT NOT NULL,            -- nome oficial (de-para) ou como veio
   medico_norm     TEXT NOT NULL,
-  competencia     TEXT NOT NULL,            -- 'YYYY-MM' (mês do pagamento)
+  competencia     TEXT NOT NULL,            -- 'YYYY-MM' (mês do pagamento — o mês em que o SISTEMA pagou as admissões)
+  competencia_arquivo TEXT,                 -- ATLAS v1.3.1: o mês que o ARQUIVO dizia (pode diferir)
   layout          TEXT,                     -- 'ferramenta' | 'manual2' | 'manual1'
   arquivo         TEXT,
   periodo_ini     TEXT,                     -- "Pagamentos liberados entre … e …"

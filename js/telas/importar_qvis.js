@@ -298,6 +298,23 @@ App.telas['importar-qvis'] = function () {
       <div class="impq-drops-grid">
         ${renderDropArea('convenio', '🏥', 'Convênio', '#3a5877', window.__impQvis.arquivoConvenio, temConv)}
         ${renderDropArea('particular', '💳', 'Particular', '#6B4587', window.__impQvis.arquivoParticular, temPart)}
+        <!-- ATLAS v1.3.1: Convênio + Particular JUNTOS — um arquivo com as duas
+             origens (cada linha vai pelo TIPO RECEBIMENTO) ou os dois arquivos de
+             uma vez; os dois snapshots nascem com o MESMO mês de pagamento. -->
+        <div class="impq-drop impq-drop-vazio impq-drop-juntos" data-tipo="juntos" data-zona-drop="juntos">
+          <div class="impq-drop-header" style="border-bottom-color: #5980a6">
+            <span class="impq-drop-icone">🏥💳</span>
+            <span class="impq-drop-label">Convênio + Particular juntos</span>
+          </div>
+          <div class="impq-drop-corpo impq-drop-zona">
+            <div class="impq-drop-area">
+              <div class="impq-drop-icone-grande">📂</div>
+              <div class="impq-drop-prompt">Um arquivo com as duas origens, ou os dois arquivos de uma vez<br>ou <strong>clique para selecionar</strong></div>
+              <div class="impq-drop-hint">Cada linha vai para Convênio ou Particular pelo TIPO RECEBIMENTO · o mesmo mês de pagamento para os dois</div>
+              <input type="file" id="impq-input-juntos" accept=".xlsx,.xls" multiple hidden>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -381,7 +398,7 @@ App.telas['importar-qvis'] = function () {
               <select class="impq-mes-pgto-select mono" data-mes-pgto="${tipo}">
                 ${opcoes.map(o => `<option value="${o.valor}" ${o.valor === mesPgtoEscolhido ? 'selected' : ''}>${o.label}</option>`).join('')}
               </select>
-              <div class="impq-mes-pgto-hint">Esta data será gravada em todas as ${p.linhas.length.toLocaleString('pt-BR')} linhas deste arquivo</div>
+              <div class="impq-mes-pgto-hint">Esta data será gravada em todas as ${p.linhas.length.toLocaleString('pt-BR')} linhas deste arquivo${(window.__impQvis.arquivoConvenio && window.__impQvis.arquivoParticular) ? ' · vale para Convênio e Particular' : ''}</div>
             </div>
           </div>
         </div>
@@ -446,6 +463,7 @@ App.telas['importar-qvis'] = function () {
 
     const temSubstituicao = totalLinhasSubstituidas > 0;
     const podeImportar = (ac || ap) && !window.__impQvis.processando && !semMesPgto;
+    const mesesDiferentes = !!(ac && ap && ac.mesPagamento && ap.mesPagamento && ac.mesPagamento !== ap.mesPagamento);
 
     return `
       <div class="impq-preview">
@@ -493,6 +511,12 @@ App.telas['importar-qvis'] = function () {
         ${semMesPgto ? `
           <div class="impq-aviso impq-aviso-erro">
             ⛔ <strong>Mês de pagamento obrigatório</strong> — defina o mês de pagamento em cada arquivo carregado antes de prosseguir.
+          </div>
+        ` : ''}
+        ${mesesDiferentes ? `
+          <div class="impq-aviso impq-aviso-erro">
+            ⚠ <strong>Convênio e Particular em meses diferentes</strong> (${formatarComp(ac.mesPagamento)} × ${formatarComp(ap.mesPagamento)}) — o mês ficaria "sem Part" ou "sem Conv".
+            <button class="btn btn-pequeno" id="impq-mesmo-mes" style="margin-left: 8px">Usar ${formatarComp(ac.mesPagamento)} nos dois</button>
           </div>
         ` : ''}
 
@@ -955,6 +979,30 @@ App.telas['importar-qvis'] = function () {
       });
     });
 
+    // ATLAS v1.3.1: zona Convênio + Particular juntos (vários arquivos)
+    const inputJuntos = document.getElementById('impq-input-juntos');
+    const zonaJuntos = document.querySelector('[data-zona-drop="juntos"]');
+    if (inputJuntos && zonaJuntos) {
+      zonaJuntos.addEventListener('click', () => inputJuntos.click());
+      inputJuntos.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files || []);
+        e.target.value = '';
+        if (files.length) handleArquivosJuntos(files);
+      });
+      ['dragenter', 'dragover'].forEach(ev => zonaJuntos.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); zonaJuntos.classList.add('impq-drag-hover'); }));
+      ['dragleave', 'drop'].forEach(ev => zonaJuntos.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); if (ev === 'dragleave') zonaJuntos.classList.remove('impq-drag-hover'); }));
+      zonaJuntos.addEventListener('drop', (e) => {
+        zonaJuntos.classList.remove('impq-drag-hover');
+        const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+        if (files.length) handleArquivosJuntos(files);
+      });
+    }
+    const btnMesmoMes = document.getElementById('impq-mesmo-mes');
+    if (btnMesmoMes) btnMesmoMes.addEventListener('click', () => {
+      const ac = window.__impQvis.arquivoConvenio, ap = window.__impQvis.arquivoParticular;
+      if (ac && ap) { ap.mesPagamento = ac.mesPagamento; renderizar(); }
+    });
+
     // Botões remover
     document.querySelectorAll('[data-remover]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -992,6 +1040,11 @@ App.telas['importar-qvis'] = function () {
         if (tipo === 'convenio' && window.__impQvis.arquivoConvenio) {
           window.__impQvis.arquivoConvenio.mesPagamento = sel.value;
         } else if (tipo === 'particular' && window.__impQvis.arquivoParticular) {
+          window.__impQvis.arquivoParticular.mesPagamento = sel.value;
+        }
+        // ATLAS v1.3.1: com os dois carregados o mês é um só (mesmo relatório)
+        if (window.__impQvis.arquivoConvenio && window.__impQvis.arquivoParticular) {
+          window.__impQvis.arquivoConvenio.mesPagamento = sel.value;
           window.__impQvis.arquivoParticular.mesPagamento = sel.value;
         }
         // Re-renderiza só o resumo (que pode usar essa info no preview)
@@ -1331,7 +1384,12 @@ App.telas['importar-qvis'] = function () {
       }
 
       const ultimaComp = Array.from(parsed.competencias.keys()).sort().pop();
-      const mesPagamento = sugerirMesPagamento(ultimaComp);
+      // ATLAS v1.3.1: Convênio e Particular do mesmo relatório vão para o MESMO
+      // mês de pagamento. A sugestão por arquivo (última competência + 1) mandava
+      // o Particular — que tem admissões do próprio mês — para o mês seguinte, e
+      // o mês ficava "sem Part". O segundo arquivo herda o mês do primeiro.
+      const outroSlot = tipo === 'convenio' ? window.__impQvis.arquivoParticular : window.__impQvis.arquivoConvenio;
+      const mesPagamento = (outroSlot && outroSlot.mesPagamento) ? outroSlot.mesPagamento : sugerirMesPagamento(ultimaComp);
 
       // Solicita código do relatório (obrigatório) + data de pagamento (opcional)
       const resultado = await pedirCodigoRelatorio(file.name, tipo);
@@ -1352,13 +1410,64 @@ App.telas['importar-qvis'] = function () {
   }
 
   /**
+   * ATLAS v1.3.1: Convênio + Particular JUNTOS. Cada arquivo é lido uma vez e
+   * recortado pela origem de cada linha (TIPO RECEBIMENTO / FONTE PAGADORA):
+   * as linhas de Convênio vão para o slot Convênio, as de Particular para o
+   * slot Particular — dois snapshots com o MESMO mês de pagamento e o mesmo
+   * código de relatório. Vários arquivos de uma vez: cada um pela sua origem.
+   */
+  async function handleArquivosJuntos(files) {
+    const lista = Array.from(files || []).filter(f => /\.(xlsx|xls)$/i.test(f.name));
+    if (!lista.length) { alert('Arquivo precisa ser .xlsx ou .xls'); return; }
+    for (const file of lista) {
+      Utilidades.toast(`Analisando "${file.name}"...`, 'info', 2000);
+      try {
+        const analise = await analisarEstrutura(file);
+        if (analise.faltandoEssenciais.length > 0) {
+          alert(`❌ Não é possível importar ${file.name}\n\nColunas ESSENCIAIS não encontradas:\n• ${analise.faltandoEssenciais.join('\n• ')}`);
+          continue;
+        }
+        if (analise.faltandoOrigem) {
+          alert(`❌ ${file.name}: nenhuma coluna de origem (TIPO RECEBIMENTO / FONTE PAGADORA) — sem ela não dá para separar Convênio de Particular.`);
+          continue;
+        }
+        if (analise.faltandoOpcionais.length > 0 || analise.novasColunas.length > 0) {
+          const ok = await mostrarModalAnalise(file, analise);
+          if (!ok) continue;
+        }
+        Utilidades.toast(`Lendo ${file.name}...`, 'info', 2000);
+        const parsed = processarLinhas(analise);
+        const conv = subconjuntoParsed(parsed, 'CONVENIO');
+        const part = subconjuntoParsed(parsed, 'PARTICULAR');
+        if (!conv && !part) { alert(`Nenhuma linha válida em ${file.name}.`); continue; }
+        const resultado = await pedirCodigoRelatorio(file.name, conv && part ? 'juntos' : (conv ? 'convenio' : 'particular'));
+        if (resultado === null) continue;
+        const ultimaComp = Array.from(parsed.competencias.keys()).sort().pop();
+        const jaTem = window.__impQvis.arquivoConvenio || window.__impQvis.arquivoParticular;
+        const mesPagamento = (jaTem && jaTem.mesPagamento) ? jaTem.mesPagamento : sugerirMesPagamento(ultimaComp);
+        const base = { file, analise, mesPagamento, codigoRelatorio: resultado.codigo, dataPagamento: resultado.dataPagamento, juntos: !!(conv && part) };
+        if (conv) window.__impQvis.arquivoConvenio = { ...base, parsed: conv };
+        if (part) window.__impQvis.arquivoParticular = { ...base, parsed: part };
+        const partes = [];
+        if (conv) partes.push(`${conv.linhas.length.toLocaleString('pt-BR')} linhas Convênio`);
+        if (part) partes.push(`${part.linhas.length.toLocaleString('pt-BR')} linhas Particular`);
+        Utilidades.toast(`✓ ${file.name}: ${partes.join(' · ')} → ${formatarComp(mesPagamento)}`, 'success', 4500);
+      } catch (e) {
+        console.error(e);
+        alert(`Erro ao processar ${file.name}:\n\n${e.message}`);
+      }
+    }
+    renderizar();
+  }
+
+  /**
    * Modal pra pedir o código do relatório QVIS + data de pagamento.
    * Retorna Promise<{codigo, dataPagamento}|null>.
    * Código é obrigatório, data de pagamento é opcional.
    */
   function pedirCodigoRelatorio(arquivoNome, tipo, codigoAtual = '', dataAtual = '') {
     return new Promise((resolve) => {
-      const labelOrigem = tipo === 'convenio' ? 'Convênio' : 'Particular';
+      const labelOrigem = tipo === 'juntos' ? 'Convênio + Particular' : (tipo === 'convenio' ? 'Convênio' : 'Particular');
       const corOrigem = tipo === 'convenio' ? '#3a5877' : '#6B4587';
       const isEdicao = !!codigoAtual;
 
@@ -1374,7 +1483,8 @@ App.telas['importar-qvis'] = function () {
             <div class="impq-codigo-info">
               <div class="impq-codigo-linha">
                 <span class="impq-codigo-lbl">Origem:</span>
-                ${Utilidades.badgeFonte(tipo === 'convenio' ? 'CONVENIO' : 'PARTICULAR')}<!-- V947 -->
+                ${tipo === 'juntos' ? Utilidades.badgeFonte('CONVENIO') + ' ' + Utilidades.badgeFonte('PARTICULAR')
+                  : Utilidades.badgeFonte(tipo === 'convenio' ? 'CONVENIO' : 'PARTICULAR')}<!-- V947 -->
               </div>
               <div class="impq-codigo-linha">
                 <span class="impq-codigo-lbl">Arquivo:</span>
@@ -1830,6 +1940,30 @@ App.telas['importar-qvis'] = function () {
 
     const origemPredominante = contagemOrigem.CONVENIO >= contagemOrigem.PARTICULAR
       ? 'CONVENIO' : 'PARTICULAR';
+    return montarParsed({ linhas, competencias, problemas, profissionais, admissoes, origemPredominante });
+  }
+
+  /**
+   * ATLAS v1.3.1: recorta um parsed por ORIGEM — um arquivo com Convênio e
+   * Particular juntos vira dois snapshots (cada linha vai pela sua origem).
+   */
+  function subconjuntoParsed(parsed, origem) {
+    const linhas = parsed.linhas.filter(l => l.origem === origem);
+    if (!linhas.length) return null;
+    const competencias = new Map();
+    const profissionais = new Set();
+    const admissoes = new Set();
+    for (const l of linhas) {
+      competencias.set(l.competencia, (competencias.get(l.competencia) || 0) + 1);
+      if (l.nome_normalizado) profissionais.add(l.nome_normalizado);
+      if (l.admissao) admissoes.add(l.admissao);
+    }
+    return montarParsed({ linhas, competencias, problemas: parsed.problemas, profissionais, admissoes, origemPredominante: origem });
+  }
+
+  /** Agregados do parsed (soma SIMPLES, sem dedupe) — usado pelo arquivo inteiro e pelos recortes. */
+  function montarParsed(base) {
+    const { linhas, competencias, problemas, profissionais, admissoes, origemPredominante } = base;
 
     // ── Agregados (soma SIMPLES, sem dedupe) ────────────────────────────
     // O usuário quer a soma direta de TODAS as linhas, igual a fazer
@@ -1903,6 +2037,16 @@ App.telas['importar-qvis'] = function () {
       renderizar();
       return;
     }
+    // ATLAS v1.3.1: os dois arquivos do mesmo relatório em meses diferentes
+    // quase sempre é engano — avisa antes de gravar
+    if (ac && ap && ac.mesPagamento && ap.mesPagamento && ac.mesPagamento !== ap.mesPagamento) {
+      const segue = confirm(
+        `⚠ Meses de pagamento diferentes\n\n` +
+        `Convênio → ${formatarComp(ac.mesPagamento)}\nParticular → ${formatarComp(ap.mesPagamento)}\n\n` +
+        `Normalmente Convênio e Particular do mesmo relatório vão para o MESMO mês — assim o mês fica "sem Part" ou "sem Conv".\n\n` +
+        `Importar mesmo assim em meses diferentes?`);
+      if (!segue) { window.__impQvis.processando = false; renderizar(); return; }
+    }
 
     try {
       const t0 = performance.now();
@@ -1915,7 +2059,7 @@ App.telas['importar-qvis'] = function () {
         let totalInseridas = 0;
         let totalRemovidas = 0;
 
-        const processarArquivo = (arq) => {
+        const processarArquivo = (arq, origemSlot) => {
           if (!arq) return;
           const { linhas, competencias } = arq.parsed;
           if (linhas.length === 0) return;
@@ -1930,8 +2074,10 @@ App.telas['importar-qvis'] = function () {
             l.mes_pagamento = mesPagamento;
           }
 
-          // Origem do arquivo (todas as linhas têm a mesma origem)
-          const origemArquivo = linhas[0].origem;
+          // ATLAS v1.3.1: a origem do snapshot é a do SLOT (Convênio/Particular),
+          // não a da primeira linha — uma linha trocada no topo do arquivo fazia
+          // o Particular apagar o snapshot do Convênio do mesmo mês.
+          const origemArquivo = origemSlot || linhas[0].origem;
 
           // Snapshot = (origem + mes_pagamento). Se já existe snapshot
           // com esse mesmo mes_pagamento + origem, substitui (DELETE antes do INSERT).
@@ -2019,8 +2165,8 @@ App.telas['importar-qvis'] = function () {
           stmtStats.free();
         };
 
-        processarArquivo(ac);
-        processarArquivo(ap);
+        processarArquivo(ac, 'CONVENIO');
+        processarArquivo(ap, 'PARTICULAR');
 
         Banco.db.exec('COMMIT');
         // Normaliza espaços múltiplos (segurança contra dados antigos importados
@@ -2724,6 +2870,9 @@ App.telas['importar-qvis'] = function () {
           margin: 18px 0;
         }
         @media (max-width: 800px) { .impq-drops-grid { grid-template-columns: 1fr; } }
+        .impq-drop-juntos { grid-column: 1 / -1; }
+        .impq-drop-juntos .impq-drop-area { padding: 14px 16px; }
+        .impq-drop-juntos .impq-drop-icone-grande { font-size: 22px; }
 
         .impq-drop {
           background: var(--bg-elevated);

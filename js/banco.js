@@ -1466,6 +1466,8 @@ const Banco = {
       "ALTER TABLE unidades ADD COLUMN criado_em TEXT DEFAULT CURRENT_TIMESTAMP",
       // Coluna nova em excecoes_cargo
       "ALTER TABLE excecoes_cargo ADD COLUMN valor_fixo REAL NOT NULL DEFAULT 0",
+      // ATLAS v1.3.1: o mês que o arquivo do relatório final dizia
+      "ALTER TABLE relatorio_final ADD COLUMN competencia_arquivo TEXT",
     ];
 
     for (const sql of migracoes) {

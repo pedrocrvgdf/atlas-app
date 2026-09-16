@@ -17,6 +17,43 @@
  * o Consolidado manda pagar com o que o relatório final pagou, admissão por
  * admissão, papel por papel — e diz O QUE FALTA PAGAR ao médico.
  *
+ * OS LAYOUTS REAIS (arquivos do hospital, guardados anonimizados em
+ * test/fixtures/relatorio_final/ — a suíte lê os quatro):
+ *   1. manual SEM admissão ("FEVEREIRO2025 - DURVAL.xlsx"): aba com o nome do
+ *      médico; r2 "CBV - Centro Brasileiro da Visão"; r3 "Acerto Médico:" …
+ *      "Saldo relatório" <total>; r4 "Pagamentos liberados entre dd/mm/aaaa e
+ *      dd/mm/aaaa"; r5 cabeçalho Sistema | Médico | CONVENIO | PAPEL |
+ *      PROCEDIMENTO | DATA | PACIENTE | REPASSADO. Sistema = Medical/Qvis;
+ *      CONVENIO = Convênio/Particular (o TIPO); PAPEL = Md, Encaminh,
+ *      MEDICO, CIRURGIAO, SOLICITANTE, Auxiliar, AUXILIAR 1/2; DATA = data
+ *      da ADMISSÃO (Date, às vezes com hora); a planilha declara 1 milhão
+ *      de linhas (dimensão inflada — ler com sheetRows e encolher o !ref).
+ *   2. manual COM admissão ("OUTUBRO2025 - DURVAL.xlsx", 26 MB, 1 milhão de
+ *      linhas declaradas): aba Planilha1; r3 "Acerto Médico:" … "VALOR
+ *      EMISSÃO NOTA FISCAL" <total>; r4 "Pagamentos liberados entre …";
+ *      r5 Sistema | Médico | Recebimento | Admissão/ CPS | Papel |
+ *      Procedimento | Data | Paciente | Repassado. Recebimento = NOME do
+ *      convênio ("GEAP (DF)") ou PARTICULAR; admissão de 8 dígitos (QVIS)
+ *      ou 7 (Medical).
+ *   3. manual COM admissão, 2ª grafia ("DEZEMBRO2025 - DURVAL.xlsx"): r1
+ *      "CBV…"; r2 "Acerto" … "VALOR EMISSÃO DE NOTA" <total>; r3
+ *      "Pagamentos liberados entre …"; r4 SISTEMA | MÉDICO | RECEBIMENTO |
+ *      ADMISSÃO | PAPEL | PROCEDIMENTO | DATA | PACIENTE | REPASSADO.
+ *      Sistema = QVIS/MEDICAL/ESTORNO/"DESEMPENHO / ADICIONAL"; a linha de
+ *      ESTORNO tem "ESTORNO" na admissão e no papel e valor NEGATIVO; o
+ *      auxiliar do sistema antigo vem como EXECUTANTE com o procedimento
+ *      "… - MÉDICO AUXILIAR SISTEMA ANTIGO".
+ *   4. o EXPORT DA FERRAMENTA ("MAIO2026 - DURVAL.xlsx"): aba Repasse; r2
+ *      "RELATÓRIO DE REPASSE MÉDICO"; r4 "Competência: ABRIL / 2026 ·
+ *      Emitido em 31/05/2026"; r6 "EMITA SUA NOTA NESTE VALOR ="; r8
+ *      STATUS | MÓDULO | ADMISSÃO | DATA | PAPEL | PROFISSIONAL | ORIGEM |
+ *      CONVÊNIO | PACIENTE | DESCRIÇÃO | REPASSE. Status = QVIS/Ajustes/
+ *      Desempenho/GLOSA; Módulo = Repasse/LIO/OPME (OPME sem descrição);
+ *      Papel = Executante/Indicante/Auxiliar/Solicitante/CIRURGIAO; datas em
+ *      texto dd/mm/aaaa. ATENÇÃO: "Competência: ABRIL" é a competência
+ *      contábil; o arquivo é o de MAIO (nome) e tem admissões de maio — o
+ *      mês vale pelos DADOS (ver competenciaPelosDados) antes do texto.
+ *
  * Regras de leitura (validadas nas três gerações de layout do hospital):
  *   · nunca deduplicar — a soma das linhas é o valor da nota; linhas repetidas
  *     e NEGATIVAS (estornos) são legítimas e contam;
@@ -160,7 +197,54 @@
     if (m && Number(m[2]) >= 1 && Number(m[2]) <= 12) return `${m[1]}-${m[2]}`;
     m = s.match(/(?<!\d)(\d{2})[-_.](\d{4})(?!\d)/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= 12) return `${m[2]}-${m[1]}`;
+    // "MAIO2026 - DURVAL", "Fevereiro_2025", "DEZ 2025"
+    m = norm(s).match(/\b(JANEIRO|FEVEREIRO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO|JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s?(\d{4})\b/);
+    if (m && MESES[m[1]]) return `${m[2]}-${MESES[m[1]]}`;
     return '';
+  }
+  /** Tipo da fonte pagadora a partir de um texto ('' quando é o NOME do convênio) */
+  function catOrigem(v) {
+    const n = norm(v);
+    if (!n) return '';
+    if (n.startsWith('CONV')) return 'CONVENIO';
+    if (n.startsWith('PART')) return 'PARTICULAR';
+    if (n === 'SUS') return 'SUS';
+    return '';
+  }
+  /** Última linha com valor de uma aba (as planilhas do hospital declaram 1 milhão de linhas) */
+  function ultimaLinhaComValor(ws) {
+    let max = -1;
+    for (const k of Object.keys(ws)) {
+      if (k[0] === '!') continue;
+      const c = XLSX.utils.decode_cell(k);
+      if (c.r > max) max = c.r;
+    }
+    return max;
+  }
+  function encolherRef(ws) {
+    if (!ws || !ws['!ref']) return;
+    let maxR = -1, maxC = 0;
+    for (const k of Object.keys(ws)) {
+      if (k[0] === '!') continue;
+      const c = XLSX.utils.decode_cell(k);
+      if (c.r > maxR) maxR = c.r;
+      if (c.c > maxC) maxC = c.c;
+    }
+    if (maxR >= 0) ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxR, c: maxC } });
+  }
+  const TETO_LINHAS = 4000;
+  /**
+   * Lê o workbook em DUAS passadas: primeiro só as 4.000 primeiras linhas
+   * (os relatórios reais têm < 1.000; as planilhas do hospital declaram 1
+   * milhão de linhas vazias e a leitura completa leva 6-14 s); se alguma aba
+   * encostou no teto com dados, relê inteira.
+   */
+  function lerWorkbook(buf) {
+    let wb = XLSX.read(buf, { type: 'array', cellDates: true, sheetRows: TETO_LINHAS });
+    const encostou = wb.SheetNames.some(n => ultimaLinhaComValor(wb.Sheets[n]) >= TETO_LINHAS - 10);
+    if (encostou) wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    for (const n of wb.SheetNames) encolherRef(wb.Sheets[n]);
+    return wb;
   }
   function medicoDoNome(nome) {
     const s = String(nome || '').replace(/\.(xlsx|xlsm|xls|csv)$/i, '');
@@ -200,13 +284,13 @@
   async function lerArquivo(arquivo) {
     await garantirXLSX();
     const buf = await arquivo.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    const wb = lerWorkbook(buf);
     const avisos = [];
     let escolhida = null;
     for (const nomeAba of wb.SheetNames) {
       const ws = wb.Sheets[nomeAba];
-      if (!ws) continue;
-      const matriz = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+      if (!ws || !ws['!ref']) continue;
+      const matriz = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '', blankrows: false });
       const cab = acharCabecalho(matriz);
       if (!cab) continue;
       escolhida = { nomeAba, matriz, cab };
@@ -222,7 +306,17 @@
     const textos = [];
     for (let i = 0; i < cab.linha; i++) for (const c of matriz[i] || []) if (c != null && String(c).trim()) textos.push(String(c));
     let meta = { competencia: '', periodo_ini: '', periodo_fim: '', medico: '', layout, arquivo: arquivo.name, aba: nomeAba };
-    for (const t of textos) { const c = compDeTexto(t); if (c) { Object.assign(meta, c); break; } }
+    // ATLAS v1.3.1: ordem de confiança do MÊS — o período dos pagamentos
+    // ("Pagamentos liberados entre …"), depois o NOME do arquivo (MAIO2026),
+    // depois o texto "Competência: ABRIL / 2026" (é a competência contábil, um
+    // mês antes do pagamento no export da ferramenta), depois o nome da aba.
+    // Os DADOS (competenciaPelosDados, na importação) mandam acima de tudo.
+    const achados = textos.map(compDeTexto).filter(Boolean);
+    const periodo = achados.find(c => c.periodo_fim);
+    const textoComp = achados.find(c => !c.periodo_fim);
+    if (periodo) { meta.periodo_ini = periodo.periodo_ini; meta.periodo_fim = periodo.periodo_fim; }
+    meta.competenciaTexto = textoComp ? textoComp.competencia : '';
+    meta.competencia = (periodo && periodo.competencia) || compDoNome(arquivo.name) || meta.competenciaTexto || compDoNome(nomeAba) || '';
     for (const t of textos) {
       const m = String(t).match(/m[ée]dico\s*:?\s*(.{4,})/i);
       if (m && !/^\s*(nome|profissional)/i.test(m[1])) { meta.medicoTexto = m[1].trim(); break; }
@@ -239,21 +333,28 @@
       const procedimento = txt('procedimento');
       const paciente = txt('paciente');
       const admissaoRaw = txt('admissao').replace(/\.0+$/, '');
+      const admissaoNorm = /\d/.test(admissaoRaw) ? normAdm(admissaoRaw) : '';   // "ESTORNO" não é admissão
       const valorRaw = cel('valor');
       const valor = Utilidades.parseNumBR(valorRaw, null);
       if (!procedimento && !paciente && !admissaoRaw) continue;   // linha decorativa
       if (valor == null && !procedimento) continue;
       const status = txt('status');
-      const papel = txt('papel');
+      let papel = txt('papel');
+      // o auxiliar do sistema antigo vem como EXECUTANTE com o papel no texto
+      if (/M[EÉ]DICO\s+AUXILIAR/i.test(procedimento) && /^(EXEC|MD|MED|CIRUR)/.test(normNome(papel))) papel = 'AUXILIAR';
       let origem = txt('origem');
       let convenio = txt('convenio');
-      const convN = norm(convenio);
-      if (!origem && (convN === 'CONVENIO' || convN === 'PARTICULAR' || convN === 'SUS')) { origem = convenio; convenio = ''; }
+      // "Recebimento"/"CONVENIO" trazem ora o TIPO (Convênio/Particular), ora o
+      // NOME do convênio ("GEAP (DF)") — separa os dois
+      const catO = catOrigem(origem), catC = catOrigem(convenio);
+      if (origem && !catO) { if (!convenio) convenio = origem; origem = /estorno/i.test(status) ? '' : 'CONVENIO'; }
+      else if (catO) origem = catO;
+      if (!origem && catC) { origem = catC; convenio = ''; }
       const prof = txt('profissional');
       if (prof) { const k = normNome(prof); contagemMed.set(k, (contagemMed.get(k) || { nome: prof, n: 0 })); contagemMed.get(k).n++; }
       const glosa = /glosa/i.test(status) ? 1 : 0;
       linhas.push({
-        admissao: admissaoRaw, admissao_norm: normAdm(admissaoRaw),
+        admissao: admissaoRaw, admissao_norm: admissaoNorm,
         data: normData(cel('data')), paciente, paciente_norm: normNome(paciente),
         papel, papel_canon: papelCanon(papel),
         procedimento, procedimento_norm: normNome(procedimento),
@@ -277,7 +378,6 @@
     if (!medico && !/^(repasse|planilha|sheet|plan)\b/i.test(nomeAba) && !/\d{4}-\d{2}/.test(nomeAba)) medico = nomeAba;
     meta.medicoBruto = medico;
     meta.medico = medico ? nomeOficial(medico) : '';
-    if (!meta.competencia) meta.competencia = compDoNome(arquivo.name) || compDoNome(nomeAba) || '';
     meta.n_linhas = linhas.length;
     meta.total = linhas.reduce((s, l) => s + (l.glosa ? 0 : l.valor), 0);
     return { meta, linhas, avisos };
@@ -297,6 +397,57 @@
     }
     return null;
   }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // EM QUE MÊS O SISTEMA PAGOU ESSAS ADMISSÕES? (a competência pelos dados)
+  // ──────────────────────────────────────────────────────────────────────
+  /** admissões (normalizadas) → Set de meses de pagamento em linhas_qvis */
+  function mesesDasAdmissoes(adms) {
+    const mapa = new Map();
+    const variantes = I().variantesAdm || ((a) => [a]);
+    const lista = [...new Set((adms || []).map(normAdm).filter(Boolean))];
+    for (let i = 0; i < lista.length; i += 120) {
+      const lote = lista.slice(i, i + 120);
+      const vars = [...new Set(lote.flatMap(variantes))];
+      try {
+        for (const r of Banco.query(
+          `SELECT DISTINCT admissao, mes_pagamento FROM linhas_qvis
+            WHERE admissao IN (${vars.map(() => '?').join(',')}) AND mes_pagamento IS NOT NULL AND mes_pagamento <> ''`, vars) || []) {
+          const k = normAdm(r.admissao);
+          if (!mapa.has(k)) mapa.set(k, new Set());
+          mapa.get(k).add(String(r.mes_pagamento));
+        }
+      } catch (e) {}
+    }
+    return mapa;
+  }
+  /**
+   * O mês do relatório final é o mês em que a ferramenta tem essas admissões
+   * pagas — o texto do arquivo ("Competência: ABRIL / 2026") pode ser a
+   * competência contábil, um mês antes do pagamento. Decide quando ≥ 60% das
+   * admissões encontradas no sistema estão num mesmo mês (e ao menos 20% do
+   * relatório foi encontrado); null quando o sistema ainda não tem os dados.
+   */
+  function competenciaPelosDados(linhas) {
+    const adms = [...new Set((linhas || []).map(l => l.admissao_norm).filter(Boolean))];
+    if (!adms.length) return null;
+    const onde = mesesDasAdmissoes(adms);
+    const cont = new Map();
+    let achadas = 0;
+    for (const a of adms) {
+      const comps = onde.get(a);
+      if (!comps || !comps.size) continue;
+      achadas++;
+      for (const c of comps) cont.set(c, (cont.get(c) || 0) + 1);
+    }
+    if (!achadas || achadas < Math.max(5, adms.length * 0.2)) return null;
+    const ordem = [...cont.entries()].sort((a, b) => b[1] - a[1]);
+    const [melhor, n] = ordem[0];
+    if (n < achadas * 0.6) return null;
+    return { competencia: melhor, n, achadas, total: adms.length, pct: Math.round(100 * n / achadas),
+      distribuicao: ordem.map(([c, k]) => ({ competencia: c, n: k })) };
+  }
+  const fmtComp = (c) => { const m = String(c || '').match(/^(\d{4})-(\d{2})$/); return m ? `${m[2]}/${m[1]}` : String(c || '—'); };
 
   // ──────────────────────────────────────────────────────────────────────
   // ADMISSÃO POR PACIENTE + DATA (layout manual sem coluna de admissão)
@@ -332,6 +483,13 @@
   // ──────────────────────────────────────────────────────────────────────
   let _listaCache = { versao: -1, lista: null };
   function invalidar() { _listaCache = { versao: -1, lista: null }; _admCache = new Map(); _admCacheV = -1; }
+  let _colunasOk = false;
+  /** bancos gravados pela v1.3.0 não têm competencia_arquivo (a migração de banco.js também cobre) */
+  function garantirColunas() {
+    if (_colunasOk) return;
+    try { Banco.db.exec(`ALTER TABLE relatorio_final ADD COLUMN competencia_arquivo TEXT`); } catch (e) {}
+    _colunasOk = true;
+  }
 
   async function importarArquivos(arquivos, opts) {
     opts = opts || {};
@@ -344,6 +502,21 @@
       await tick();
       try { lidos.push(Object.assign(await lerArquivo(f), { file: f })); }
       catch (e) { erros.push({ arquivo: f.name, erro: e.message || String(e) }); }
+    }
+    // a competência vale pelos DADOS: o mês em que o sistema pagou as admissões
+    for (const l of lidos) {
+      l.meta.competencia_arquivo = l.meta.competencia || '';
+      try {
+        resolverAdmissoesPorPacienteData(l.linhas);   // o layout sem admissão precisa disto antes
+        const dados = competenciaPelosDados(l.linhas);
+        if (dados && dados.competencia) {
+          if (l.meta.competencia && l.meta.competencia !== dados.competencia) {
+            l.avisos.push(`o arquivo indica ${fmtComp(l.meta.competencia)}, mas ${dados.pct}% das admissões encontradas no sistema estão em ${fmtComp(dados.competencia)} — importado como ${fmtComp(dados.competencia)}`);
+          }
+          l.meta.competencia = dados.competencia;
+          l.meta.competenciaDados = dados;
+        }
+      } catch (e) { console.warn('[relatorio_final] competência pelos dados:', e); }
     }
     // o que ficou sem médico ou competência: pergunta (uma vez, para todos)
     const pend = lidos.filter(l => !l.meta.medico || !l.meta.competencia);
@@ -360,7 +533,8 @@
       progresso({ fase: 'gravando', i, n: prontos.length, arquivo: l.meta.arquivo });
       await tick();
       try {
-        const resolvidas = resolverAdmissoesPorPacienteData(l.linhas);
+        const resolvidas = l.linhas.filter(x => x.admissao_norm).length && l.meta.layout === 'manual1'
+          ? l.linhas.filter(x => x.admissao_norm).length : 0;
         const id = gravar(l);
         importados.push({ id, medico: l.meta.medico, competencia: l.meta.competencia, layout: l.meta.layout,
           arquivo: l.meta.arquivo, n_linhas: l.meta.n_linhas, total: l.meta.total, avisos: l.avisos,
@@ -379,15 +553,19 @@
     const medNorm = normNome(m.medico);
     Banco.db.exec('BEGIN');
     try {
-      const antigos = Banco.query(`SELECT id FROM relatorio_final WHERE medico_norm = ? AND competencia = ?`, [medNorm, m.competencia]) || [];
+      // substitui o mesmo médico × mês E o mesmo ARQUIVO do médico (o mês pode
+      // ter mudado entre duas importações — pelos dados — sem virar duplicata)
+      const antigos = Banco.query(`SELECT id FROM relatorio_final WHERE medico_norm = ? AND (competencia = ? OR arquivo = ?)`,
+        [medNorm, m.competencia, m.arquivo || '']) || [];
       for (const a of antigos) {
         Banco.db.run(`DELETE FROM relatorio_final_linhas WHERE relatorio_id = ?`, [a.id]);
         Banco.db.run(`DELETE FROM relatorio_final WHERE id = ?`, [a.id]);
       }
+      garantirColunas();
       Banco.db.run(
-        `INSERT INTO relatorio_final (medico, medico_norm, competencia, layout, arquivo, periodo_ini, periodo_fim, n_linhas, total, importado_em)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-        [m.medico, medNorm, m.competencia, m.layout, m.arquivo, m.periodo_ini || null, m.periodo_fim || null, m.n_linhas, m.total]);
+        `INSERT INTO relatorio_final (medico, medico_norm, competencia, competencia_arquivo, layout, arquivo, periodo_ini, periodo_fim, n_linhas, total, importado_em)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        [m.medico, medNorm, m.competencia, m.competencia_arquivo || null, m.layout, m.arquivo, m.periodo_ini || null, m.periodo_fim || null, m.n_linhas, m.total]);
       const id = Banco.queryUnica(`SELECT last_insert_rowid() AS id`).id;
       const stmt = Banco.db.prepare(
         `INSERT INTO relatorio_final_linhas
@@ -426,6 +604,7 @@
     if (_listaCache.versao === v && _listaCache.lista) return _listaCache.lista;
     let lista = [];
     try {
+      garantirColunas();
       lista = Banco.query(`SELECT * FROM relatorio_final ORDER BY competencia DESC, medico`) || [];
     } catch (e) { lista = []; }
     _listaCache = { versao: v, lista };
@@ -587,6 +766,11 @@
       status: (d && d.status) || (r && r.status) || '', modulo: (d && d.modulo) || (r && r.modulo) || '',
       origem: (d && d.origem) || (r && r.origem) || '', convenio: (d && d.convenio) || (r && r.convenio) || '',
       fonte: d ? 'consolidado' : 'final',
+      // ATLAS v1.3.1: de qual relatório veio o recebido e em que mês a
+      // ferramenta pagou (o deveria pode estar noutro mês que o do relatório)
+      relatorio_id: (r && r.relatorio_id) || null,
+      compRecebido: (r && r.competencia) || '',
+      foraDoMes: !!(d && d.dentro === false),
     });
     // 1) estornos: negativo anula o positivo igual (mesmo papel e exame)
     const recAtivas = rec.slice();
@@ -782,58 +966,147 @@
    * AUDITORIA: relatórios (ids; vazio = todos) → { itens, porRelatorio, totais }.
    * Assíncrona e com progresso: monta cada competência UMA vez e cede a vez
    * ao navegador entre relatórios (vários médicos × meses sem travar).
+   *
+   * ATLAS v1.3.1 — O CASAMENTO É PELA ADMISSÃO, NÃO PELO MÊS. O relatório
+   * do médico e a competência da ferramenta podem não coincidir (o arquivo
+   * "MAIO2026" diz "Competência: ABRIL" e o sistema pode ter sido importado
+   * como maio). Por isso o confronto junta TODOS os relatórios do médico:
+   *   · o "deveria" nasce dos meses dos relatórios;
+   *   · admissão recebida que não está nesses meses é procurada no mês em
+   *     que o sistema a pagou (linhas_qvis.mes_pagamento) e o Consolidado
+   *     daquele mês entra só para ela (marcada "fora do mês");
+   *   · cada relatório recebe uma COBERTURA: quantas admissões dele estão no
+   *     Consolidado do próprio mês, quantas noutros meses e quantas em nenhum
+   *     — é o que mostra, na hora, um mês importado com outro rótulo.
    */
   async function auditar(ids, opts) {
     opts = opts || {};
     const progresso = typeof opts.progresso === 'function' ? opts.progresso : () => {};
     const todos = listar();
     const sel = (ids && ids.length) ? todos.filter(r => ids.includes(r.id)) : todos.slice();
-    const comps = [...new Set(sel.map(r => r.competencia))].sort();
-    const deveriaPorComp = new Map();
     const avisos = [];
-    for (let i = 0; i < comps.length; i++) {
-      const comp = comps[i];
-      progresso({ fase: 'competencia', i, n: comps.length, competencia: comp });
+    const avisosComp = new Set();
+    // o "deveria" de cada mês, montado uma vez (sob demanda)
+    const devCache = new Map();
+    const getDeveria = async (comp) => {
+      if (devCache.has(comp)) return devCache.get(comp);
+      progresso({ fase: 'competencia', i: devCache.size, n: devCache.size + 1, competencia: comp });
       await tick();
       const calc = garantirCalculo(comp);
-      if (!calc.ok) avisos.push(`${comp}: ${calc.motivo} — o "deveria" deste mês ficou só com o que o Consolidado tem`);
       const linhas = calc.ok || temSnapshot(comp) ? deveriaDaCompetencia(comp) : [];
+      if (!calc.ok && !temSnapshot(comp) && !avisosComp.has(comp)) {
+        avisosComp.add(comp);
+        avisos.push(`${comp}: ${calc.motivo} — o "deveria" deste mês ficou só com o que o Consolidado tem`);
+      }
       const porMed = new Map();
       for (const l of linhas) {
         const k = medNormDeLinhaCons(l);
         if (!porMed.has(k)) porMed.set(k, []);
         porMed.get(k).push(itemDeveria(l, comp));
       }
-      deveriaPorComp.set(comp, porMed);
+      const ent = { porMed, ok: calc.ok };
+      devCache.set(comp, ent);
+      return ent;
+    };
+    // por médico: todos os relatórios dele juntos
+    const porMedico = new Map();
+    for (const r of sel) {
+      if (!porMedico.has(r.medico_norm)) porMedico.set(r.medico_norm, { medico: r.medico, rels: [] });
+      porMedico.get(r.medico_norm).rels.push(r);
     }
     const itens = [], porRelatorio = [];
-    for (let i = 0; i < sel.length; i++) {
-      const r = sel[i];
-      progresso({ fase: 'relatorio', i, n: sel.length, medico: r.medico, competencia: r.competencia });
-      await tick();
-      const dev = (deveriaPorComp.get(r.competencia) || new Map()).get(r.medico_norm) || [];
-      const rec = linhasDoRelatorio(r.id).map(itemRecebido);
+    let iRel = 0;
+    for (const [medNorm, g] of porMedico) {
+      const rels = g.rels;
+      const compsRel = [...new Set(rels.map(r => r.competencia))];
+      const relDoComp = (comp) => rels.find(r => r.competencia === comp) || null;
+      // recebido: todas as linhas de todos os relatórios do médico
+      const rec = [];
+      for (const r of rels) {
+        progresso({ fase: 'relatorio', i: iRel++, n: sel.length, medico: r.medico, competencia: r.competencia });
+        await tick();
+        for (const x of linhasDoRelatorio(r.id)) { const it = itemRecebido(x); it.relatorio_id = r.id; rec.push(it); }
+      }
+      // deveria dos meses dos relatórios
+      const dev = [];
+      for (const comp of compsRel) {
+        const ent = await getDeveria(comp);
+        for (const it of (ent.porMed.get(medNorm) || [])) { it.dentro = true; dev.push(it); }
+      }
       adotarAdmissoes(rec, dev);
+      // admissões recebidas que não estão nesses meses: em que mês o sistema as pagou?
+      const admsDev = new Set(dev.map(d => d.admissao_norm).filter(Boolean));
+      const admsRec = [...new Set(rec.map(x => x.admissao_norm).filter(Boolean))];
+      const faltando = admsRec.filter(a => !admsDev.has(a));
+      const onde = faltando.length ? mesesDasAdmissoes(faltando) : new Map();
+      const outros = new Map();   // comp → Set(admissões)
+      for (const [adm, comps] of onde) for (const c of comps) {
+        if (compsRel.includes(c)) continue;
+        if (!outros.has(c)) outros.set(c, new Set());
+        outros.get(c).add(adm);
+      }
+      for (const [comp, adms] of outros) {
+        const ent = await getDeveria(comp);
+        for (const it of (ent.porMed.get(medNorm) || [])) if (adms.has(it.admissao_norm)) { it.dentro = false; dev.push(it); }
+      }
+      // confronto por admissão (qualquer mês)
       const gDev = agruparPorAdm(dev), gRec = agruparPorAdm(rec);
       const chaves = new Set([...gDev.keys(), ...gRec.keys()]);
-      const doRel = [];
-      for (const k of chaves) doRel.push(...confrontarAdmissao(gDev.get(k) || [], gRec.get(k) || [], { medico: r.medico }));
-      const extras = opts.semRegra ? [] : regraNaoPaga(r.medico, r.competencia, doRel);
-      doRel.push(...extras);
-      if (!opts.semAguardando) {
-        const vistas = new Set(doRel.map(x => x.admissao_norm).filter(Boolean));
-        doRel.push(...aguardandoConvenio(r.medico, r.competencia, vistas));
+      const doMed = [];
+      for (const k of chaves) {
+        const its = confrontarAdmissao(gDev.get(k) || [], gRec.get(k) || [], { medico: g.medico });
+        const recDaAdm = (gRec.get(k) || [])[0];
+        for (const it of its) {
+          if (!it.relatorio_id) {
+            const rel = (recDaAdm && recDaAdm.relatorio_id) ? rels.find(r => r.id === recDaAdm.relatorio_id) : relDoComp(it.competencia);
+            it.relatorio_id = (rel || rels[0]).id;
+          }
+          it.medico = it.medico || g.medico;
+        }
+        doMed.push(...its);
       }
-      for (const it of doRel) { it.relatorio_id = r.id; it.medico = it.medico || r.medico; }
-      const tot = totais(doRel);
-      porRelatorio.push({ id: r.id, medico: r.medico, competencia: r.competencia, layout: r.layout, arquivo: r.arquivo,
-        n_linhas: r.n_linhas, ...tot });
-      itens.push(...doRel);
+      // com regra e sem pagamento / aguardando — por mês de relatório
+      for (const comp of compsRel) {
+        const rel = relDoComp(comp);
+        const extras = opts.semRegra ? [] : regraNaoPaga(g.medico, comp, doMed);
+        for (const it of extras) { it.relatorio_id = rel ? rel.id : rels[0].id; doMed.push(it); }
+        if (!opts.semAguardando) {
+          const vistas = new Set(doMed.map(x => x.admissao_norm).filter(Boolean));
+          for (const it of aguardandoConvenio(g.medico, comp, vistas)) { it.relatorio_id = rel ? rel.id : rels[0].id; doMed.push(it); }
+        }
+      }
+      // cobertura de cada relatório: onde estão as admissões dele
+      const devPorAdm = new Map();
+      for (const d of dev) { if (!d.admissao_norm) continue; if (!devPorAdm.has(d.admissao_norm)) devPorAdm.set(d.admissao_norm, new Set()); devPorAdm.get(d.admissao_norm).add(d.competencia); }
+      for (const r of rels) {
+        const adms = [...new Set(rec.filter(x => x.relatorio_id === r.id).map(x => x.admissao_norm).filter(Boolean))];
+        const semAdm = rec.filter(x => x.relatorio_id === r.id && !x.admissao_norm).length;
+        let noMes = 0, nenhum = 0;
+        const outrosMeses = new Map();
+        for (const a of adms) {
+          const comps = devPorAdm.get(a);
+          if (comps && comps.has(r.competencia)) { noMes++; continue; }
+          if (comps && comps.size) { for (const c of comps) outrosMeses.set(c, (outrosMeses.get(c) || 0) + 1); continue; }
+          nenhum++;
+        }
+        const cob = { n: adms.length, noMes, outros: [...outrosMeses.entries()].sort((a, b) => b[1] - a[1]).map(([c, k]) => ({ competencia: c, n: k })),
+          nenhum, semAdmissao: semAdm };
+        const its = doMed.filter(it => it.relatorio_id === r.id);
+        porRelatorio.push({ id: r.id, medico: r.medico, competencia: r.competencia, competencia_arquivo: r.competencia_arquivo || '',
+          layout: r.layout, arquivo: r.arquivo, n_linhas: r.n_linhas, cobertura: cob, ...totais(its) });
+        if (adms.length && noMes < adms.length * 0.5) {
+          const partes = [`${noMes} de ${adms.length} admissões no Consolidado de ${fmtComp(r.competencia)}`];
+          if (cob.outros.length) partes.push('em outros meses: ' + cob.outros.slice(0, 4).map(o => `${fmtComp(o.competencia)} (${o.n})`).join(', '));
+          if (nenhum) partes.push(`${nenhum} em nenhum mês calculado do sistema`);
+          avisos.push(`${r.medico} · ${fmtComp(r.competencia)} (${r.arquivo}): ${partes.join(' · ')}${cob.outros.length ? ' — as admissões de outros meses foram confrontadas no mês em que o sistema as pagou' : ''}`);
+        }
+      }
+      itens.push(...doMed);
     }
     invalidar();   // um cálculo pode ter gravado snapshot → listas por versão
     progresso({ fase: 'fim', n: sel.length });
     return { itens, porRelatorio, totais: totais(itens), avisos, geradoEm: new Date().toISOString(),
-      competencias: comps, relatorios: sel.map(r => r.id) };
+      competencias: [...new Set(sel.map(r => r.competencia))].sort(), relatorios: sel.map(r => r.id) };
   }
   function totais(itens) {
     const t = { deveria: 0, recebido: 0, falta: 0, semLastro: 0, n: itens.length, porCategoria: {} };
@@ -1096,7 +1369,8 @@
             <tr data-id="${r.id}" class="${ui.sel.has(r.id) ? 'sel' : ''}">
               <td class="rf-chk"><input type="checkbox" class="rf-sel" data-id="${r.id}" ${ui.sel.has(r.id) ? 'checked' : ''}></td>
               <td class="rf-med">${esc(CodigoMedico.exibir(r.medico))}</td>
-              <td class="mono">${esc(r.competencia)}</td>
+              <td class="mono">${esc(r.competencia)}${r.competencia_arquivo && r.competencia_arquivo !== r.competencia
+                ? ` <span class="rf-comp-arq" title="O arquivo indica ${esc(fmtComp(r.competencia_arquivo))}; as admissões estão no sistema de ${esc(fmtComp(r.competencia))}">arquivo: ${esc(fmtComp(r.competencia_arquivo))}</span>` : ''}</td>
               <td><span class="rf-layout rf-layout-${esc(r.layout || '')}">${esc(rotuloLayout(r.layout))}</span></td>
               <td class="num mono">${r.n_linhas}</td>
               <td class="num mono" data-ocultavel>R$ ${fmtN(r.total)}</td>
@@ -1239,11 +1513,16 @@
       </div>
       <div class="rf-resumo">
         <div class="rf-tab-wrap"><table class="rf-tab rf-tab-resumo">
-          <thead><tr><th>Médico</th><th>Mês</th><th class="num">Deveria</th><th class="num">Recebido</th><th class="num">Falta pagar</th><th class="num">Sem lastro</th><th class="num">Itens</th></tr></thead>
-          <tbody>${res.porRelatorio.map(r => `<tr class="${r.falta > 0.004 ? 'rf-tem-falta' : ''}">
-            <td>${esc(CodigoMedico.exibir(r.medico))}</td><td class="mono">${esc(r.competencia)}</td>
+          <thead><tr><th>Médico</th><th>Mês</th><th>Admissões do relatório</th><th class="num">Deveria</th><th class="num">Recebido</th><th class="num">Falta pagar</th><th class="num">Sem lastro</th><th class="num">Itens</th></tr></thead>
+          <tbody>${res.porRelatorio.map(r => {
+            const c = r.cobertura || { n: 0, noMes: 0, outros: [], nenhum: 0, semAdmissao: 0 };
+            const ruim = c.n && c.noMes < c.n * 0.5;
+            const cob = c.n ? `<span class="rf-cob ${ruim ? 'rf-cob-ruim' : ''}" title="Onde a ferramenta tem as admissões deste relatório">${c.n} · <b>${c.noMes}</b> no mês${c.outros.length ? ' · ' + c.outros.slice(0, 3).map(o => `${o.n} em ${esc(fmtComp(o.competencia))}`).join(', ') : ''}${c.nenhum ? ` · <b>${c.nenhum}</b> em nenhum` : ''}${c.semAdmissao ? ` · ${c.semAdmissao} s/ admissão` : ''}</span>` : '—';
+            return `<tr class="${r.falta > 0.004 ? 'rf-tem-falta' : ''}">
+            <td>${esc(CodigoMedico.exibir(r.medico))}</td><td class="mono">${esc(r.competencia)}${r.competencia_arquivo && r.competencia_arquivo !== r.competencia ? ` <span class="rf-comp-arq">arquivo: ${esc(fmtComp(r.competencia_arquivo))}</span>` : ''}</td>
+            <td>${cob}</td>
             <td class="num mono" data-ocultavel>R$ ${fmtN(r.deveria)}</td><td class="num mono" data-ocultavel>R$ ${fmtN(r.recebido)}</td>
-            <td class="num mono rf-falta" data-ocultavel>R$ ${fmtN(r.falta)}</td><td class="num mono" data-ocultavel>R$ ${fmtN(r.semLastro)}</td><td class="num mono">${r.n}</td></tr>`).join('')}
+            <td class="num mono rf-falta" data-ocultavel>R$ ${fmtN(r.falta)}</td><td class="num mono" data-ocultavel>R$ ${fmtN(r.semLastro)}</td><td class="num mono">${r.n}</td></tr>`; }).join('')}
           </tbody></table></div>
       </div>
       <div class="rf-cats">
@@ -1264,7 +1543,7 @@
         <thead><tr><th>Categoria</th><th>Mês</th><th>Médico</th><th>Admissão</th><th>Data</th><th>Paciente</th><th>Procedimento</th><th>Papel</th><th>Origem</th><th class="num">Deveria</th><th class="num">Recebido</th><th class="num">Falta</th></tr></thead>
         <tbody>${vis.slice(0, 2000).map(it => `<tr class="rf-it rf-it-${it.tom}" data-adm="${esc(it.admissao)}" title="Abrir a admissão na aba Admissão">
           <td><span class="rf-cat-tag rf-cat-${it.tom}">${esc(it.rotulo)}</span></td>
-          <td class="mono">${esc(it.competencia)}</td><td>${esc(CodigoMedico.exibir(it.medico))}</td>
+          <td class="mono">${esc(it.competencia)}${it.foraDoMes ? ` <span class="rf-fora" title="A ferramenta pagou esta admissão em ${esc(fmtComp(it.competencia))}; o relatório é de ${esc(fmtComp(it.compRecebido))}">≠ ${esc(fmtComp(it.compRecebido))}</span>` : ''}</td><td>${esc(CodigoMedico.exibir(it.medico))}</td>
           <td class="mono">${esc(it.admissao || '—')}</td><td class="mono">${esc(dataBR(it.data))}</td>
           <td>${esc(I().nomePaciente ? I().nomePaciente(it.paciente) : it.paciente)}</td><td>${esc(it.procedimento)}</td><td>${esc(it.papel)}</td>
           <td>${it.origem ? Utilidades.badgeFonte(it.origem) : ''}</td>
@@ -1326,6 +1605,10 @@
     .rf-arq { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft, #585d62); }
     .rf-layout { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #eef2f6; color: #3f6489; white-space: nowrap; }
     .rf-layout-manual1, .rf-layout-manual2 { background: #fbf3e3; color: #8a6d2f; }
+    .rf-comp-arq, .rf-fora { display: inline-block; font-family: inherit; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #fbf3e3; color: #8a6d2f; white-space: nowrap; margin-left: 4px; }
+    .rf-cob { font-size: 11px; color: var(--ink-soft, #585d62); white-space: nowrap; }
+    .rf-cob b { font-weight: 800; color: var(--ink, #1d1f20); }
+    .rf-cob-ruim { color: #a15646; } .rf-cob-ruim b { color: #a15646; }
     .rf-row-acoes { white-space: nowrap; text-align: right; }
     .rf-mini { font-size: 11px; padding: 3px 9px; border-radius: 8px; border: 1px solid var(--border, #eef0f2); background: #fff; cursor: pointer; color: var(--ink, #1d1f20); }
     .rf-mini:hover { background: var(--accent-soft, #e4eaf1); }
@@ -1380,6 +1663,7 @@
     montar, importarArquivos, lerArquivo, listar, remover, linhasDoRelatorio, linhasDaAdmissao, temRelatorio,
     auditar, confrontoDaAdmissao, exportarExcel, garantirCalculo, garantirMotor,
     CATEGORIAS, CATS_FALTA, garantirXLSX, garantirExcelJS,
-    _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui },
+    competenciaPelosDados, mesesDasAdmissoes,
+    _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook },
   };
 })();
