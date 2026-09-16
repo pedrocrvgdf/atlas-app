@@ -534,7 +534,7 @@ App.telas['administracao'] = function () {
       await Banco.resetar();
       Utilidades.esconderLoading();
       alert('✓ Banco resetado. Você foi redirecionado para a tela inicial.');
-      App.navegarPara('dashboard');
+      App.navegarPara(App._primeiraTelaPermitida());   // ATLAS v1.3.4: tela inicial (a Visão Geral saiu do boot)
     } catch (e) {
       Utilidades.esconderLoading();
       alert('Erro: ' + e.message);

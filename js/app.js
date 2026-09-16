@@ -5,7 +5,9 @@
  */
 
 const App = {
-  telaAtual: 'dashboard',
+  // ATLAS v1.3.4: a tela inicial é a INSPEÇÃO — a Visão Geral saiu do boot
+  // por desempenho (rodava a matriz de vários meses a cada abertura)
+  telaAtual: 'inspecao',
 
   // Mapeamento: id da tela → função que renderiza
   telas: {},
@@ -452,7 +454,9 @@ const App = {
   },
 
   _primeiraTelaPermitida() {
-    const ordem = ['dashboard', 'base-tabela', 'medicos', 'unidades', 'backup', 'administracao'];
+    // ATLAS v1.3.4: a Inspeção abre primeiro; a Visão Geral ('dashboard') saiu
+    // do boot e do dock por desempenho (a ideia fica — ver CLAUDE.md)
+    const ordem = ['inspecao', 'base-tabela', 'medicos', 'unidades', 'backup', 'administracao'];
     for (const t of ordem) {
       if (Auth.podeAcessar(t)) return t;
     }
@@ -497,7 +501,7 @@ const App = {
   // Tailwind ou motion — a ferramenta é offline e sem build; os ícones são
   // os mesmos Tabler, já vendorizados em libs/.
   //
-  // O que aparece aqui é decisão do Pedro (16/09/2026): Visão Geral, Inspeção,
+  // O que aparece aqui é decisão do Pedro (16/09/2026): Inspeção,
   // Auditoria, Relatórios · Importar Sistema (o QVIS) e Produção · Base
   // Tabela, Médicos, De-Para · Configurações. Gerenciais, Produção Médica,
   // Controle de Notas, Consolidação, Unidades e os 12 Desempenhos continuam
@@ -505,9 +509,14 @@ const App = {
   // ATLAS v1.3: a ATLAS não faz repasse, audita — o CALCULAR saiu do dock e a
   // INSPEÇÃO (admissão + relatório final) entrou no lugar. O Calcular segue
   // registrado e suas regras rodam por baixo (AtlasCalcular.calcularESalvar).
+  // ATLAS v1.3.4: a VISÃO GERAL ('dashboard') saiu do dock e do boot por
+  // desempenho — "ainda não utilizaremos" (Pedro). A ideia fica guardada:
+  // js/telas/dashboard.js + visao_geral_dados.js + visao_geral_ui.js (e os
+  // docs) continuam carregados e registrados; App.navegarPara('dashboard')
+  // abre. Para voltar: item aqui + 'dashboard' na frente de
+  // _primeiraTelaPermitida.
   // ──────────────────────────────────────────────────────────────────────
   DOCK_ITENS: [
-    { tela: 'dashboard',         titulo: 'Visão Geral',       icone: 'ti-home' },
     { tela: 'inspecao',          titulo: 'Inspeção',          icone: 'ti-zoom-check' },
     { tela: 'auditoria',         titulo: 'Auditoria',         icone: 'ti-clipboard-check' },
     { tela: 'relatorios',        titulo: 'Relatórios',        icone: 'ti-report' },
@@ -528,6 +537,7 @@ const App = {
     if (d) return d.icone;
     const extra = {
       calcular: 'ti-calculator',   // ATLAS v1.3: sem botão, mas com marca própria
+      dashboard: 'ti-home',        // ATLAS v1.3.4: Visão Geral guardada (sem botão)
       gerenciais: 'ti-adjustments', 'producao-medica': 'ti-layout-grid', 'controle-notas': 'ti-receipt',
       consolidacao: 'ti-lock-check', unidades: 'ti-building', backup: 'ti-database-export',
       administracao: 'ti-settings', 'balanco-retroativo': 'ti-flask',

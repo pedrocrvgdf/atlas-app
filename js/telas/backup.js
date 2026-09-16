@@ -127,7 +127,7 @@ App.telas['backup'] = function () {
   on('bk-arq-restaurar', async () => {
     try {
       const nome = await AtlasArquivoBanco.vincularExistente();
-      if (nome) App.navegarPara('dashboard');
+      if (nome) App.navegarPara(App._primeiraTelaPermitida());   // ATLAS v1.3.4: tela inicial (a Visão Geral saiu do boot)
     } catch (e) { bkErro(e); }
   });
   on('bk-arq-gravar', async () => {
@@ -201,7 +201,7 @@ App.telas['backup'] = function () {
       await Banco.importar(arq);
       Utilidades.esconderLoading();
       Utilidades.toast('Banco importado com sucesso', 'success');
-      App.navegarPara('dashboard');
+      App.navegarPara(App._primeiraTelaPermitida());   // ATLAS v1.3.4: tela inicial (a Visão Geral saiu do boot)
     } catch (err) {
       Utilidades.esconderLoading();
       alert('Erro ao importar: ' + err.message);
