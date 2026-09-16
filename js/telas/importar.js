@@ -1095,21 +1095,26 @@ App.telas['importar'] = function () {
     const temBase = Banco.escalar(
       `SELECT 1 FROM base_tabela b JOIN hospitais h ON h.id=b.hospital_id WHERE h.cliente_id=? LIMIT 1`, [cliente.id]) != null;
     const temMed = Banco.escalar('SELECT 1 FROM linhas_medico WHERE cliente_id=? LIMIT 1', [cliente.id]) != null;
-    const pronto = temProd && temSis && temBase;
+    // O RELATÓRIO DO MÉDICO NÃO É OPCIONAL (METODOLOGIA §5.3): o do sistema é o
+    // cru e não é fiel ao que o médico tem que receber; o que ele recebeu de
+    // fato está no relatório final. Sem ele, o cálculo mediria a coisa errada.
+    const pronto = temProd && temSis && temBase && temMed;
     const chip = (ok, txt) => `<span class="imp-chip ${ok ? 'imp-chip-TODAS' : ''}" style="${ok ? '' : 'opacity:.55'}">${ok ? '✓' : '○'} ${esc(txt)}</span>`;
 
     box.innerHTML = `
       <div class="painel ${pronto ? 'painel-ativo' : ''}">
         <div class="painel-cabecalho">
           <span class="painel-titulo">Calcular o que falta receber</span>
-          <span class="painel-conta">${chip(temProd, 'Produção')} ${chip(temSis, 'Sistema')} ${chip(temBase, 'Base Tabela')} ${chip(temMed, 'Médico (opcional)')}</span>
+          <span class="painel-conta">${chip(temProd, 'Produção')} ${chip(temSis, 'Sistema')} ${chip(temBase, 'Base Tabela')} ${chip(temMed, 'Médico')}</span>
         </div>
         <div class="painel-corpo" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <button class="botao botao-primario" id="imp-calcular" ${pronto ? '' : 'disabled title="Importe produção, sistema e Base Tabela"'}>
+          <button class="botao botao-primario" id="imp-calcular" ${pronto ? '' : 'disabled title="Importe produção, sistema, Base Tabela e o relatório do médico"'}>
             🧮 Calcular o que falta</button>
           <span class="texto-cinza" style="font-size:11.5px;flex:1;min-width:260px">${pronto
-            ? 'Cruza a produção com o relatório do sistema pelas regras da Base Tabela e abre a Inspeção com o resultado.'
-            : 'Faltam relatórios: sem Base Tabela não há como saber quanto deveria ter sido pago, e sem produção ou sistema não há o que cruzar.'}</span>
+            ? 'Produção × sistema diz o que foi recebido e o que foi glosado; a Base diz os papéis que cada admissão exige; o relatório final do médico diz o que ele de fato recebeu. Abre a Inspeção com o resultado.'
+            : (!temMed && temProd && temSis && temBase
+              ? 'Falta o relatório do MÉDICO — ele não é opcional: o do sistema é o cru, e o que o médico de fato recebeu está no relatório final que o analista mandou a ele.'
+              : 'Faltam relatórios: sem Base Tabela não há como saber quanto deveria ter sido pago; sem produção ou sistema não há o que cruzar; sem o relatório do médico não se sabe o que ele recebeu.')}</span>
           <button class="botao botao-perigo" id="imp-limpar">🧹 Limpar importações</button>
         </div>
       </div>`;
@@ -1175,6 +1180,10 @@ App.telas['importar'] = function () {
             Sem isso o cruzamento não fecha — "DURVAL JUNIOR" e "DURVAL MORAES DE CARVALHO JUNIOR" são a mesma pessoa.</div>` : ''}
           ${x.r.hospitaisSemBase && x.r.hospitaisSemBase.length ? `<div class="aviso-caixa">⚠ Há hospital sem
             <strong>nenhuma regra na Base Tabela</strong>: os procedimentos dele saem como SEM REGRA e não são cobrados.</div>` : ''}
+          ${x.r.kpis.mesesSemRelatorioMedico && x.r.kpis.mesesSemRelatorioMedico.length ? `<div class="aviso-caixa">⚠ Pagamentos do
+            sistema em <strong>${x.r.kpis.mesesSemRelatorioMedico.map(m => esc(Utilidades.compExibir(m))).join(', ')}</strong>
+            sem o relatório do médico daquele mês importado. Nesses meses a régua ainda é o cru do sistema —
+            importe o relatório final do médico para a conta valer de verdade.</div>` : ''}
           ${(() => {
             // TERMÔMETRO DO CASAMENTO — quando o total parece pequeno demais, é
             // aqui que a resposta aparece: procedimento que não acha a linha da

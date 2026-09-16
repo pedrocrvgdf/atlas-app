@@ -760,14 +760,19 @@
      *
      * O relatório do SISTEMA é o CRU: ninguém mexeu nele. Ele passava pela mão
      * do analista, que aplicava as regras e montava o demonstrativo que o
-     * médico recebeu — esse é o relatório FIM. O que o médico de fato recebeu
-     * é o que está NELE, não a coluna REPASSADO do sistema.
+     * médico recebeu — esse é o relatório FIM, e o cru NÃO é fiel ao que o
+     * médico tem que receber: o processo erra e o relatório sai errado junto.
+     * O que o médico de fato recebeu é o que está NELE.
      *
-     * Então: admissão que aparece no relatório do médico tem o pagamento
-     * medido por ele; admissão que não aparece continua medida pelo sistema
-     * (é o único dado que existe sobre ela). As linhas são somadas por
-     * admissão × procedimento × papel × médico para que um estorno (valor
-     * negativo) desfaça o pagamento que estornou.
+     * Por isso a palavra final é dele, inclusive no silêncio: **papel que não
+     * consta no demonstrativo não foi pago**, mesmo que o sistema diga que
+     * repassou. As linhas são somadas por admissão × procedimento × papel ×
+     * médico para que um estorno (valor negativo) desfaça o que estornou.
+     *
+     * A armadilha é o mês que ainda não foi importado: sem guarda, tudo dele
+     * viraria dívida falsa. Então a régua vale pelos MESES QUE EXISTEM
+     * (`mesesMedico`) — fora deles o sistema segue sendo o único dado, e o
+     * resultado diz quais meses de pagamento estão sem demonstrativo.
      */
     let sqlMed = `SELECT hospital_id, admissao, competencia, data, paciente, convenio, fonte,
         procedimento, procedimento_norm, papel, papel_canon, medico, 1 AS quantidade,
@@ -778,6 +783,25 @@
     const med = consultar(sqlMed, pMed,
       ` GROUP BY admissao_norm, procedimento_norm, COALESCE(papel_canon, papel), medico_norm
         ORDER BY admissao`, admsRep);
+
+    // O QUE O DEMONSTRATIVO COBRE — lido do cliente INTEIRO (não do recorte):
+    // com filtro por admissão o recorte pode não ter nenhuma linha do médico, e
+    // é justamente esse silêncio que precisa valer como "não foi pago".
+    const ondeMed = f.hospitalId ? ' AND hospital_id = ?' : '';
+    const pMedCli = f.hospitalId ? [f.clienteId, f.hospitalId] : [f.clienteId];
+    const mesesMedico = new Set(Banco.query(
+      `SELECT DISTINCT competencia FROM linhas_medico
+        WHERE cliente_id = ?${ondeMed} AND COALESCE(competencia, '') <> ''`, pMedCli)
+      .map(r => r.competencia));
+    const medicosDoRelatorio = new Set();
+    for (const r of Banco.query(
+      `SELECT DISTINCT medico FROM linhas_medico
+        WHERE cliente_id = ?${ondeMed} AND TRIM(COALESCE(medico, '')) <> ''`, pMedCli)) {
+      const n = U_.normalizar(resolverMedico(r.medico, sinonimos));
+      if (n) medicosDoRelatorio.add(n);
+    }
+    const temRelatorioMedico = mesesMedico.size > 0 || medicosDoRelatorio.size > 0;
+    const mesesSemMedico = new Set();   // meses de pagamento do sistema sem demonstrativo
 
     // regras por hospital (pode haver mais de um no filtro "todos"). A
     // inferência NÃO entra aqui: ela é sugestão da tela Base Tabela, não regra.
@@ -796,17 +820,13 @@
       if (!b.size) semBase.push(h);
     }
 
-    // relatório do médico indexado por admissão NORMALIZADA, e o conjunto de
-    // médicos que ele cobre — o demonstrativo é de UMA pessoa e só fala dela
+    // relatório do médico indexado por admissão NORMALIZADA
     const medPorAdm = new Map();
-    const medicosDoRelatorio = new Set();
     for (const l of med) {
       if (!(Number(l.repassado) > 0)) continue;   // estorno já abatido na soma
       const adm = U_.normAdm(l.admissao);
       if (!medPorAdm.has(adm)) medPorAdm.set(adm, []);
       medPorAdm.get(adm).push(Object.assign({ _consumida: false, _doMedico: true }, l));
-      const n = U_.normalizar(resolverMedico(l.medico, sinonimos));
-      if (n) medicosDoRelatorio.add(n);
     }
 
     // repasse indexado por admissão NORMALIZADA (normAdm)
@@ -858,7 +878,24 @@
       // régua do pagamento é ele; as linhas do sistema desse médico ficam
       // superadas — o relatório tratado é a versão final delas.
       const medAdm = medPorAdm.get(adm) || [];
-      if (medAdm.length) {
+
+      // O MÊS DESTA ADMISSÃO TEM DEMONSTRATIVO? O mês é o do PAGAMENTO (a
+      // competência da linha do sistema). Tendo, o demonstrativo manda mesmo
+      // calado: papel que não está nele não foi pago. Não tendo, não dá para
+      // afirmar nada — o mês entra no aviso de "sem relatório do médico".
+      let admCoberta = false;
+      for (const lr of repAdm) {
+        const c = String(lr.competencia || '');
+        if (!c) continue;
+        if (mesesMedico.has(c)) admCoberta = true;
+        else if (Number(lr.repassado) > 0 || foiRecebida(lr)) mesesSemMedico.add(c);
+      }
+      if (medAdm.length) admCoberta = true;
+
+      // linhas do sistema dos médicos que TÊM demonstrativo ficam superadas:
+      // o relatório tratado é a versão final delas (inclusive quando ele não
+      // traz nada daquela admissão — aí a versão final é "não recebeu")
+      if (admCoberta) {
         for (const lr of repAdm) {
           const n = U_.normalizar(resolverMedico(lr.medico, sinonimos));
           if (n && medicosDoRelatorio.has(n)) lr._consumida = true;
@@ -1052,10 +1089,14 @@
            * DE ONDE SAI O "PAGO" DESTE PAPEL. O relatório do SISTEMA é o cru;
            * o do MÉDICO é o mesmo relatório depois de tratado pelo analista —
            * é ele que o médico recebeu e é por ele que se mede o pagamento.
-           * Mas o demonstrativo é de UM médico: só vale para os papéis de quem
-           * ele cobre. Para os demais, o sistema segue sendo o único dado.
+           *
+           * Duas condições, e as duas importam: o demonstrativo é de UM médico
+           * (só vale para os papéis de quem ele cobre) e de UM mês (só vale
+           * onde aquele mês foi importado). Dentro disso ele manda até no
+           * silêncio — papel ausente é papel não pago. Fora disso, o sistema
+           * segue sendo o único dado que existe.
            */
-          const reguaMedico = !!nomeDonoN && medAdm.length > 0 && medicosDoRelatorio.has(nomeDonoN);
+          const reguaMedico = !!nomeDonoN && admCoberta && medicosDoRelatorio.has(nomeDonoN);
           const fonteDoPago = reguaMedico ? medAdm : repAdm;
           const mesmoMedico = (outro) => {
             const o = U_.normalizar(resolverMedico(outro, sinonimos));
@@ -1162,9 +1203,12 @@
           } else {
             status = 'NAO_PAGO';
             // o pagador pagou o procedimento e o repasse não saiu: é a
-            // dívida mais clara que existe — tem nome próprio no relatório
+            // dívida mais clara que existe — tem nome próprio no relatório.
+            // Com o demonstrativo do médico no mês, o silêncio dele é a prova:
+            // o papel não consta, logo não foi pago (METODOLOGIA §5.3).
             motivo = !nomeDono ? 'sem_medico'
-              : (recebidoPorProc.has(procN) ? 'recebido_sem_repasse' : 'nao_pago');
+              : (reguaMedico ? 'nao_consta_no_relatorio_medico'
+              : (recebidoPorProc.has(procN) ? 'recebido_sem_repasse' : 'nao_pago'));
             falta = esperado;
             dif = esperado;
           }
@@ -1285,6 +1329,12 @@
       nGlosa: admissoes.filter(a => a.itens.some(i => i.status === 'GLOSA')).length,
       nAguardando: admissoes.filter(a => a.status === 'AGUARDANDO').length,
       nRenomeados: 0,
+      // o relatório do médico é obrigatório (§5.3): sem ele o que se mede é o
+      // cru do sistema, e o cru não é fiel ao que o médico tem que receber
+      temRelatorioMedico,
+      // meses de PAGAMENTO do sistema que ainda não têm demonstrativo do
+      // médico importado — ali a régua não é a final, e a tela avisa
+      mesesSemRelatorioMedico: [...mesesSemMedico].sort(),
     };
 
     // como as grafias da produção acharam a Base (exato/sinônimo/similar/

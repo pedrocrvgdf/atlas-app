@@ -53,6 +53,7 @@ App.telas['auditoria'] = function () {
     pago_a_outro: 'pago ao médico errado — a dívida continua',
     sem_medico: 'papel remunerado sem profissional em base nenhuma',
     recebido_sem_repasse: 'o pagador pagou e o repasse não saiu',
+    nao_consta_no_relatorio_medico: 'o sistema mostra a admissão e o relatório final do médico não traz este papel — erro no tratamento do relatório',
     nao_conciliado: 'ainda no caminho — o convênio não pagou ou a conciliação não quitou',
     indicante_ao_executante: 'indicante não informado no sistema — o valor é do executante',
     pago_sem_regra: 'o sistema pagou, mas sem regra não dá para conferir o valor',

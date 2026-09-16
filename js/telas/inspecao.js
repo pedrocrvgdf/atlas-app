@@ -44,6 +44,10 @@ window.AtlasInspecao = (function () {
   const FRASE_PARTICULAR = 'Particular — sem repasse lançado nesta competência';
   const FRASE_SEM_REGRA = 'Sem regra de repasse';
   const FRASE_SEM_EXECUCAO = 'procedimento recebido do convênio sem repasse executado';
+  // o sistema PROVA que a admissão existe e o dinheiro entrou; a Base diz quanto
+  // era; o relatório final do médico diz o que ele recebeu. Silêncio dele num
+  // papel que a Base remunera = erro no tratamento do relatório (METODOLOGIA §5.3)
+  const FRASE_FORA_DO_FINAL = 'consta no sistema e não foi repassado no relatório final do médico';
   const FRASE_PAGA = 'Admissão paga no repasse';
   const FRASE_NADA = 'Admissão não encontrada';
   const DICA_PENDENTE = 'O convênio ainda não pagou esta admissão';
@@ -368,6 +372,9 @@ window.AtlasInspecao = (function () {
         // pendente é a conferência do valor, e isso a Auditoria mostra.
         if (i.pago > 0) continue;
         out.push({ item: i, grave: false, texto: `${rotProc} - ${FRASE_SEM_REGRA}` });
+      } else if (i.motivo === 'nao_consta_no_relatorio_medico') {
+        out.push({ item: i, grave: true,
+          texto: `${rotProc} - ${PAPEL_ROTULO[i.papel] || i.papel} ${FRASE_FORA_DO_FINAL}` });
       } else if (i.motivo === 'recebido_sem_repasse' || insp.totalRepassado <= 0) {
         out.push({ item: i, grave: true, texto: `${rotProc} - ${FRASE_SEM_EXECUCAO}` });
       } else {
