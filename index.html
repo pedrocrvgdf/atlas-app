@@ -4,51 +4,160 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ATLAS — Auditoria de Contas</title>
-  <link rel="icon" type="image/png" href="assets/atlas-titan.png">
 
-  <!-- Tipografia e estilos (tudo LOCAL — funciona 100% offline / file://) -->
+  <!-- V216: Google Fonts via <link> (antes eram @import no CSS, que causa waterfall).
+       preconnect + display=swap: baixam em paralelo e não bloqueiam o render. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600&family=Poppins:wght@400;500;600&display=swap">
+
+  <!-- Estilos -->
+  <!-- V494: Manrope local (tipografia da barra de menu — design handoff) -->
   <link rel="stylesheet" href="libs/manrope.css">
   <link rel="stylesheet" href="css/style.css">
+  <!-- V493: Ícones do menu (Tabler) agora LOCAIS (libs/) — mesma versão 3.21.0
+       que vinha do CDN. O app funciona sem internet/CDN bloqueado. -->
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="libs/fonts/tabler-icons.woff2">
+  <link rel="stylesheet" href="libs/tabler-icons.min.css">
 
-  <!-- SQLite no navegador. O sql-wasm-b64.js embute o binário WASM em base64
-       (necessário para abrir por duplo clique/file://, onde fetch local é
-       bloqueado). defer mantém a ordem de execução sem travar o 1º paint. -->
+  <!-- V217: revela os ícones SÓ quando a webfont Tabler está de fato disponível.
+       document.fonts.ready resolvia cedo demais (antes do CSS do Tabler baixar) e o □ vazava.
+       Aqui forçamos o download da fonte específica e confirmamos com .check(), com retry + failsafe. -->
+  <script>
+    (function () {
+      var html = document.documentElement;
+      var FONT = '1em "tabler-icons"';
+      var revelado = false;
+      function revelar() { if (!revelado) { revelado = true; html.classList.add('fonts-ready'); } }
+      function pronto() {
+        try { return document.fonts && document.fonts.check && document.fonts.check(FONT); }
+        catch (e) { return false; }   // família ainda não registrada
+      }
+      function poll(n) {
+        if (revelado) return;
+        if (pronto()) { revelar(); return; }
+        if (n <= 0) { revelar(); return; }   // failsafe por contagem
+        setTimeout(function () { poll(n - 1); }, 80);
+      }
+      // dispara o download da fonte uma vez e começa o polling
+      try { if (document.fonts && document.fonts.load) document.fonts.load(FONT).catch(function () {}); } catch (e) {}
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (pronto()) revelar(); });
+      poll(50);                    // ~4s de polling (80ms × 50)
+      setTimeout(revelar, 4500);   // failsafe absoluto de tempo
+    })();
+  </script>
+
+  <!-- V493: Bibliotecas agora LOCAIS (libs/) — mesmas versões que vinham do CDN
+       (sql.js 1.11.0, xlsx 0.18.5, exceljs 4.4.0, jszip 3.10.1), obtidas do npm.
+       O app agora abre e funciona 100% OFFLINE / com CDN bloqueado por firewall.
+       defer: não bloqueiam o 1º paint, mas mantêm a ordem de execução. -->
+  <!-- SQLite no navegador. O sql-wasm-b64.js embute o binário WASM (necessário
+       para abrir via duplo clique/file://, onde fetch de arquivo local é bloqueado) -->
   <script defer src="libs/sql-wasm.js"></script>
   <script defer src="libs/sql-wasm-b64.js"></script>
+  <!-- V589: as libs de planilha (xlsx, exceljs, jszip) não carregam mais no
+       boot — o app.js injeta os três scripts ~1,5s após a inicialização,
+       fora do caminho crítico de abertura. -->
 
-  <!-- Leitor de planilhas (SheetJS) — vendorizado -->
-  <script defer src="libs/xlsx.full.min.js"></script>
-  <!-- Gerador de planilhas formatadas (extração da Inspeção) — vendorizado -->
-  <script defer src="libs/exceljs.min.js"></script>
+  <!-- V491: three.js removido — nenhuma referência a THREE existe no código. -->
+
 </head>
 <body>
 
+  <!-- Container principal — preenchido por JavaScript -->
   <div id="app">
+    <!-- Tela de loading inicial -->
     <div class="loading-overlay">
       <div class="spinner"></div>
-      <div class="message">Abrindo a ATLAS…</div>
+      <div class="message">Carregando aplicação...</div>
     </div>
   </div>
 
-  <!-- Scripts da aplicação (A ORDEM IMPORTA: núcleo → motor → telas → shell) -->
-  <script defer src="js/versao.js"></script>
+  <!-- Scripts da aplicação (ordem importa) -->
+  <script defer src="js/versao.js"></script><!-- V858: carimbo do pacote -->
   <script defer src="js/utilidades.js"></script>
+  <script defer src="js/cabecalho_degrade.js"></script><!-- V949: degradê contínuo no cabeçalho das matrizes (alinha as fatias por célula) -->
+  <script defer src="js/log_erros.js"></script><!-- V695: log LOCAL de erros (observabilidade offline) -->
+  <script defer src="js/auth.js"></script><!-- ATLAS v1.0: sem tela de login; só a senha administrativa -->
   <script defer src="js/schema.js"></script>
+  <script defer src="libs/fflate.min.js"></script><!-- V644: gzip síncrono p/ snapshots -->
   <script defer src="js/banco.js"></script>
-  <script defer src="js/leitor_xlsx.js"></script>
-  <script defer src="js/importador.js"></script>
-  <script defer src="js/motor.js"></script>
+  <script defer src="js/arquivo_banco.js"></script><!-- V592: cópia automática em arquivo real -->
+  <script defer src="js/versoes_tabela.js"></script><!-- V563 -->
+  <script defer src="js/check_regra.js"></script><!-- V642 -->
+  <script defer src="js/codigo_medico.js"></script>
+  <script defer src="js/memoria_calculo.js"></script><!-- V937: memória de cálculo (hover no repasse — Calcular/Auditoria) -->
+  <script defer src="js/unidades_regras.js"></script><!-- V938: Ajuste Unidades (o que o médico do Períodos recebe além do plantão) -->
+  <script defer src="js/importador_base_tabela.js"></script>
+  <script defer src="js/importador_medicos.js"></script>
+  <script defer src="js/importador_producao.js"></script>
+  <script defer src="js/importador_laudos.js"></script>
+  <script defer src="js/app.js"></script>
 
+  <!-- Documentação central dos módulos + componente do botão informativo -->
+  <script defer src="js/docs_modulos.js"></script>
+  <script defer src="js/docs_visao_geral.js"></script><!-- V952: "Como ler" de cada gráfico/ilha/card da Visão Geral (botão ⓘ) -->
+  <script defer src="js/telas/atlas_info.js"></script>
+  <script defer src="js/telas/manual.js"></script><!-- V596: manual da ferramenta -->
+
+  <!-- Núcleo de Repasse (providers) + módulo compartilhado do LIO -->
+  <script defer src="js/repasse_core.js"></script>
+  <script defer src="js/repasse_lio_core.js"></script>
+
+  <!-- Telas -->
   <script defer src="js/telas/dashboard.js"></script>
-  <script defer src="js/telas/clientes.js"></script>
-  <script defer src="js/telas/importar.js"></script>
   <script defer src="js/telas/base_tabela.js"></script>
   <script defer src="js/telas/medicos.js"></script>
-  <script defer src="js/telas/auditoria.js"></script>
-  <script defer src="js/telas/inspecao.js"></script>
-  <script defer src="js/telas/relatorios.js"></script>
+  <script defer src="js/telas/unidades.js"></script>
+  <script defer src="js/telas/de_para_nomes.js"></script>
+  <script defer src="js/telas/backup.js"></script>
+  <script defer src="js/telas/administracao.js"></script>
   <script defer src="js/telas/sistema.js"></script>
+  <script defer src="js/telas/balanco_retroativo.js"></script>
+  <script defer src="js/telas/controle_notas.js"></script><!-- V906 -->
 
-  <script defer src="js/app.js"></script>
+  <script defer src="js/telas/desempenho_cargos.js"></script>
+  <script defer src="js/telas/desempenho_lentes_contato.js"></script>
+  <script defer src="js/telas/desempenho_estrabismo.js"></script>
+  <script defer src="js/telas/desempenho_luz_pulsada.js"></script>
+  <script defer src="js/telas/desempenho_crosslink.js"></script>
+  <script defer src="js/telas/desempenho_refractive_laser.js"></script>
+  <script defer src="js/telas/desempenho_periodos.js"></script>
+  <script defer src="js/telas/desempenho_fellow.js"></script>
+  <script defer src="js/telas/desempenho_fracionamento.js"></script>
+  <script defer src="js/telas/desempenho_opme.js"></script>
+  <script defer src="js/telas/desempenho_lio.js"></script>
+  <script defer src="js/telas/desempenho_laudos.js"></script>
+  <script defer src="js/telas/importar_producao.js"></script>
+  <script defer src="js/telas/importar_qvis.js"></script>
+  <script defer src="js/telas/importar_periodos.js"></script>
+  <script defer src="js/telas/importar_fellow.js"></script>
+  <script defer src="js/telas/importar_fracionamento.js"></script>
+  <script defer src="js/telas/calcular.js"></script>
+  <script defer src="js/telas/auditoria.js"></script>
+  <script defer src="js/telas/gerenciais.js"></script>
+  <script defer src="js/cadastro_pendencias.js"></script><!-- V814 -->
+  <script defer src="js/telas/relatorios.js"></script>
+  <script defer src="js/inspecao.js"></script><!-- V943: Inspeção da Admissão de volta, sem cofre -->
+  <script defer src="js/telas/consolidacao.js"></script>
+  <script defer src="js/telas/visao_geral_dados.js"></script>
+  <script defer src="js/telas/lembretes.js"></script>
+  <script defer src="js/telas/linha_tempo.js"></script>
+  <script defer src="js/telas/visao_geral_ui.js"></script>
+  <script defer src="js/telas/producao_medica.js"></script>
+  <script defer src="js/telas/externos.js"></script><!-- V699: módulo Externos (modo switch) -->
+  <script defer src="js/diag_perf.js"></script><!-- V592: cronômetro das funções pesadas -->
+
+  <!-- Marca d'água global (rodapé fixo discreto) — escondida pelo overlay de login -->
+  <div class="app-watermark" aria-hidden="true">
+    <span><strong>Founder:</strong> Matheus Alves</span>
+    <span class="sep">·</span>
+    <span><strong>Co-founder:</strong> Pedro Henrique</span>
+    <span class="sep">·</span>
+    <span>Since 2026</span>
+  </div>
+
 </body>
 </html>

@@ -1,10 +1,15 @@
 /**
- * ATLAS — carimbo de versão do pacote.
- * Aparece no rodapé do menu; ajuda a saber qual build cada máquina roda.
+ * CARIMBO DE VERSÃO DO PACOTE.
+ *
+ * Aparece no rodapé do menu e fica carimbado no próprio banco: se alguém abrir
+ * um .db gravado por uma versão MAIS NOVA da ATLAS, a ferramenta avisa na hora
+ * (Banco._conferirVersaoDoPacote). `numero` só cresce.
+ *
+ * ATLAS v1.0.0 nasce da ferramenta de repasse v202_999 (numero 999): por isso
+ * a contagem continua de 1000.
  */
 window.ATLAS_VERSAO = {
-  produto: 'ATLAS — Auditoria de Contas',
-  pacote: 'v0.11.1',
-  numero: 22,
+  pacote: 'v1.0.0',
+  numero: 1000,
   gerado: '2026-09-16',
 };
