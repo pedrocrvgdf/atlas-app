@@ -16,7 +16,11 @@
  *   • percentual preenchido  → repasse = produzido × percentual (Particular)
  * ============================================================================
  */
-App.telas['calcular'] = function () {
+// ATLAS v1.3: a tela aceita { soRegistrar: true } — registra o motor em
+// window.AtlasCalcular (calcularESalvar) SEM desenhar nada. É assim que a
+// aba Relatório final calcula um mês que ainda não tem cálculo salvo, com
+// exatamente as regras do Calcular, sem o botão no dock.
+App.telas['calcular'] = function (opts) {
   if (!window.__calc) {
     window.__calc = {
       competencia: null,
@@ -8099,6 +8103,27 @@ App.telas['calcular'] = function () {
 
     @media (max-width: 1100px) { .calc-toolbar { flex-direction: column; align-items: stretch; } }
   `;
+
+  // ATLAS v1.3: o motor exposto por baixo — as MESMAS regras do botão
+  // "Calcular" (aux recarregado, caches de duplicidade zerados, snapshot e
+  // repasse_pagos gravados). Mês CONSOLIDADO não recalcula (V619).
+  window.AtlasCalcular = Object.assign(window.AtlasCalcular || {}, {
+    calcularESalvar(competencia) {
+      if (!competencia) return { ok: false, motivo: 'competência vazia' };
+      if (window.AtlasConsolidacao && window.AtlasConsolidacao.estaConsolidado && window.AtlasConsolidacao.estaConsolidado(competencia)) {
+        return { ok: false, consolidado: true, motivo: `${competencia} está consolidado — o cálculo salvo é o registro oficial` };
+      }
+      if (state.tiposHabilitados == null) state.tiposHabilitados = lerTiposHabilitados();
+      if (state.overrides == null) state.overrides = lerOverrides();
+      window.__atlasAuxCache = null;
+      Object.keys(window).filter(k => k.indexOf('__atlasPagos_') === 0).forEach(k => { delete window[k]; });
+      const resultado = calcular({ competencia });
+      const salvou = salvarSnapshot(competencia, resultado);
+      try { if (window.AtlasRelatorios && AtlasRelatorios.invalidarConsolidado) AtlasRelatorios.invalidarConsolidado(competencia); } catch (_) {}
+      return { ok: !!salvou, kpis: resultado.kpis, motivo: salvou ? '' : 'não conseguiu salvar o cálculo' };
+    },
+  });
+  if (opts && opts.soRegistrar) return;
 
   render();
 };

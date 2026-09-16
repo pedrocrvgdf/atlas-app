@@ -1,0 +1,1385 @@
+/*
+ * ============================================================================
+ * ATLAS v1.3 — RELATÓRIO FINAL: o que o MÉDICO de fato recebeu
+ * ============================================================================
+ *
+ * A ferramenta inteira converge no módulo Relatórios: Importar Sistema →
+ * Calcular (Base Tabela) → Auditoria (papéis que o sistema não trouxe) →
+ * fichários de Desempenho → Consolidado. Isso é o "DEVERIA ter sido pago".
+ *
+ * O RELATÓRIO FINAL é o outro lado da conta: o arquivo que o médico recebeu
+ * para emitir a nota — um por médico × mês de PAGAMENTO. Antes de abril/2026
+ * ele era feito à mão (dois layouts manuais); depois, é o .xlsx que a própria
+ * ferramenta exporta por médico (Relatórios › Exportar › por médico).
+ *
+ * Esta aba lê esses arquivos (vários de uma vez, sem travar), guarda no banco
+ * (viaja com o .db) e faz a AUDITORIA: confronta, por médico e por mês, o que
+ * o Consolidado manda pagar com o que o relatório final pagou, admissão por
+ * admissão, papel por papel — e diz O QUE FALTA PAGAR ao médico.
+ *
+ * Regras de leitura (validadas nas três gerações de layout do hospital):
+ *   · nunca deduplicar — a soma das linhas é o valor da nota; linhas repetidas
+ *     e NEGATIVAS (estornos) são legítimas e contam;
+ *   · GLOSA vale zero no confronto (glosa = 1, valor guardado só para leitura);
+ *   · competência = mês do pagamento: vem do cabeçalho do arquivo
+ *     ("Pagamentos liberados entre dd/mm/aaaa e dd/mm/aaaa" → mês final;
+ *     "Competência: ABRIL / 2026"; "mm/aaaa"), do nome do arquivo
+ *     (Relatorio_<MÉDICO>_<AAAA-MM>…) ou do nome da aba ("Repasse AAAA-MM");
+ *     sem nada disso, pergunta na importação;
+ *   · médico = o valor mais frequente da coluna Profissional/Médico, resolvido
+ *     pelo de-para (nome oficial); na falta, o nome do arquivo ou o cabeçalho;
+ *   · layout sem coluna de admissão (manual, 1ª geração) → a admissão é
+ *     resolvida por PACIENTE + DATA na produção analítica e no sistema.
+ *
+ * Categorias do confronto (falta = o que somar na cobrança):
+ *   conforme        deveria = recebido
+ *   a_menor         recebido < deveria                       → falta a diferença
+ *   nao_pago        papel devido sem linha no relatório      → falta o valor
+ *   nao_consta      admissão devida sem NENHUMA linha final  → falta tudo
+ *   regra_nao_paga  linha do sistema com regra na Base Tabela e sem pagamento
+ *                   em lugar nenhum (nem Consolidado, nem final) → falta
+ *   a_maior         recebido > deveria                       (informativo)
+ *   sem_lastro      recebido sem par no Consolidado          (informativo)
+ *   glosa           glosado — vale zero                      (informativo)
+ *   estorno         linha negativa sem par positivo          (informativo)
+ *   aguardando      produzido e ainda não recebido do convênio (informativo)
+ *
+ * Módulo GLOBAL: window.AtlasRelatorioFinal — montar(container) desenha a aba;
+ * linhasDaAdmissao/confrontoDaAdmissao alimentam o 4º painel da Inspeção.
+ * Depende de js/inspecao.js (AtlasInspecao._interno) e, para o "deveria", de
+ * AtlasRelatorios.linhasCompletasComp e AtlasCalcular.calcularESalvar.
+ * ============================================================================
+ */
+(function () {
+  'use strict';
+
+  const I = () => (window.AtlasInspecao && window.AtlasInspecao._interno) || {};
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtN = (n) => Utilidades.formatarNumero(Number(n) || 0, 2);
+  const norm = (s) => Utilidades.normalizar(s);
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const normAdm = (x) => (I().normAdm ? I().normAdm(x) : String(x == null ? '' : x).replace(/\D/g, '').replace(/^0+/, ''));
+  const normNome = (x) => (I().normNome ? I().normNome(x) : norm(x));
+  const normData = (x) => (I().normData ? I().normData(x) : '');
+  const dataBR = (iso) => (I().dataBR ? I().dataBR(iso) : String(iso || ''));
+
+  /**
+   * As libs de planilha carregam ~1,5 s depois do boot (app.js, V589). Quem
+   * chega aqui antes disso espera por elas em vez de falhar.
+   */
+  const _libs = {};
+  function garantirLib(global, src) {
+    if (window[global]) return Promise.resolve(window[global]);
+    if (_libs[global]) return _libs[global];
+    _libs[global] = new Promise((resolve, reject) => {
+      const t0 = Date.now();
+      const espera = () => {
+        if (window[global]) return resolve(window[global]);
+        if (Date.now() - t0 > 20000) return reject(new Error(`Biblioteca ${global} não carregou (${src})`));
+        setTimeout(espera, 120);
+      };
+      if (![...document.scripts].some(sc => (sc.getAttribute('src') || '') === src)) {
+        const sc = document.createElement('script');
+        sc.src = src;
+        sc.onerror = () => reject(new Error(`Não consegui carregar ${src}`));
+        document.head.appendChild(sc);
+      }
+      espera();
+    });
+    return _libs[global];
+  }
+  const garantirXLSX = () => garantirLib('XLSX', 'libs/xlsx.full.min.js');
+  const garantirExcelJS = () => garantirLib('ExcelJS', 'libs/exceljs.min.js');
+
+  const CATEGORIAS = {
+    conforme:       { rotulo: 'Conforme',                     soma: false, tom: 'ok' },
+    a_menor:        { rotulo: 'Pago a menor',                 soma: true,  tom: 'falta' },
+    nao_pago:       { rotulo: 'Papel não pago',               soma: true,  tom: 'falta' },
+    nao_consta:     { rotulo: 'Não consta no relatório final', soma: true, tom: 'falta' },
+    regra_nao_paga: { rotulo: 'Com regra e sem pagamento',    soma: true,  tom: 'falta' },
+    a_maior:        { rotulo: 'Pago a maior',                 soma: false, tom: 'aviso' },
+    sem_lastro:     { rotulo: 'Recebido sem lastro',          soma: false, tom: 'aviso' },
+    glosa:          { rotulo: 'Glosa (vale zero)',            soma: false, tom: 'info' },
+    estorno:        { rotulo: 'Estorno',                      soma: false, tom: 'info' },
+    aguardando:     { rotulo: 'Aguardando convênio',          soma: false, tom: 'info' },
+  };
+  const CATS_FALTA = Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].soma);
+
+  // ──────────────────────────────────────────────────────────────────────
+  // LEITURA DO ARQUIVO
+  // ──────────────────────────────────────────────────────────────────────
+  const ALIASES = {
+    admissao:     ['ADMISSAO', 'ADMISSAO CPS', 'COD ADMISSAO', 'CODIGO ADMISSAO', 'N ADMISSAO', 'NUM ADMISSAO',
+                   'NRO ADMISSAO', 'NUMERO ADMISSAO', 'ATENDIMENTO', 'CPS', 'ADM', 'N ATENDIMENTO'],
+    data:         ['DATA', 'DATA ADMISSAO', 'DT ADMISSAO', 'DATA ATENDIMENTO', 'DT', 'DATA ADM', 'DATA DO ATENDIMENTO'],
+    papel:        ['PAPEL', 'FUNCAO', 'TIPO PROFISSIONAL', 'PARTICIPACAO', 'PAPEL DO MEDICO', 'ATUACAO'],
+    profissional: ['PROFISSIONAL', 'MEDICO', 'NOME PROFISSIONAL', 'NOME DO PROFISSIONAL', 'PRESTADOR',
+                   'NOME MEDICO', 'NOME DO MEDICO', 'MEDICO PROFISSIONAL'],
+    paciente:     ['PACIENTE', 'NOME PACIENTE', 'NOME DO PACIENTE'],
+    procedimento: ['DESCRICAO', 'PROCEDIMENTO', 'DESCRICAO PROCEDIMENTO', 'DESCRICAO DO PROCEDIMENTO', 'PRODUTO',
+                   'ITEM', 'SERVICO', 'EXAME PROCEDIMENTO'],
+    valor:        ['VALOR REPASSE', 'REPASSADO', 'REPASSE', 'VALOR REPASSADO', 'VALOR RECEBIDO', 'RECEBIDO',
+                   'VALOR PAGO', 'VALOR', 'VALOR LIQUIDO', 'VALOR R$', 'VLR REPASSE', 'VLR', 'TOTAL', 'HONORARIO PAGO'],
+    status:       ['STATUS', 'SISTEMA', 'SITUACAO', 'ESTADO'],
+    modulo:       ['MODULO', 'FICHARIO'],
+    origem:       ['ORIGEM', 'RECEBIMENTO', 'TIPO RECEBIMENTO', 'TIPO DE RECEBIMENTO', 'FONTE', 'FONTE PAGADORA'],
+    convenio:     ['CONVENIO', 'PLANO', 'OPERADORA'],
+  };
+  const ALIAS_CAMPO = new Map();
+  for (const campo of Object.keys(ALIASES)) for (const a of ALIASES[campo]) if (!ALIAS_CAMPO.has(a)) ALIAS_CAMPO.set(a, campo);
+
+  const MESES = { JANEIRO: '01', FEVEREIRO: '02', MARCO: '03', ABRIL: '04', MAIO: '05', JUNHO: '06', JULHO: '07',
+    AGOSTO: '08', SETEMBRO: '09', OUTUBRO: '10', NOVEMBRO: '11', DEZEMBRO: '12',
+    JAN: '01', FEV: '02', MAR: '03', ABR: '04', MAI: '05', JUN: '06', JUL: '07', AGO: '08', SET: '09', OUT: '10', NOV: '11', DEZ: '12' };
+
+  /** 'dd/mm/aaaa' | 'aaaa-mm-dd' | Date | serial → 'AAAA-MM' */
+  function mesDe(v) {
+    const iso = normData(v);
+    return iso ? iso.slice(0, 7) : '';
+  }
+  function compDeTexto(txt) {
+    const t = String(txt || '');
+    let m = t.match(/pagamentos?\s+liberados?\s+(?:entre|de)\s+(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(?:e|a|at[ée])\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+    if (m) return { competencia: mesDe(m[2]), periodo_ini: normData(m[1]), periodo_fim: normData(m[2]) };
+    m = t.match(/compet[êe]ncia\s*:?\s*([A-Za-zçÇ]+)\s*(?:\/|de|-)?\s*(\d{4})/i);
+    if (m) { const mm = MESES[norm(m[1])]; if (mm) return { competencia: `${m[2]}-${mm}` }; }
+    m = t.match(/compet[êe]ncia\s*:?\s*(\d{1,2})\s*\/\s*(\d{4})/i);
+    if (m) return { competencia: `${m[2]}-${String(m[1]).padStart(2, '0')}` };
+    m = t.match(/compet[êe]ncia\s*:?\s*(\d{4})-(\d{2})/i);
+    if (m) return { competencia: `${m[1]}-${m[2]}` };
+    m = t.match(/m[êe]s\s*(?:de\s+)?(?:pagamento|refer[êe]ncia|repasse)?\s*:?\s*(\d{1,2})\s*\/\s*(\d{4})/i);
+    if (m) return { competencia: `${m[2]}-${String(m[1]).padStart(2, '0')}` };
+    m = t.match(/m[êe]s\s*(?:de\s+)?(?:pagamento|refer[êe]ncia|repasse)?\s*:?\s*([A-Za-zçÇ]+)\s*(?:\/|de|-)\s*(\d{4})/i);
+    if (m) { const mm = MESES[norm(m[1])]; if (mm) return { competencia: `${m[2]}-${mm}` }; }
+    return null;
+  }
+  function compDoNome(nome) {
+    const s = String(nome || '');
+    let m = s.match(/(\d{4})[-_.](\d{2})(?!\d)/);
+    if (m && Number(m[2]) >= 1 && Number(m[2]) <= 12) return `${m[1]}-${m[2]}`;
+    m = s.match(/(?<!\d)(\d{2})[-_.](\d{4})(?!\d)/);
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= 12) return `${m[2]}-${m[1]}`;
+    return '';
+  }
+  function medicoDoNome(nome) {
+    const s = String(nome || '').replace(/\.(xlsx|xlsm|xls|csv)$/i, '');
+    let m = s.match(/^relat[oó]rio[_ \-]+(.+?)[_ \-]+\d{4}[-_]\d{2}/i);
+    if (m) return m[1].replace(/_/g, ' ').trim();
+    m = s.match(/^(?:dr[a]?\.?\s+)?(.+?)[_ \-]+\d{4}[-_]\d{2}/i);
+    if (m && /[A-Za-z]{3,}/.test(m[1]) && !/^(repasse|relatorio|final)$/i.test(m[1].trim())) return m[1].replace(/_/g, ' ').trim();
+    return '';
+  }
+  /** abreviaturas dos layouts manuais → papel que o de-para de papéis conhece */
+  function papelBruto(p) {
+    const n = normNome(p);
+    if (!n) return '';
+    if (n === 'MD' || n === 'MED' || n === 'EXEC' || n === 'EXECUTANTE' || n === 'CIRURGIAO' || n === 'CIRURGIA') return 'EXECUTANTE';
+    if (/^ENCAMINH/.test(n) || n === 'INDICADOR') return 'INDICANTE';
+    if (/^AUX/.test(n)) return 'AUXILIAR';
+    if (/LAUDO|LAUDISTA/.test(n)) return 'MEDICO LAUDO';
+    if (/^SOLIC/.test(n)) return 'SOLICITANTE';
+    return String(p || '').trim();
+  }
+  function papelCanon(p) {
+    const b = papelBruto(p);
+    return I().papelCanonico ? I().papelCanonico(b) : normNome(b);
+  }
+  function nomeOficial(nome) {
+    return I().nomeOficialMedico ? I().nomeOficialMedico(nome) : String(nome || '').trim();
+  }
+  function ehTotalRow(cells) {
+    const primeira = cells.find(c => String(c == null ? '' : c).trim() !== '');
+    return /^(total|sub\s*total|soma|totais)\b/i.test(String(primeira == null ? '' : primeira).trim());
+  }
+
+  /**
+   * Lê UM arquivo → { meta, linhas, avisos }. Varre todas as abas e fica com
+   * a primeira que tem cabeçalho reconhecível (procedimento + valor + 1).
+   */
+  async function lerArquivo(arquivo) {
+    await garantirXLSX();
+    const buf = await arquivo.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    const avisos = [];
+    let escolhida = null;
+    for (const nomeAba of wb.SheetNames) {
+      const ws = wb.Sheets[nomeAba];
+      if (!ws) continue;
+      const matriz = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+      const cab = acharCabecalho(matriz);
+      if (!cab) continue;
+      escolhida = { nomeAba, matriz, cab };
+      break;
+    }
+    if (!escolhida) throw new Error('Não reconheci o layout: preciso de colunas de procedimento/descrição e de valor/repasse');
+    const { nomeAba, matriz, cab } = escolhida;
+    const mapa = cab.mapa;   // campo → índice
+    const layout = mapa.status != null && mapa.modulo != null && mapa.admissao != null ? 'ferramenta'
+      : (mapa.admissao != null ? 'manual2' : 'manual1');
+
+    // texto informativo acima do cabeçalho (competência, período, médico)
+    const textos = [];
+    for (let i = 0; i < cab.linha; i++) for (const c of matriz[i] || []) if (c != null && String(c).trim()) textos.push(String(c));
+    let meta = { competencia: '', periodo_ini: '', periodo_fim: '', medico: '', layout, arquivo: arquivo.name, aba: nomeAba };
+    for (const t of textos) { const c = compDeTexto(t); if (c) { Object.assign(meta, c); break; } }
+    for (const t of textos) {
+      const m = String(t).match(/m[ée]dico\s*:?\s*(.{4,})/i);
+      if (m && !/^\s*(nome|profissional)/i.test(m[1])) { meta.medicoTexto = m[1].trim(); break; }
+    }
+
+    const linhas = [];
+    const contagemMed = new Map();
+    for (let i = cab.linha + 1; i < matriz.length; i++) {
+      const row = matriz[i] || [];
+      const cel = (campo) => (mapa[campo] == null ? '' : row[mapa[campo]]);
+      const txt = (campo) => { const v = cel(campo); return v == null ? '' : (v instanceof Date ? normData(v) : String(v).trim()); };
+      if (!row.some(c => c != null && String(c).trim() !== '')) continue;
+      if (ehTotalRow(row)) continue;
+      const procedimento = txt('procedimento');
+      const paciente = txt('paciente');
+      const admissaoRaw = txt('admissao').replace(/\.0+$/, '');
+      const valorRaw = cel('valor');
+      const valor = Utilidades.parseNumBR(valorRaw, null);
+      if (!procedimento && !paciente && !admissaoRaw) continue;   // linha decorativa
+      if (valor == null && !procedimento) continue;
+      const status = txt('status');
+      const papel = txt('papel');
+      let origem = txt('origem');
+      let convenio = txt('convenio');
+      const convN = norm(convenio);
+      if (!origem && (convN === 'CONVENIO' || convN === 'PARTICULAR' || convN === 'SUS')) { origem = convenio; convenio = ''; }
+      const prof = txt('profissional');
+      if (prof) { const k = normNome(prof); contagemMed.set(k, (contagemMed.get(k) || { nome: prof, n: 0 })); contagemMed.get(k).n++; }
+      const glosa = /glosa/i.test(status) ? 1 : 0;
+      linhas.push({
+        admissao: admissaoRaw, admissao_norm: normAdm(admissaoRaw),
+        data: normData(cel('data')), paciente, paciente_norm: normNome(paciente),
+        papel, papel_canon: papelCanon(papel),
+        procedimento, procedimento_norm: normNome(procedimento),
+        valor: Number(valor) || 0, status, modulo: txt('modulo'), origem, convenio, glosa,
+        medico: prof, linha_origem: i + 1,
+      });
+    }
+    if (!linhas.length) throw new Error('Cabeçalho reconhecido, mas nenhuma linha de dados');
+
+    // médico do arquivo: a coluna manda (valor mais frequente), depois o nome
+    // do arquivo, depois o cabeçalho, depois o nome da aba
+    let medico = '';
+    if (contagemMed.size) {
+      const ordenados = [...contagemMed.values()].sort((a, b) => b.n - a.n);
+      medico = ordenados[0].nome;
+      if (ordenados.length > 1 && ordenados[1].n >= ordenados[0].n * 0.5) {
+        avisos.push(`Mais de um profissional no arquivo (${ordenados.slice(0, 3).map(o => `${o.nome} ×${o.n}`).join(', ')}) — ficou o mais frequente`);
+      }
+    }
+    if (!medico) medico = medicoDoNome(arquivo.name) || meta.medicoTexto || '';
+    if (!medico && !/^(repasse|planilha|sheet|plan)\b/i.test(nomeAba) && !/\d{4}-\d{2}/.test(nomeAba)) medico = nomeAba;
+    meta.medicoBruto = medico;
+    meta.medico = medico ? nomeOficial(medico) : '';
+    if (!meta.competencia) meta.competencia = compDoNome(arquivo.name) || compDoNome(nomeAba) || '';
+    meta.n_linhas = linhas.length;
+    meta.total = linhas.reduce((s, l) => s + (l.glosa ? 0 : l.valor), 0);
+    return { meta, linhas, avisos };
+  }
+
+  function acharCabecalho(matriz) {
+    const max = Math.min(matriz.length, 60);
+    for (let i = 0; i < max; i++) {
+      const row = matriz[i] || [];
+      const mapa = {};
+      let n = 0;
+      row.forEach((c, idx) => {
+        const campo = ALIAS_CAMPO.get(norm(c));
+        if (campo && mapa[campo] == null) { mapa[campo] = idx; n++; }
+      });
+      if (n >= 3 && mapa.procedimento != null && mapa.valor != null) return { linha: i, mapa };
+    }
+    return null;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // ADMISSÃO POR PACIENTE + DATA (layout manual sem coluna de admissão)
+  // ──────────────────────────────────────────────────────────────────────
+  function resolverAdmissoesPorPacienteData(linhas) {
+    const pend = linhas.filter(l => !l.admissao_norm && l.paciente_norm && l.data);
+    if (!pend.length) return 0;
+    const datas = [...new Set(pend.map(l => l.data))];
+    const porChave = new Map();
+    const juntar = (sql, campoAdm, campoPac, campoData) => {
+      for (let i = 0; i < datas.length; i += 200) {
+        const lote = datas.slice(i, i + 200);
+        try {
+          for (const r of Banco.query(sql.replace('__IN__', lote.map(() => '?').join(',')), lote) || []) {
+            const k = normNome(r[campoPac]) + '|' + normData(r[campoData]);
+            if (!porChave.has(k)) porChave.set(k, String(r[campoAdm]));
+          }
+        } catch (e) {}
+      }
+    };
+    juntar(`SELECT cod_admissao, paciente, data_admissao FROM linhas_producao WHERE substr(data_admissao, 1, 10) IN (__IN__)`, 'cod_admissao', 'paciente', 'data_admissao');
+    juntar(`SELECT admissao, paciente, data_admissao FROM linhas_qvis WHERE substr(data_admissao, 1, 10) IN (__IN__)`, 'admissao', 'paciente', 'data_admissao');
+    let n = 0;
+    for (const l of pend) {
+      const a = porChave.get(l.paciente_norm + '|' + l.data);
+      if (a) { l.admissao = a; l.admissao_norm = normAdm(a); n++; }
+    }
+    return n;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // IMPORTAÇÃO EM LOTE (vários arquivos, sem travar)
+  // ──────────────────────────────────────────────────────────────────────
+  let _listaCache = { versao: -1, lista: null };
+  function invalidar() { _listaCache = { versao: -1, lista: null }; _admCache = new Map(); _admCacheV = -1; }
+
+  async function importarArquivos(arquivos, opts) {
+    opts = opts || {};
+    const progresso = typeof opts.progresso === 'function' ? opts.progresso : () => {};
+    const files = Array.from(arquivos || []).filter(Boolean);
+    const lidos = [], erros = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      progresso({ fase: 'lendo', i, n: files.length, arquivo: f.name });
+      await tick();
+      try { lidos.push(Object.assign(await lerArquivo(f), { file: f })); }
+      catch (e) { erros.push({ arquivo: f.name, erro: e.message || String(e) }); }
+    }
+    // o que ficou sem médico ou competência: pergunta (uma vez, para todos)
+    const pend = lidos.filter(l => !l.meta.medico || !l.meta.competencia);
+    let cancelados = [];
+    if (pend.length) {
+      const ok = opts.perguntar === false ? false : await pedirDados(pend);
+      if (!ok) { cancelados = pend.map(l => l.meta.arquivo); }
+    }
+    const prontos = lidos.filter(l => l.meta.medico && l.meta.competencia);
+    // ordem estável: o mesmo médico×mês repetido no lote → o último substitui
+    const importados = [];
+    for (let i = 0; i < prontos.length; i++) {
+      const l = prontos[i];
+      progresso({ fase: 'gravando', i, n: prontos.length, arquivo: l.meta.arquivo });
+      await tick();
+      try {
+        const resolvidas = resolverAdmissoesPorPacienteData(l.linhas);
+        const id = gravar(l);
+        importados.push({ id, medico: l.meta.medico, competencia: l.meta.competencia, layout: l.meta.layout,
+          arquivo: l.meta.arquivo, n_linhas: l.meta.n_linhas, total: l.meta.total, avisos: l.avisos,
+          semAdmissao: l.linhas.filter(x => !x.admissao_norm).length, resolvidas });
+      } catch (e) { erros.push({ arquivo: l.meta.arquivo, erro: e.message || String(e) }); }
+    }
+    invalidar();
+    if (importados.length) Banco.salvarDebounced(2000);
+    progresso({ fase: 'fim', n: importados.length });
+    return { importados, erros, cancelados };
+  }
+
+  /** Grava um relatório lido (substitui o mesmo médico × competência). */
+  function gravar(l) {
+    const m = l.meta;
+    const medNorm = normNome(m.medico);
+    Banco.db.exec('BEGIN');
+    try {
+      const antigos = Banco.query(`SELECT id FROM relatorio_final WHERE medico_norm = ? AND competencia = ?`, [medNorm, m.competencia]) || [];
+      for (const a of antigos) {
+        Banco.db.run(`DELETE FROM relatorio_final_linhas WHERE relatorio_id = ?`, [a.id]);
+        Banco.db.run(`DELETE FROM relatorio_final WHERE id = ?`, [a.id]);
+      }
+      Banco.db.run(
+        `INSERT INTO relatorio_final (medico, medico_norm, competencia, layout, arquivo, periodo_ini, periodo_fim, n_linhas, total, importado_em)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        [m.medico, medNorm, m.competencia, m.layout, m.arquivo, m.periodo_ini || null, m.periodo_fim || null, m.n_linhas, m.total]);
+      const id = Banco.queryUnica(`SELECT last_insert_rowid() AS id`).id;
+      const stmt = Banco.db.prepare(
+        `INSERT INTO relatorio_final_linhas
+           (relatorio_id, competencia, medico, medico_norm, admissao, admissao_norm, data, paciente, paciente_norm,
+            papel, papel_canon, procedimento, procedimento_norm, valor, status, modulo, origem, convenio, glosa, linha_origem)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+      try {
+        for (const x of l.linhas) {
+          stmt.run([id, m.competencia, m.medico, medNorm, x.admissao || '', x.admissao_norm || '', x.data || '',
+            x.paciente || '', x.paciente_norm || '', x.papel || '', x.papel_canon || '', x.procedimento || '',
+            x.procedimento_norm || '', Number(x.valor) || 0, x.status || '', x.modulo || '', x.origem || '',
+            x.convenio || '', x.glosa ? 1 : 0, x.linha_origem || null]);
+        }
+      } finally { stmt.free(); }
+      Banco.db.exec('COMMIT');
+      return id;
+    } catch (e) {
+      try { Banco.db.exec('ROLLBACK'); } catch (_) {}
+      throw e;
+    }
+  }
+
+  function remover(id) {
+    Banco.db.exec('BEGIN');
+    try {
+      Banco.db.run(`DELETE FROM relatorio_final_linhas WHERE relatorio_id = ?`, [id]);
+      Banco.db.run(`DELETE FROM relatorio_final WHERE id = ?`, [id]);
+      Banco.db.exec('COMMIT');
+    } catch (e) { try { Banco.db.exec('ROLLBACK'); } catch (_) {} throw e; }
+    invalidar();
+    Banco.salvarDebounced(1500);
+  }
+
+  function listar() {
+    const v = Banco._versao || 0;
+    if (_listaCache.versao === v && _listaCache.lista) return _listaCache.lista;
+    let lista = [];
+    try {
+      lista = Banco.query(`SELECT * FROM relatorio_final ORDER BY competencia DESC, medico`) || [];
+    } catch (e) { lista = []; }
+    _listaCache = { versao: v, lista };
+    return lista;
+  }
+  function linhasDoRelatorio(id) {
+    try { return Banco.query(`SELECT * FROM relatorio_final_linhas WHERE relatorio_id = ? ORDER BY id`, [id]) || []; }
+    catch (e) { return []; }
+  }
+  let _admCache = new Map(), _admCacheV = -1;
+  function linhasDaAdmissao(adm) {
+    const k = normAdm(adm);
+    if (!k) return [];
+    const v = Banco._versao || 0;
+    if (_admCacheV !== v) { _admCache = new Map(); _admCacheV = v; }
+    if (_admCache.has(k)) return _admCache.get(k);
+    let rows = [];
+    try {
+      rows = Banco.query(`SELECT l.*, r.arquivo, r.layout FROM relatorio_final_linhas l
+                            JOIN relatorio_final r ON r.id = l.relatorio_id
+                           WHERE l.admissao_norm = ? ORDER BY l.competencia, l.id`, [k]) || [];
+    } catch (e) { rows = []; }
+    if (_admCache.size > 2000) _admCache = new Map();
+    _admCache.set(k, rows);
+    return rows;
+  }
+  function temRelatorio(medNorm, comp) {
+    return listar().some(r => r.medico_norm === medNorm && r.competencia === comp);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // PERGUNTA — médico / competência que o arquivo não disse
+  // ──────────────────────────────────────────────────────────────────────
+  function pedirDados(pendentes) {
+    return new Promise((resolve) => {
+      let medicos = [];
+      try { medicos = (Banco.query(`SELECT nome_oficial FROM medicos WHERE ativo = 1 ORDER BY nome_oficial`) || []).map(m => m.nome_oficial); } catch (e) {}
+      const ov = document.createElement('div');
+      ov.className = 'rf-modal-ov';
+      ov.innerHTML = `
+        <div class="rf-modal" role="dialog" aria-modal="true">
+          <div class="rf-modal-head"><strong>Complete o que o arquivo não disse</strong>
+            <span>${pendentes.length} arquivo${pendentes.length > 1 ? 's' : ''} sem médico ou competência. Informe e importe — ou cancele só estes.</span></div>
+          <datalist id="rf-dl-medicos">${medicos.map(m => `<option value="${esc(m)}"></option>`).join('')}</datalist>
+          <div class="rf-modal-lista">
+            ${pendentes.map((l, i) => `
+              <div class="rf-modal-item" data-i="${i}">
+                <div class="rf-modal-arq" title="${esc(l.meta.arquivo)}">${esc(l.meta.arquivo)} <small>${l.meta.n_linhas} linhas · R$ ${fmtN(l.meta.total)}</small></div>
+                <input type="text" class="rf-modal-med" list="rf-dl-medicos" placeholder="Médico" value="${esc(l.meta.medico || l.meta.medicoBruto || '')}">
+                <input type="month" class="rf-modal-comp" value="${esc(l.meta.competencia || '')}">
+              </div>`).join('')}
+          </div>
+          <div class="rf-modal-acoes">
+            <button type="button" class="btn" id="rf-modal-cancelar">Cancelar estes</button>
+            <button type="button" class="btn btn-primary" id="rf-modal-ok">Importar</button>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+      const fechar = (ok) => { ov.remove(); resolve(ok); };
+      ov.querySelector('#rf-modal-cancelar').addEventListener('click', () => fechar(false));
+      ov.querySelector('#rf-modal-ok').addEventListener('click', () => {
+        let faltou = false;
+        ov.querySelectorAll('.rf-modal-item').forEach(el => {
+          const l = pendentes[Number(el.dataset.i)];
+          const med = el.querySelector('.rf-modal-med').value.trim();
+          const comp = el.querySelector('.rf-modal-comp').value.trim();
+          if (med) l.meta.medico = nomeOficial(med);
+          if (/^\d{4}-\d{2}$/.test(comp)) l.meta.competencia = comp;
+          if (!l.meta.medico || !l.meta.competencia) { faltou = true; el.classList.add('rf-modal-falta'); }
+        });
+        if (faltou) { Utilidades.toast?.('Preencha médico e competência dos arquivos marcados (ou cancele).', 'warning', 3500); return; }
+        fechar(true);
+      });
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // O "DEVERIA": a soma da ferramenta por competência
+  // ──────────────────────────────────────────────────────────────────────
+  function garantirMotor() {
+    if (window.AtlasCalcular && typeof window.AtlasCalcular.calcularESalvar === 'function') return true;
+    try {
+      if (window.App && App.telas && typeof App.telas['calcular'] === 'function') App.telas['calcular']({ soRegistrar: true });
+    } catch (e) { console.warn('[relatorio_final] motor do Calcular:', e); }
+    return !!(window.AtlasCalcular && typeof window.AtlasCalcular.calcularESalvar === 'function');
+  }
+  function temSnapshot(comp) {
+    try { return !!Banco.queryUnica(`SELECT competencia FROM repasse_snapshot WHERE competencia = ? LIMIT 1`, [comp]); }
+    catch (e) { return false; }
+  }
+  function temSistema(comp) {
+    try { return !!Banco.queryUnica(`SELECT id FROM linhas_qvis WHERE mes_pagamento = ? LIMIT 1`, [comp]); }
+    catch (e) { return false; }
+  }
+  /** Garante o cálculo do mês (as regras do Calcular, sem a tela) → { ok, motivo } */
+  function garantirCalculo(comp) {
+    if (temSnapshot(comp)) return { ok: true, motivo: 'salvo' };
+    if (!temSistema(comp)) return { ok: false, motivo: 'sem relatório do sistema importado para ' + comp };
+    if (!garantirMotor()) return { ok: false, motivo: 'motor do Calcular indisponível' };
+    try {
+      const r = window.AtlasCalcular.calcularESalvar(comp);
+      if (r && r.ok) return { ok: true, motivo: 'calculado agora' };
+      return { ok: false, motivo: (r && r.motivo) || 'não calculou' };
+    } catch (e) { return { ok: false, motivo: e.message || String(e) }; }
+  }
+  /** Linhas COMPLETAS do Consolidado do mês, sem o filtro interno/híbrido. */
+  function deveriaDaCompetencia(comp) {
+    const api = window.AtlasRelatorios;
+    if (!api || typeof api.linhasCompletasComp !== 'function') return [];
+    try { return api.linhasCompletasComp(comp, { semFiltroIH: true }) || []; }
+    catch (e) { console.error('[relatorio_final] deveria', comp, e); return []; }
+  }
+  function medNormDeLinhaCons(l) {
+    return normNome(nomeOficial(l._medicoReal || l.profissional || ''));
+  }
+  function itemDeveria(l, comp) {
+    return {
+      lado: 'deveria', competencia: comp,
+      admissao: String(l.admissao || '').trim(), admissao_norm: normAdm(l.admissao),
+      data: normData(l.data), paciente: l.paciente || '',
+      papel: papelCanon(l.papel), papelRot: l.papel || '',
+      procedimento: String(l.descricao || '').trim(),
+      valor: /glosa/i.test(String(l.status || '')) ? 0 : (Number(l.valor) || 0),
+      glosa: /glosa/i.test(String(l.status || '')),
+      status: l.status || '', modulo: l.modulo || '', origem: l.origem || '', convenio: l.convenio || '',
+      medico: nomeOficial(l._medicoReal || l.profissional || ''),
+    };
+  }
+  function itemRecebido(r) {
+    return {
+      lado: 'recebido', competencia: r.competencia,
+      admissao: String(r.admissao || '').trim(), admissao_norm: r.admissao_norm || '',
+      data: r.data || '', paciente: r.paciente || '',
+      papel: r.papel_canon || papelCanon(r.papel), papelRot: r.papel || '',
+      procedimento: String(r.procedimento || '').trim(),
+      valor: r.glosa ? 0 : (Number(r.valor) || 0), glosa: !!r.glosa,
+      status: r.status || '', modulo: r.modulo || '', origem: r.origem || '', convenio: r.convenio || '',
+      medico: r.medico || '',
+    };
+  }
+  const mesmoExame = (a, b) => (I().mesmoExame ? I().mesmoExame(a, b) : normNome(a) === normNome(b));
+  const igual = (a, b) => Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.005;
+
+  /**
+   * Confronta UMA admissão: itens do deveria × itens do recebido → itens
+   * classificados. Nunca deduplica: cada linha de um lado consome no máximo
+   * uma do outro. Estorno (negativo) anula o positivo igual do mesmo papel.
+   */
+  function confrontarAdmissao(dev, rec, ctx) {
+    const out = [];
+    const base = (d, r, categoria, falta) => ({
+      categoria, rotulo: CATEGORIAS[categoria].rotulo, tom: CATEGORIAS[categoria].tom,
+      competencia: (d || r).competencia, medico: (d && d.medico) || (r && r.medico) || (ctx && ctx.medico) || '',
+      admissao: (d && d.admissao) || (r && r.admissao) || '', admissao_norm: (d && d.admissao_norm) || (r && r.admissao_norm) || '',
+      data: (d && d.data) || (r && r.data) || '', paciente: (d && d.paciente) || (r && r.paciente) || '',
+      procedimento: (d && d.procedimento) || (r && r.procedimento) || '',
+      papel: (d && d.papel) || (r && r.papel) || '',
+      deveria: d ? d.valor : 0, recebido: r ? r.valor : 0, falta: Math.max(0, Number(falta) || 0),
+      status: (d && d.status) || (r && r.status) || '', modulo: (d && d.modulo) || (r && r.modulo) || '',
+      origem: (d && d.origem) || (r && r.origem) || '', convenio: (d && d.convenio) || (r && r.convenio) || '',
+      fonte: d ? 'consolidado' : 'final',
+    });
+    // 1) estornos: negativo anula o positivo igual (mesmo papel e exame)
+    const recAtivas = rec.slice();
+    for (const neg of rec.filter(r => r.valor < -0.004)) {
+      const pos = recAtivas.find(r => r !== neg && r.valor > 0.004 && r.papel === neg.papel
+        && igual(r.valor, -neg.valor) && mesmoExame(r.procedimento, neg.procedimento));
+      if (pos) { recAtivas.splice(recAtivas.indexOf(pos), 1); recAtivas.splice(recAtivas.indexOf(neg), 1); }
+    }
+    const usados = new Set();
+    const devOrd = dev.slice().sort((a, b) => b.valor - a.valor);
+    const temRecebidoAlgum = recAtivas.some(r => !r.glosa && r.valor > 0.004);
+    for (const d of devOrd) {
+      const cand = recAtivas.filter(r => !usados.has(r) && r.papel === d.papel && r.valor >= -0.004);
+      const pick = cand.find(r => mesmoExame(r.procedimento, d.procedimento) && igual(r.valor, d.valor))
+        || cand.find(r => mesmoExame(r.procedimento, d.procedimento))
+        || cand.find(r => igual(r.valor, d.valor) && d.valor > 0.004);
+      if (pick) {
+        usados.add(pick);
+        if (d.glosa && pick.glosa) { out.push(base(d, pick, 'glosa', 0)); continue; }
+        if (igual(pick.valor, d.valor)) out.push(base(d, pick, d.glosa ? 'glosa' : 'conforme', 0));
+        else if (pick.valor < d.valor) out.push(base(d, pick, 'a_menor', d.valor - pick.valor));
+        else out.push(base(d, pick, 'a_maior', 0));
+        continue;
+      }
+      if (d.glosa) { out.push(base(d, null, 'glosa', 0)); continue; }
+      if (!(d.valor > 0.004)) continue;   // linha zerada do Consolidado: nada a cobrar
+      out.push(base(d, null, temRecebidoAlgum ? 'nao_pago' : 'nao_consta', d.valor));
+    }
+    for (const r of recAtivas) {
+      if (usados.has(r)) continue;
+      if (r.glosa) { out.push(base(null, r, 'glosa', 0)); continue; }
+      if (r.valor < -0.004) { out.push(base(null, r, 'estorno', 0)); continue; }
+      if (!(r.valor > 0.004)) continue;
+      out.push(base(null, r, 'sem_lastro', 0));
+    }
+    return out;
+  }
+  function agruparPorAdm(itens) {
+    const m = new Map();
+    for (const it of itens) {
+      const k = it.admissao_norm || ('?|' + normNome(it.paciente) + '|' + it.data);
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(it);
+    }
+    return m;
+  }
+  /** Linhas do final SEM admissão ganham a admissão do deveria por paciente + data */
+  function adotarAdmissoes(recItens, devItens) {
+    const porPacData = new Map();
+    for (const d of devItens) if (d.admissao_norm && d.paciente && d.data) {
+      const k = normNome(d.paciente) + '|' + d.data;
+      if (!porPacData.has(k)) porPacData.set(k, d);
+    }
+    for (const r of recItens) if (!r.admissao_norm && r.paciente && r.data) {
+      const d = porPacData.get(normNome(r.paciente) + '|' + r.data);
+      if (d) { r.admissao = d.admissao; r.admissao_norm = d.admissao_norm; }
+    }
+  }
+
+  /** grafias conhecidas do médico (cadastro + de-para), normalizadas */
+  function grafiasDoMedico(medico) {
+    const set = new Set([norm(medico), normNome(medico)]);
+    try {
+      const m = Banco.queryUnica(`SELECT id, nome_oficial, nome_normalizado FROM medicos WHERE nome_oficial = ? LIMIT 1`, [medico]);
+      if (m) {
+        if (m.nome_normalizado) set.add(String(m.nome_normalizado));
+        for (const s of Banco.query(`SELECT grafia, grafia_normalizada FROM sinonimos_medico WHERE medico_id = ?`, [m.id]) || []) {
+          if (s.grafia) { set.add(norm(s.grafia)); set.add(normNome(s.grafia)); }
+          if (s.grafia_normalizada) set.add(String(s.grafia_normalizada));
+        }
+      }
+    } catch (e) {}
+    return [...set].filter(Boolean);
+  }
+  function qvisDoMedico(medico, comp) {
+    const g = grafiasDoMedico(medico);
+    if (!g.length) return [];
+    try {
+      const ph = g.map(() => '?').join(',');
+      return Banco.query(
+        `SELECT admissao, data_admissao, paciente, nome_profissional, papel, procedimento, procedimento_normalizado,
+                origem, convenio, produzido, recebido, repassado, classificacao_produto, mes_pagamento
+           FROM linhas_qvis
+          WHERE mes_pagamento = ? AND (nome_normalizado IN (${ph}) OR UPPER(TRIM(nome_profissional)) IN (${ph}))`,
+        [comp, ...g, ...g]) || [];
+    } catch (e) { return []; }
+  }
+  /** valor que a regra da Base Tabela manda para a linha do sistema (V846/V871 da Inspeção) */
+  function valorDaRegra(q) {
+    const rep = Number(q.repassado) || 0;
+    if (rep > 0) return rep;
+    try {
+      const regras = I()._regrasNaData ? I()._regrasNaData(normData(q.data_admissao)) : (I()._carregarRegras ? I()._carregarRegras() : null);
+      if (!regras || !regras.procs) return 0;
+      const pid = regras.procs.get(normNome(q.procedimento_normalizado || q.procedimento));
+      if (pid == null) return 0;
+      const vm = regras.porProcValores && regras.porProcValores.get(pid);
+      const r = vm && vm.get(papelCanon(q.papel));
+      if (!r) return 0;
+      if ((Number(r.valor) || 0) > 0) return Number(r.valor);
+      if ((Number(r.percentual) || 0) > 0) return (Number(q.produzido) || 0) * Number(r.percentual);
+    } catch (e) {}
+    return 0;
+  }
+  /** Linhas do sistema do médico no mês, com regra, sem pagamento em lugar nenhum */
+  function regraNaoPaga(medico, comp, itensJa) {
+    const qvis = qvisDoMedico(medico, comp);
+    if (!qvis.length) return [];
+    const porAdm = agruparPorAdm(itensJa);
+    const inst = I().ehMedicoInstitucional || (() => false);
+    const temRegra = I().temRegraDeRepasse || (() => true);
+    const grupos = new Map();
+    for (const q of qvis) {
+      if (inst(q.nome_profissional)) continue;
+      const origem = String(q.origem || '').toUpperCase();
+      if (origem !== 'PARTICULAR' && (Number(q.recebido) || 0) <= 0) continue;   // glosa do convênio: vale zero
+      if (!temRegra(q)) continue;
+      const papel = papelCanon(q.papel);
+      const k = normAdm(q.admissao);
+      const ja = (porAdm.get(k) || []).some(it => it.papel === papel && mesmoExame(it.procedimento, q.procedimento));
+      if (ja) continue;
+      const valor = valorDaRegra(q);
+      const gk = k + '|' + papel + '|' + normNome(q.procedimento);
+      if (!grupos.has(gk)) {
+        grupos.set(gk, { categoria: 'regra_nao_paga', rotulo: CATEGORIAS.regra_nao_paga.rotulo, tom: 'falta',
+          competencia: comp, medico, admissao: String(q.admissao || '').trim(), admissao_norm: k,
+          data: normData(q.data_admissao), paciente: q.paciente || '', procedimento: q.procedimento || '', papel,
+          deveria: 0, recebido: 0, falta: 0, status: 'Sistema', modulo: 'Sistema', origem: q.origem || '',
+          convenio: q.convenio || '', fonte: 'sistema', n: 0 });
+      }
+      const g = grupos.get(gk);
+      g.deveria += valor; g.falta += valor; g.n++;
+    }
+    return [...grupos.values()];
+  }
+  /** Produzido nos últimos 3 meses e ainda fora do sistema (não é dívida — informativo) */
+  function aguardandoConvenio(medico, comp, jaVistas) {
+    const g = new Set(grafiasDoMedico(medico));
+    if (!g.size) return [];
+    const [ano, mes] = comp.split('-').map(Number);
+    const comps = [];
+    for (let k = 0; k < 3; k++) {
+      const d = new Date(Date.UTC(ano, mes - 1 - k, 1));
+      comps.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+    }
+    let rows = [];
+    try {
+      rows = Banco.query(
+        `SELECT cod_admissao, data_admissao, paciente, produto, procedimento_principal, classificacao_produto, categoria,
+                tipo_recebimento, convenio, medico, cirurgiao, indicante, solicitante, auxiliar_1, auxiliar_2
+           FROM linhas_producao WHERE competencia IN (${comps.map(() => '?').join(',')})`, comps) || [];
+    } catch (e) { rows = []; }
+    const repassavel = I().produtoRepassavel || (() => true);
+    const COLS = [['cirurgiao', 'EXECUTANTE'], ['medico', 'EXECUTANTE'], ['indicante', 'INDICANTE'],
+      ['solicitante', 'INDICANTE'], ['auxiliar_1', 'AUXILIAR'], ['auxiliar_2', 'AUXILIAR']];
+    const cand = [];
+    for (const r of rows) {
+      const k = normAdm(r.cod_admissao);
+      if (!k || jaVistas.has(k)) continue;
+      if (!repassavel(r.classificacao_produto, r.categoria)) continue;
+      const col = COLS.find(([c]) => r[c] && (g.has(norm(r[c])) || g.has(normNome(r[c]))));
+      if (!col) continue;
+      cand.push({ r, k, papel: col[1] });
+    }
+    if (!cand.length) return [];
+    const adms = [...new Set(cand.map(c => c.k))];
+    const noSistema = new Set();
+    const variantes = I().variantesAdm || ((a) => [a]);
+    for (let i = 0; i < adms.length; i += 120) {
+      const lote = adms.slice(i, i + 120);
+      const vars = [...new Set(lote.flatMap(variantes))];
+      try {
+        for (const x of Banco.query(`SELECT DISTINCT admissao FROM linhas_qvis WHERE admissao IN (${vars.map(() => '?').join(',')})`, vars) || []) {
+          noSistema.add(normAdm(x.admissao));
+        }
+      } catch (e) {}
+    }
+    const out = new Map();
+    for (const c of cand) {
+      if (noSistema.has(c.k)) continue;
+      const proc = String(c.r.produto || c.r.procedimento_principal || '').trim();
+      const gk = c.k + '|' + c.papel + '|' + normNome(proc);
+      if (out.has(gk)) continue;
+      out.set(gk, { categoria: 'aguardando', rotulo: CATEGORIAS.aguardando.rotulo, tom: 'info', competencia: comp, medico,
+        admissao: String(c.r.cod_admissao || '').trim(), admissao_norm: c.k, data: normData(c.r.data_admissao),
+        paciente: c.r.paciente || '', procedimento: proc, papel: c.papel, deveria: 0, recebido: 0, falta: 0,
+        status: 'Produção', modulo: 'Produção', origem: c.r.tipo_recebimento || '', convenio: c.r.convenio || '', fonte: 'producao' });
+    }
+    return [...out.values()];
+  }
+
+  /**
+   * AUDITORIA: relatórios (ids; vazio = todos) → { itens, porRelatorio, totais }.
+   * Assíncrona e com progresso: monta cada competência UMA vez e cede a vez
+   * ao navegador entre relatórios (vários médicos × meses sem travar).
+   */
+  async function auditar(ids, opts) {
+    opts = opts || {};
+    const progresso = typeof opts.progresso === 'function' ? opts.progresso : () => {};
+    const todos = listar();
+    const sel = (ids && ids.length) ? todos.filter(r => ids.includes(r.id)) : todos.slice();
+    const comps = [...new Set(sel.map(r => r.competencia))].sort();
+    const deveriaPorComp = new Map();
+    const avisos = [];
+    for (let i = 0; i < comps.length; i++) {
+      const comp = comps[i];
+      progresso({ fase: 'competencia', i, n: comps.length, competencia: comp });
+      await tick();
+      const calc = garantirCalculo(comp);
+      if (!calc.ok) avisos.push(`${comp}: ${calc.motivo} — o "deveria" deste mês ficou só com o que o Consolidado tem`);
+      const linhas = calc.ok || temSnapshot(comp) ? deveriaDaCompetencia(comp) : [];
+      const porMed = new Map();
+      for (const l of linhas) {
+        const k = medNormDeLinhaCons(l);
+        if (!porMed.has(k)) porMed.set(k, []);
+        porMed.get(k).push(itemDeveria(l, comp));
+      }
+      deveriaPorComp.set(comp, porMed);
+    }
+    const itens = [], porRelatorio = [];
+    for (let i = 0; i < sel.length; i++) {
+      const r = sel[i];
+      progresso({ fase: 'relatorio', i, n: sel.length, medico: r.medico, competencia: r.competencia });
+      await tick();
+      const dev = (deveriaPorComp.get(r.competencia) || new Map()).get(r.medico_norm) || [];
+      const rec = linhasDoRelatorio(r.id).map(itemRecebido);
+      adotarAdmissoes(rec, dev);
+      const gDev = agruparPorAdm(dev), gRec = agruparPorAdm(rec);
+      const chaves = new Set([...gDev.keys(), ...gRec.keys()]);
+      const doRel = [];
+      for (const k of chaves) doRel.push(...confrontarAdmissao(gDev.get(k) || [], gRec.get(k) || [], { medico: r.medico }));
+      const extras = opts.semRegra ? [] : regraNaoPaga(r.medico, r.competencia, doRel);
+      doRel.push(...extras);
+      if (!opts.semAguardando) {
+        const vistas = new Set(doRel.map(x => x.admissao_norm).filter(Boolean));
+        doRel.push(...aguardandoConvenio(r.medico, r.competencia, vistas));
+      }
+      for (const it of doRel) { it.relatorio_id = r.id; it.medico = it.medico || r.medico; }
+      const tot = totais(doRel);
+      porRelatorio.push({ id: r.id, medico: r.medico, competencia: r.competencia, layout: r.layout, arquivo: r.arquivo,
+        n_linhas: r.n_linhas, ...tot });
+      itens.push(...doRel);
+    }
+    invalidar();   // um cálculo pode ter gravado snapshot → listas por versão
+    progresso({ fase: 'fim', n: sel.length });
+    return { itens, porRelatorio, totais: totais(itens), avisos, geradoEm: new Date().toISOString(),
+      competencias: comps, relatorios: sel.map(r => r.id) };
+  }
+  function totais(itens) {
+    const t = { deveria: 0, recebido: 0, falta: 0, semLastro: 0, n: itens.length, porCategoria: {} };
+    for (const it of itens) {
+      t.deveria += it.deveria || 0;
+      t.recebido += it.recebido || 0;
+      if (CATEGORIAS[it.categoria] && CATEGORIAS[it.categoria].soma) t.falta += it.falta || 0;
+      if (it.categoria === 'sem_lastro') t.semLastro += it.recebido || 0;
+      const c = t.porCategoria[it.categoria] || { n: 0, valor: 0 };
+      c.n++; c.valor += CATEGORIAS[it.categoria] && CATEGORIAS[it.categoria].soma ? (it.falta || 0) : (it.categoria === 'sem_lastro' || it.categoria === 'a_maior' ? it.recebido - it.deveria : 0);
+      t.porCategoria[it.categoria] = c;
+    }
+    return t;
+  }
+
+  /** 4º painel da Inspeção: confronto de UMA admissão (Consolidado × final) */
+  function confrontoDaAdmissao(adm, consolidado, finais) {
+    const rec = (finais || []).map(itemRecebido);
+    const devTodos = (consolidado || []).map(r => itemDeveria(r.linha, r.competencia));
+    // só confronta o que TEM relatório final importado (médico × mês)
+    const pares = new Set();
+    for (const d of devTodos) if (temRelatorio(normNome(d.medico), d.competencia)) pares.add(normNome(d.medico) + '|' + d.competencia);
+    for (const r of rec) pares.add(normNome(r.medico) + '|' + r.competencia);
+    if (!pares.size) {
+      return { tom: 'info', titulo: 'Sem relatório final importado para esta admissão',
+        texto: 'Importe, na aba Relatório final, o relatório do médico e do mês em que ela foi paga para ver o confronto.', itens: [] };
+    }
+    const itens = [];
+    for (const par of pares) {
+      const [medN, comp] = par.split('|');
+      const dev = devTodos.filter(d => normNome(d.medico) === medN && d.competencia === comp);
+      const re = rec.filter(r => normNome(r.medico) === medN && r.competencia === comp);
+      const medico = (dev[0] && dev[0].medico) || (re[0] && re[0].medico) || '';
+      itens.push(...confrontarAdmissao(dev, re, { medico }));
+    }
+    const t = totais(itens);
+    let tom = 'ok', titulo = 'Relatório final confere com o Consolidado';
+    if (t.falta > 0.004) { tom = 'falta'; titulo = `Falta pagar ao médico R$ ${fmtN(t.falta)} nesta admissão`; }
+    else if (itens.some(i => i.categoria === 'sem_lastro' || i.categoria === 'a_maior')) { tom = 'sem'; titulo = 'Recebido sem lastro no Consolidado'; }
+    else if (!itens.length) { tom = 'info'; titulo = 'Nada a confrontar nesta admissão'; }
+    return { tom, titulo, texto: '', itens: itens.filter(i => i.categoria !== 'conforme' || itens.length <= 12), totais: t };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // EXPORTAÇÃO EXCEL
+  // ──────────────────────────────────────────────────────────────────────
+  async function exportarExcel(res, opts) {
+    try { await garantirExcelJS(); }
+    catch (e) { Utilidades.toast?.('Biblioteca ExcelJS não carregada. Recarregue (Ctrl+Shift+R).', 'error', 4500); return; }
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'ATLAS — Auditoria de Contas';
+    wb.created = new Date();
+    const cols = [
+      { header: 'Categoria', key: 'rotulo', width: 28 }, { header: 'Competência', key: 'competencia', width: 12 },
+      { header: 'Médico', key: 'medico', width: 32 }, { header: 'Admissão', key: 'admissao', width: 13 },
+      { header: 'Data', key: 'data', width: 12 }, { header: 'Paciente', key: 'paciente', width: 30 },
+      { header: 'Procedimento', key: 'procedimento', width: 44 }, { header: 'Papel', key: 'papel', width: 16 },
+      { header: 'Origem', key: 'origem', width: 12 }, { header: 'Convênio', key: 'convenio', width: 22 },
+      { header: 'Deveria', key: 'deveria', width: 14 }, { header: 'Recebido', key: 'recebido', width: 14 },
+      { header: 'Falta pagar', key: 'falta', width: 14 }, { header: 'Fonte', key: 'fonte', width: 12 },
+    ];
+    const aba = (nome, itens) => {
+      const ws = wb.addWorksheet(nome, { views: [{ state: 'frozen', ySplit: 1 }] });
+      ws.columns = cols;
+      const head = ws.getRow(1);
+      head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3F6489' } };
+      for (const it of itens) {
+        const row = ws.addRow({ rotulo: it.rotulo, competencia: it.competencia, medico: it.medico, admissao: it.admissao,
+          data: dataBR(it.data), paciente: it.paciente, procedimento: it.procedimento, papel: it.papel, origem: it.origem,
+          convenio: it.convenio, deveria: Number(it.deveria) || 0, recebido: Number(it.recebido) || 0,
+          falta: Number(it.falta) || 0, fonte: it.fonte });
+        ['deveria', 'recebido', 'falta'].forEach(k => { row.getCell(k).numFmt = 'R$ #,##0.00'; });
+        if (it.tom === 'falta') row.getCell('falta').font = { bold: true, color: { argb: 'FFA15646' } };
+      }
+      const tot = ws.addRow({ rotulo: 'TOTAL', deveria: itens.reduce((s, i) => s + (i.deveria || 0), 0),
+        recebido: itens.reduce((s, i) => s + (i.recebido || 0), 0), falta: itens.reduce((s, i) => s + (i.falta || 0), 0) });
+      tot.font = { bold: true };
+      ['deveria', 'recebido', 'falta'].forEach(k => { tot.getCell(k).numFmt = 'R$ #,##0.00'; });
+      ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } };
+    };
+    const itens = res.itens || [];
+    aba('Falta pagar', itens.filter(i => CATEGORIAS[i.categoria] && CATEGORIAS[i.categoria].soma));
+    aba('Conforme', itens.filter(i => i.categoria === 'conforme'));
+    aba('Avisos', itens.filter(i => !CATEGORIAS[i.categoria].soma && i.categoria !== 'conforme'));
+    const ws = wb.addWorksheet('Resumo', { views: [{ state: 'frozen', ySplit: 1 }] });
+    ws.columns = [
+      { header: 'Médico', key: 'medico', width: 32 }, { header: 'Competência', key: 'competencia', width: 12 },
+      { header: 'Layout', key: 'layout', width: 12 }, { header: 'Linhas do final', key: 'n_linhas', width: 14 },
+      { header: 'Deveria', key: 'deveria', width: 14 }, { header: 'Recebido', key: 'recebido', width: 14 },
+      { header: 'Falta pagar', key: 'falta', width: 14 }, { header: 'Sem lastro', key: 'semLastro', width: 14 },
+    ];
+    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3F6489' } };
+    for (const r of res.porRelatorio || []) {
+      const row = ws.addRow({ medico: r.medico, competencia: r.competencia, layout: r.layout, n_linhas: r.n_linhas,
+        deveria: r.deveria, recebido: r.recebido, falta: r.falta, semLastro: r.semLastro });
+      ['deveria', 'recebido', 'falta', 'semLastro'].forEach(k => { row.getCell(k).numFmt = 'R$ #,##0.00'; });
+    }
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+    a.href = url; a.download = (opts && opts.nome) || `ATLAS_falta_pagar_${ts}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // A ABA (UI)
+  // ──────────────────────────────────────────────────────────────────────
+  const ui = { sel: new Set(), filtroMed: '', filtroComp: '', busca: '', resultado: null, cats: new Set(), buscaRes: '',
+    medRes: '', compRes: '', ocupado: false };
+  let _root = null;
+  const $ = (id) => document.getElementById(id);
+
+  function montar(container) {
+    if (!container) return;
+    _root = container;
+    Utilidades.garantirEstilos && Utilidades.garantirEstilos('css-relatorio-final', CSS);
+    container.innerHTML = `
+      <div class="rf-wrap">
+        <section class="card rf-card" id="rf-card-import">
+          <div class="rf-head">
+            <div>
+              <h3>Relatórios finais importados</h3>
+              <p>O relatório que cada <strong>médico recebeu</strong>, um arquivo por médico e mês de pagamento — o layout manual de antes de abril/2026 ou o exportado pela ferramenta. Solte vários arquivos de uma vez.</p>
+            </div>
+            <div class="rf-acoes">
+              <label class="btn btn-primary rf-btn-importar" title="Selecionar um ou vários relatórios (.xlsx, .xls, .csv)">
+                <i class="ti ti-file-import"></i> Importar relatórios
+                <input type="file" id="rf-arquivos" accept=".xlsx,.xlsm,.xls,.csv" multiple hidden>
+              </label>
+            </div>
+          </div>
+          <div class="rf-drop" id="rf-drop">Arraste os arquivos para cá</div>
+          <div class="rf-progresso" id="rf-progresso" hidden>
+            <div class="rf-barra"><div class="rf-barra-fill" id="rf-barra-fill"></div></div>
+            <div class="rf-prog-tx" id="rf-prog-tx"></div>
+          </div>
+          <div class="rf-filtros" id="rf-filtros"></div>
+          <div class="rf-lista" id="rf-lista"></div>
+          <div class="rf-lista-acoes">
+            <button type="button" class="btn btn-primary" id="rf-auditar" title="Confronta o Consolidado da ferramenta com os relatórios marcados (ou todos) e lista o que falta pagar">
+              <i class="ti ti-scale"></i> Auditar <span id="rf-auditar-n"></span>
+            </button>
+            <button type="button" class="btn" id="rf-pauta" title="Manda as admissões dos relatórios marcados para a pauta da aba Admissão">Mandar admissões para a pauta</button>
+          </div>
+        </section>
+        <section class="card rf-card" id="rf-resultado" hidden></section>
+      </div>`;
+    ligar();
+    pintarLista();
+    if (ui.resultado) pintarResultado();
+  }
+
+  function ligar() {
+    const inp = $('rf-arquivos');
+    inp.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []);
+      e.target.value = '';
+      await importarUI(files);
+    });
+    const drop = $('rf-drop');
+    const card = $('rf-card-import');
+    ['dragenter', 'dragover'].forEach(ev => card.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('ativo'); }));
+    ['dragleave', 'drop'].forEach(ev => card.addEventListener(ev, (e) => { e.preventDefault(); if (ev === 'drop' || !card.contains(e.relatedTarget)) drop.classList.remove('ativo'); }));
+    card.addEventListener('drop', async (e) => {
+      const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+      if (files.length) await importarUI(files);
+    });
+    $('rf-auditar').addEventListener('click', () => auditarUI());
+    $('rf-pauta').addEventListener('click', () => {
+      const ids = idsSelecionados();
+      const itens = [];
+      for (const id of ids) for (const l of linhasDoRelatorio(id)) if (l.admissao_norm) itens.push({ admissao: l.admissao, paciente: l.paciente, data: l.data });
+      const n = window.AtlasInspecao && AtlasInspecao.definirPauta ? AtlasInspecao.definirPauta(itens) : 0;
+      Utilidades.toast?.(n ? `✓ ${n} admissões na pauta da aba Admissão` : 'Nenhuma admissão com código nos relatórios marcados', n ? 'success' : 'warning', 3500);
+      if (n && window.AtlasInspecaoTela && AtlasInspecaoTela.irPara) AtlasInspecaoTela.irPara('admissao');
+    });
+  }
+
+  async function importarUI(files) {
+    if (!files.length || ui.ocupado) return;
+    ui.ocupado = true;
+    const prog = $('rf-progresso'), fill = $('rf-barra-fill'), tx = $('rf-prog-tx');
+    prog.hidden = false;
+    try {
+      const res = await importarArquivos(files, { progresso: (p) => {
+        if (!fill) return;
+        const pct = p.fase === 'fim' ? 100 : Math.round(((p.i || 0) / Math.max(1, p.n || 1)) * (p.fase === 'lendo' ? 50 : 50) + (p.fase === 'gravando' ? 50 : 0));
+        fill.style.width = pct + '%';
+        tx.textContent = p.fase === 'lendo' ? `Lendo ${p.i + 1}/${p.n}: ${p.arquivo}`
+          : p.fase === 'gravando' ? `Gravando ${p.i + 1}/${p.n}: ${p.arquivo}` : 'Concluído';
+      } });
+      pintarLista();
+      const partes = [];
+      if (res.importados.length) partes.push(`${res.importados.length} relatório${res.importados.length > 1 ? 's' : ''} importado${res.importados.length > 1 ? 's' : ''}`);
+      if (res.cancelados.length) partes.push(`${res.cancelados.length} cancelado${res.cancelados.length > 1 ? 's' : ''}`);
+      if (res.erros.length) partes.push(`${res.erros.length} com erro`);
+      const semAdm = res.importados.reduce((s, r) => s + (r.semAdmissao || 0), 0);
+      if (semAdm) partes.push(`${semAdm} linha${semAdm > 1 ? 's' : ''} sem admissão (paciente + data não casou)`);
+      Utilidades.toast?.(`✓ ${partes.join(' · ') || 'nada importado'}`, res.erros.length && !res.importados.length ? 'error' : 'success', 6000);
+      if (res.erros.length) console.warn('[relatorio_final] erros de importação:', res.erros);
+      pintarErros(res);
+    } catch (e) {
+      console.error(e);
+      Utilidades.toast?.('Falha na importação: ' + (e.message || e), 'error', 5000);
+    } finally {
+      ui.ocupado = false;
+      setTimeout(() => { if (prog) prog.hidden = true; }, 900);
+    }
+  }
+  function pintarErros(res) {
+    const alvo = $('rf-lista');
+    if (!alvo) return;
+    const blocos = [];
+    for (const e of res.erros) blocos.push(`<div class="rf-aviso rf-aviso-erro">✗ <strong>${esc(e.arquivo)}</strong>: ${esc(e.erro)}</div>`);
+    for (const r of res.importados) for (const a of r.avisos || []) blocos.push(`<div class="rf-aviso">⚠ <strong>${esc(r.arquivo)}</strong>: ${esc(a)}</div>`);
+    if (blocos.length) alvo.insertAdjacentHTML('afterbegin', `<div class="rf-avisos">${blocos.join('')}</div>`);
+  }
+
+  function idsSelecionados() {
+    const lista = listar();
+    const ids = lista.filter(r => ui.sel.has(r.id)).map(r => r.id);
+    return ids.length ? ids : filtrados().map(r => r.id);
+  }
+  function filtrados() {
+    const b = normNome(ui.busca);
+    return listar().filter(r => (!ui.filtroMed || r.medico === ui.filtroMed) && (!ui.filtroComp || r.competencia === ui.filtroComp)
+      && (!b || normNome(r.medico + ' ' + r.arquivo + ' ' + r.competencia).includes(b)));
+  }
+  function pintarLista() {
+    const alvo = $('rf-lista'), filt = $('rf-filtros');
+    if (!alvo) return;
+    const lista = listar();
+    const meds = [...new Set(lista.map(r => r.medico))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const comps = [...new Set(lista.map(r => r.competencia))].sort().reverse();
+    filt.innerHTML = lista.length ? `
+      <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Médico</span><span class="atlas-ff-divr"></span>
+        <select class="atlas-ff-sel" id="rf-f-med"><option value="">todos</option>${meds.map(m => `<option value="${esc(m)}" ${ui.filtroMed === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+      <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Mês</span><span class="atlas-ff-divr"></span>
+        <select class="atlas-ff-sel" id="rf-f-comp"><option value="">todos</option>${comps.map(c => `<option value="${esc(c)}" ${ui.filtroComp === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+      <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Buscar</span><span class="atlas-ff-divr"></span>
+        <input type="text" class="atlas-ff-sel" id="rf-f-busca" placeholder="médico, arquivo…" value="${esc(ui.busca)}"></label>
+      <span class="rf-contagem">${lista.length} relatório${lista.length !== 1 ? 's' : ''} · ${meds.length} médico${meds.length !== 1 ? 's' : ''} · ${comps.length} m${comps.length !== 1 ? 'eses' : 'ês'}</span>` : '';
+    const vis = filtrados();
+    if (!lista.length) {
+      alvo.innerHTML = `<div class="rf-vazio">Nenhum relatório final importado ainda.<br>Importe os relatórios que os médicos receberam — um arquivo por médico e mês.</div>`;
+    } else {
+      const todosSel = vis.length && vis.every(r => ui.sel.has(r.id));
+      alvo.innerHTML = `
+        <div class="rf-tab-wrap"><table class="rf-tab">
+          <thead><tr>
+            <th class="rf-chk"><input type="checkbox" id="rf-sel-todos" ${todosSel ? 'checked' : ''} title="Marcar todos os visíveis"></th>
+            <th>Médico</th><th>Mês</th><th>Layout</th><th class="num">Linhas</th><th class="num">Total recebido</th><th>Arquivo</th><th>Importado em</th><th></th>
+          </tr></thead>
+          <tbody>${vis.map(r => `
+            <tr data-id="${r.id}" class="${ui.sel.has(r.id) ? 'sel' : ''}">
+              <td class="rf-chk"><input type="checkbox" class="rf-sel" data-id="${r.id}" ${ui.sel.has(r.id) ? 'checked' : ''}></td>
+              <td class="rf-med">${esc(CodigoMedico.exibir(r.medico))}</td>
+              <td class="mono">${esc(r.competencia)}</td>
+              <td><span class="rf-layout rf-layout-${esc(r.layout || '')}">${esc(rotuloLayout(r.layout))}</span></td>
+              <td class="num mono">${r.n_linhas}</td>
+              <td class="num mono" data-ocultavel>R$ ${fmtN(r.total)}</td>
+              <td class="rf-arq" title="${esc(r.arquivo)}">${esc(r.arquivo)}</td>
+              <td class="mono">${esc(String(r.importado_em || '').slice(0, 16).replace('T', ' '))}</td>
+              <td class="rf-row-acoes">
+                <button type="button" class="rf-mini" data-ver="${r.id}" title="Ver as linhas deste relatório">Ver</button>
+                <button type="button" class="rf-mini rf-mini-x" data-remover="${r.id}" title="Remover este relatório">Remover</button>
+              </td>
+            </tr>`).join('')}
+          </tbody></table></div>`;
+    }
+    const n = ui.sel.size;
+    const btnN = $('rf-auditar-n');
+    if (btnN) btnN.textContent = n ? `(${n} marcado${n > 1 ? 's' : ''})` : (vis.length ? `(${vis.length} visíve${vis.length > 1 ? 'is' : 'l'})` : '');
+    // eventos
+    $('rf-f-med')?.addEventListener('change', (e) => { ui.filtroMed = e.target.value; pintarLista(); });
+    $('rf-f-comp')?.addEventListener('change', (e) => { ui.filtroComp = e.target.value; pintarLista(); });
+    $('rf-f-busca')?.addEventListener('input', (e) => { ui.busca = e.target.value; clearTimeout(ui._t); ui._t = setTimeout(pintarLista, 200); });
+    $('rf-sel-todos')?.addEventListener('change', (e) => { for (const r of vis) { if (e.target.checked) ui.sel.add(r.id); else ui.sel.delete(r.id); } pintarLista(); });
+    alvo.querySelectorAll('.rf-sel').forEach(cb => cb.addEventListener('change', () => {
+      const id = Number(cb.dataset.id);
+      if (cb.checked) ui.sel.add(id); else ui.sel.delete(id);
+      cb.closest('tr').classList.toggle('sel', cb.checked);
+      const btn = $('rf-auditar-n'); if (btn) btn.textContent = ui.sel.size ? `(${ui.sel.size} marcado${ui.sel.size > 1 ? 's' : ''})` : '';
+    }));
+    alvo.querySelectorAll('[data-remover]').forEach(b => b.addEventListener('click', async () => {
+      const id = Number(b.dataset.remover);
+      const r = listar().find(x => x.id === id);
+      if (!r) return;
+      if (!await Utilidades.confirmar(`Remover o relatório final de ${r.medico} · ${r.competencia}?`)) return;
+      remover(id); ui.sel.delete(id); pintarLista();
+      Utilidades.toast?.('Relatório removido.', 'info', 2500);
+    }));
+    alvo.querySelectorAll('[data-ver]').forEach(b => b.addEventListener('click', () => verLinhas(Number(b.dataset.ver))));
+  }
+  function rotuloLayout(l) { return l === 'ferramenta' ? 'ferramenta' : l === 'manual2' ? 'manual (c/ admissão)' : l === 'manual1' ? 'manual (s/ admissão)' : (l || '—'); }
+
+  function verLinhas(id) {
+    const r = listar().find(x => x.id === id);
+    if (!r) return;
+    const linhas = linhasDoRelatorio(id);
+    const ov = document.createElement('div');
+    ov.className = 'rf-modal-ov';
+    ov.innerHTML = `
+      <div class="rf-modal rf-modal-larga" role="dialog" aria-modal="true">
+        <div class="rf-modal-head"><strong>${esc(CodigoMedico.exibir(r.medico))} · ${esc(r.competencia)}</strong>
+          <span>${esc(r.arquivo)} · ${linhas.length} linhas · recebido R$ ${fmtN(r.total)}${r.periodo_ini ? ` · pagamentos de ${dataBR(r.periodo_ini)} a ${dataBR(r.periodo_fim)}` : ''}</span>
+          <button type="button" class="rf-modal-x" data-fechar>×</button></div>
+        <div class="rf-tab-wrap rf-modal-scroll"><table class="rf-tab">
+          <thead><tr><th>Status</th><th>Módulo</th><th>Admissão</th><th>Data</th><th>Papel</th><th>Paciente</th><th>Origem</th><th>Convênio</th><th>Procedimento</th><th class="num">Valor</th></tr></thead>
+          <tbody>${linhas.map(l => `<tr class="${l.glosa ? 'rf-glosa' : ''}">
+            <td>${esc(l.status)}</td><td>${esc(l.modulo)}</td>
+            <td class="mono"><button type="button" class="rf-link" data-adm="${esc(l.admissao)}">${esc(l.admissao || '—')}</button></td>
+            <td class="mono">${esc(dataBR(l.data))}</td><td>${esc(l.papel)}</td><td>${esc(I().nomePaciente ? I().nomePaciente(l.paciente) : l.paciente)}</td>
+            <td>${l.origem ? Utilidades.badgeFonte(l.origem) : ''}</td><td>${esc(l.convenio)}</td><td>${esc(l.procedimento)}</td>
+            <td class="num mono" data-ocultavel>R$ ${fmtN(l.valor)}</td></tr>`).join('')}
+          </tbody></table></div>
+      </div>`;
+    document.body.appendChild(ov);
+    const fechar = () => ov.remove();
+    ov.querySelector('[data-fechar]').addEventListener('click', fechar);
+    ov.addEventListener('click', (e) => { if (e.target === ov) fechar(); });
+    ov.querySelectorAll('[data-adm]').forEach(b => b.addEventListener('click', () => { fechar(); abrirAdmissao(b.dataset.adm); }));
+    Utilidades.aplicarMascaraValores?.();
+  }
+  function abrirAdmissao(adm) {
+    if (!adm) return;
+    if (window.AtlasInspecaoTela && AtlasInspecaoTela.abrirAdmissao) AtlasInspecaoTela.abrirAdmissao(adm);
+    else if (window.AtlasInspecao && AtlasInspecao.inspecionarAdmissao) AtlasInspecao.inspecionarAdmissao(adm);
+  }
+
+  async function auditarUI() {
+    if (ui.ocupado) return;
+    const ids = idsSelecionados();
+    if (!ids.length) { Utilidades.toast?.('Importe ao menos um relatório final.', 'warning', 3000); return; }
+    ui.ocupado = true;
+    const prog = $('rf-progresso'), fill = $('rf-barra-fill'), tx = $('rf-prog-tx');
+    prog.hidden = false; fill.style.width = '2%'; tx.textContent = 'Preparando…';
+    const btn = $('rf-auditar'); if (btn) btn.disabled = true;
+    try {
+      ui.resultado = await auditar(ids, { progresso: (p) => {
+        const pct = p.fase === 'fim' ? 100 : p.fase === 'competencia' ? Math.round(((p.i || 0) / Math.max(1, p.n)) * 40)
+          : 40 + Math.round(((p.i || 0) / Math.max(1, p.n)) * 60);
+        fill.style.width = pct + '%';
+        tx.textContent = p.fase === 'competencia' ? `Montando o "deveria" de ${p.competencia} (${p.i + 1}/${p.n})`
+          : p.fase === 'relatorio' ? `Confrontando ${p.medico} · ${p.competencia} (${p.i + 1}/${p.n})` : 'Concluído';
+      } });
+      ui.cats = new Set(); ui.buscaRes = ''; ui.medRes = ''; ui.compRes = '';
+      pintarResultado();
+      const t = ui.resultado.totais;
+      Utilidades.toast?.(`✓ Auditoria: ${ui.resultado.porRelatorio.length} relatório(s) · falta pagar R$ ${fmtN(t.falta)}`, t.falta > 0 ? 'warning' : 'success', 6000);
+      $('rf-resultado')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      console.error(e);
+      Utilidades.toast?.('Falha na auditoria: ' + (e.message || e), 'error', 5000);
+    } finally {
+      ui.ocupado = false;
+      if (btn) btn.disabled = false;
+      setTimeout(() => { if (prog) prog.hidden = true; }, 900);
+    }
+  }
+
+  function itensVisiveis() {
+    const res = ui.resultado;
+    if (!res) return [];
+    const b = normNome(ui.buscaRes);
+    return res.itens.filter(it => (!ui.cats.size || ui.cats.has(it.categoria))
+      && (!ui.medRes || it.medico === ui.medRes) && (!ui.compRes || it.competencia === ui.compRes)
+      && (!b || normNome([it.admissao, it.paciente, it.procedimento, it.papel, it.medico, it.rotulo].join(' ')).includes(b)));
+  }
+  function pintarResultado() {
+    const alvo = $('rf-resultado');
+    const res = ui.resultado;
+    if (!alvo || !res) return;
+    alvo.hidden = false;
+    const t = res.totais;
+    const meds = [...new Set(res.itens.map(i => i.medico))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const comps = [...new Set(res.itens.map(i => i.competencia))].sort().reverse();
+    const vis = itensVisiveis();
+    const totVis = totais(vis);
+    const cats = Object.keys(CATEGORIAS).filter(k => t.porCategoria[k]);
+    alvo.innerHTML = `
+      <div class="rf-head">
+        <div>
+          <h3>O que falta pagar</h3>
+          <p>Deveria (Consolidado da ferramenta) × recebido (relatório final), por admissão e papel. ${res.porRelatorio.length} relatório${res.porRelatorio.length !== 1 ? 's' : ''} · ${res.competencias.join(', ')}.</p>
+        </div>
+        <div class="rf-acoes">
+          <button type="button" class="btn" id="rf-pauta-falta" title="Manda para a pauta da aba Admissão as admissões com valor faltante">Pauta do que falta</button>
+          <button type="button" class="btn btn-primary" id="rf-exportar"><i class="ti ti-file-spreadsheet"></i> Exportar Excel</button>
+        </div>
+      </div>
+      ${res.avisos.length ? `<div class="rf-avisos">${res.avisos.map(a => `<div class="rf-aviso">⚠ ${esc(a)}</div>`).join('')}</div>` : ''}
+      <div class="rf-kpis">
+        <div class="rf-kpi"><span class="rf-kpi-lbl">Deveria</span><span class="rf-kpi-val" data-ocultavel>R$ ${fmtN(t.deveria)}</span></div>
+        <div class="rf-kpi"><span class="rf-kpi-lbl">Recebido</span><span class="rf-kpi-val" data-ocultavel>R$ ${fmtN(t.recebido)}</span></div>
+        <div class="rf-kpi rf-kpi-falta"><span class="rf-kpi-lbl">Falta pagar</span><span class="rf-kpi-val" data-ocultavel>R$ ${fmtN(t.falta)}</span></div>
+        <div class="rf-kpi rf-kpi-aviso"><span class="rf-kpi-lbl">Sem lastro</span><span class="rf-kpi-val" data-ocultavel>R$ ${fmtN(t.semLastro)}</span></div>
+      </div>
+      <div class="rf-resumo">
+        <div class="rf-tab-wrap"><table class="rf-tab rf-tab-resumo">
+          <thead><tr><th>Médico</th><th>Mês</th><th class="num">Deveria</th><th class="num">Recebido</th><th class="num">Falta pagar</th><th class="num">Sem lastro</th><th class="num">Itens</th></tr></thead>
+          <tbody>${res.porRelatorio.map(r => `<tr class="${r.falta > 0.004 ? 'rf-tem-falta' : ''}">
+            <td>${esc(CodigoMedico.exibir(r.medico))}</td><td class="mono">${esc(r.competencia)}</td>
+            <td class="num mono" data-ocultavel>R$ ${fmtN(r.deveria)}</td><td class="num mono" data-ocultavel>R$ ${fmtN(r.recebido)}</td>
+            <td class="num mono rf-falta" data-ocultavel>R$ ${fmtN(r.falta)}</td><td class="num mono" data-ocultavel>R$ ${fmtN(r.semLastro)}</td><td class="num mono">${r.n}</td></tr>`).join('')}
+          </tbody></table></div>
+      </div>
+      <div class="rf-cats">
+        ${cats.map(k => `<button type="button" class="rf-cat rf-cat-${CATEGORIAS[k].tom} ${ui.cats.has(k) ? 'ativa' : ''}" data-cat="${k}">
+          ${esc(CATEGORIAS[k].rotulo)} <b>${t.porCategoria[k].n}</b>${CATEGORIAS[k].soma ? ` <span data-ocultavel>R$ ${fmtN(t.porCategoria[k].valor)}</span>` : ''}</button>`).join('')}
+        ${ui.cats.size ? '<button type="button" class="rf-cat rf-cat-limpar" data-cat="">limpar</button>' : ''}
+      </div>
+      <div class="rf-filtros">
+        <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Médico</span><span class="atlas-ff-divr"></span>
+          <select class="atlas-ff-sel" id="rf-r-med"><option value="">todos</option>${meds.map(m => `<option value="${esc(m)}" ${ui.medRes === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+        <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Mês</span><span class="atlas-ff-divr"></span>
+          <select class="atlas-ff-sel" id="rf-r-comp"><option value="">todos</option>${comps.map(c => `<option value="${esc(c)}" ${ui.compRes === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+        <label class="atlas-ff-wrap"><span class="atlas-ff-pre">Buscar</span><span class="atlas-ff-divr"></span>
+          <input type="text" class="atlas-ff-sel" id="rf-r-busca" placeholder="admissão, paciente, procedimento…" value="${esc(ui.buscaRes)}"></label>
+        <span class="rf-contagem">${vis.length} de ${res.itens.length} itens · falta <span data-ocultavel>R$ ${fmtN(totVis.falta)}</span></span>
+      </div>
+      <div class="rf-tab-wrap rf-tab-itens"><table class="rf-tab">
+        <thead><tr><th>Categoria</th><th>Mês</th><th>Médico</th><th>Admissão</th><th>Data</th><th>Paciente</th><th>Procedimento</th><th>Papel</th><th>Origem</th><th class="num">Deveria</th><th class="num">Recebido</th><th class="num">Falta</th></tr></thead>
+        <tbody>${vis.slice(0, 2000).map(it => `<tr class="rf-it rf-it-${it.tom}" data-adm="${esc(it.admissao)}" title="Abrir a admissão na aba Admissão">
+          <td><span class="rf-cat-tag rf-cat-${it.tom}">${esc(it.rotulo)}</span></td>
+          <td class="mono">${esc(it.competencia)}</td><td>${esc(CodigoMedico.exibir(it.medico))}</td>
+          <td class="mono">${esc(it.admissao || '—')}</td><td class="mono">${esc(dataBR(it.data))}</td>
+          <td>${esc(I().nomePaciente ? I().nomePaciente(it.paciente) : it.paciente)}</td><td>${esc(it.procedimento)}</td><td>${esc(it.papel)}</td>
+          <td>${it.origem ? Utilidades.badgeFonte(it.origem) : ''}</td>
+          <td class="num mono" data-ocultavel>R$ ${fmtN(it.deveria)}</td><td class="num mono" data-ocultavel>R$ ${fmtN(it.recebido)}</td>
+          <td class="num mono rf-falta" data-ocultavel>${it.falta > 0.004 ? 'R$ ' + fmtN(it.falta) : ''}</td></tr>`).join('')}
+        </tbody></table>
+        ${vis.length > 2000 ? `<div class="rf-truncado">Mostrando 2.000 de ${vis.length} itens — refine os filtros ou exporte o Excel.</div>` : ''}
+      </div>`;
+    alvo.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.cat;
+      if (!k) ui.cats.clear(); else if (ui.cats.has(k)) ui.cats.delete(k); else ui.cats.add(k);
+      pintarResultado();
+    }));
+    $('rf-r-med')?.addEventListener('change', (e) => { ui.medRes = e.target.value; pintarResultado(); });
+    $('rf-r-comp')?.addEventListener('change', (e) => { ui.compRes = e.target.value; pintarResultado(); });
+    $('rf-r-busca')?.addEventListener('input', (e) => { ui.buscaRes = e.target.value; clearTimeout(ui._t2); ui._t2 = setTimeout(pintarResultado, 220); });
+    $('rf-exportar')?.addEventListener('click', () => exportarExcel({ ...res, itens: vis }));
+    $('rf-pauta-falta')?.addEventListener('click', () => {
+      const itens = res.itens.filter(i => i.falta > 0.004 && i.admissao_norm).map(i => ({ admissao: i.admissao, paciente: i.paciente, data: i.data }));
+      const n = window.AtlasInspecao && AtlasInspecao.definirPauta ? AtlasInspecao.definirPauta(itens) : 0;
+      Utilidades.toast?.(n ? `✓ ${n} admissões com valor faltante na pauta` : 'Nada faltando — pauta não alterada', n ? 'success' : 'info', 3500);
+      if (n && window.AtlasInspecaoTela && AtlasInspecaoTela.irPara) AtlasInspecaoTela.irPara('admissao');
+    });
+    alvo.querySelectorAll('tr.rf-it').forEach(tr => tr.addEventListener('click', () => abrirAdmissao(tr.dataset.adm)));
+    Utilidades.aplicarMascaraValores?.();
+  }
+
+  const CSS = `
+    .rf-wrap { display: flex; flex-direction: column; gap: 16px; }
+    .rf-card { padding: 18px 20px 20px; }
+    .rf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
+    .rf-head h3 { margin: 0 0 4px; font-size: 20px; }
+    .rf-head p { margin: 0; font-size: 12.5px; color: var(--ink-soft, #585d62); max-width: 720px; line-height: 1.45; }
+    .rf-acoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .rf-btn-importar { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .rf-drop { border: 2px dashed var(--border, #eef0f2); border-radius: 14px; padding: 12px; text-align: center; font-size: 12px; color: var(--ink-faint, #8a9096); margin-bottom: 12px; transition: all .15s; }
+    .rf-drop.ativo { border-color: var(--primary, #5980a6); background: var(--accent-soft, #e4eaf1); color: var(--accent-text, #3f6489); }
+    .rf-progresso { margin: 0 0 12px; }
+    .rf-barra { height: 8px; border-radius: 999px; background: var(--bg-sunken, #f2f3f5); overflow: hidden; }
+    .rf-barra-fill { height: 100%; width: 0; background: var(--primary, #5980a6); transition: width .2s; }
+    .rf-prog-tx { font-size: 11.5px; color: var(--ink-soft, #585d62); margin-top: 4px; }
+    .rf-filtros { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+    .rf-filtros .atlas-ff-wrap { min-width: 180px; }
+    .rf-contagem { margin-left: auto; font-size: 11.5px; color: var(--ink-soft, #585d62); font-weight: 600; }
+    .rf-vazio { padding: 26px; text-align: center; color: var(--ink-faint, #8a9096); font-size: 13px; line-height: 1.6; border: 1px dashed var(--border, #eef0f2); border-radius: 14px; }
+    .rf-tab-wrap { overflow: auto; border-radius: 14px; border: 1px solid var(--border, #eef0f2); }
+    .rf-tab-itens { max-height: 62vh; }
+    .rf-modal-scroll { max-height: 70vh; }
+    .rf-tab { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11.5px; }
+    .rf-tab th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint, #8a9096); padding: 8px 10px; position: sticky; top: 0; background: #fff; z-index: 1; border-bottom: 1px solid var(--border, #eef0f2); }
+    .rf-tab td { padding: 6px 10px; border-bottom: 1px solid #f2f3f5; vertical-align: middle; }
+    .rf-tab tbody tr:nth-child(even) td { background: #f7f8fa; }
+    .rf-tab tbody tr:hover td { background: #f2f4f7; }
+    .rf-tab tr.sel td { background: var(--accent-soft, #e4eaf1) !important; }
+    .rf-tab .num { text-align: right; white-space: nowrap; }
+    .rf-tab .mono { font-family: var(--font-mono, monospace); white-space: nowrap; }
+    .rf-chk { width: 28px; text-align: center; }
+    .rf-med { font-weight: 600; }
+    .rf-arq { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft, #585d62); }
+    .rf-layout { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #eef2f6; color: #3f6489; white-space: nowrap; }
+    .rf-layout-manual1, .rf-layout-manual2 { background: #fbf3e3; color: #8a6d2f; }
+    .rf-row-acoes { white-space: nowrap; text-align: right; }
+    .rf-mini { font-size: 11px; padding: 3px 9px; border-radius: 8px; border: 1px solid var(--border, #eef0f2); background: #fff; cursor: pointer; color: var(--ink, #1d1f20); }
+    .rf-mini:hover { background: var(--accent-soft, #e4eaf1); }
+    .rf-mini-x { color: #a15646; }
+    .rf-link { border: none; background: none; color: #3f6489; font-weight: 700; cursor: pointer; padding: 0; font-family: inherit; text-decoration: underline dotted; }
+    .rf-lista-acoes { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .rf-avisos { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .rf-aviso { font-size: 11.5px; padding: 6px 10px; border-radius: 10px; background: #fbf3e3; color: #6b4f1d; }
+    .rf-aviso-erro { background: #faf5f3; color: #a15646; }
+    .rf-glosa td { color: #c07a66; }
+    .rf-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 6px 0 14px; }
+    .rf-kpi { padding: 12px 14px; border-radius: 16px; background: #f7f8fa; display: flex; flex-direction: column; gap: 2px; }
+    .rf-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint, #8a9096); }
+    .rf-kpi-val { font-size: 20px; font-weight: 700; font-family: var(--font-mono, monospace); color: var(--ink, #1d1f20); }
+    .rf-kpi-falta { background: #faf5f3; } .rf-kpi-falta .rf-kpi-val { color: #a15646; }
+    .rf-kpi-aviso { background: #fbf3e3; } .rf-kpi-aviso .rf-kpi-val { color: #8a6d2f; }
+    .rf-resumo { margin-bottom: 12px; }
+    .rf-tab-resumo tr.rf-tem-falta .rf-falta { color: #a15646; font-weight: 800; }
+    .rf-falta { color: #a15646; font-weight: 700; }
+    .rf-cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .rf-cat { font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border, #eef0f2); background: #fff; cursor: pointer; color: var(--ink, #1d1f20); font-family: inherit; }
+    .rf-cat b { font-weight: 800; margin-left: 2px; }
+    .rf-cat.ativa { background: var(--primary, #5980a6); border-color: var(--primary, #5980a6); color: #fff; }
+    .rf-cat-falta:not(.ativa) { color: #a15646; border-color: #e8cfc7; }
+    .rf-cat-aviso:not(.ativa) { color: #8a6d2f; border-color: #eadcb8; }
+    .rf-cat-ok:not(.ativa) { color: #3c6b45; border-color: #cfdfd1; }
+    .rf-cat-limpar { color: var(--ink-faint, #8a9096); border-style: dashed; }
+    .rf-cat-tag { display: inline-block; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; padding: 1px 7px; border-radius: 999px; background: #eef2f6; color: #3f6489; white-space: nowrap; }
+    .rf-cat-tag.rf-cat-falta { background: #faf5f3; color: #a15646; }
+    .rf-cat-tag.rf-cat-aviso { background: #fbf3e3; color: #8a6d2f; }
+    .rf-cat-tag.rf-cat-ok { background: #e9f1e9; color: #3c6b45; }
+    .rf-cat-tag.rf-cat-info { background: #f2f3f5; color: #6b7075; }
+    tr.rf-it { cursor: pointer; }
+    .rf-truncado { padding: 8px 12px; font-size: 11.5px; color: var(--ink-soft, #585d62); }
+    .rf-modal-ov { position: fixed; inset: 0; z-index: 10000; background: rgba(29, 31, 32, .35); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .rf-modal { background: #fff; border-radius: 20px; box-shadow: 0 24px 60px -20px rgba(29,31,32,.5); width: min(760px, 96vw); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+    .rf-modal-larga { width: min(1500px, 98vw); }
+    .rf-modal-head { padding: 14px 18px 10px; border-bottom: 1px solid var(--border, #eef0f2); display: flex; flex-direction: column; gap: 2px; position: relative; }
+    .rf-modal-head strong { font-size: 15px; }
+    .rf-modal-head span { font-size: 12px; color: var(--ink-soft, #585d62); }
+    .rf-modal-x { position: absolute; right: 12px; top: 10px; border: none; background: none; font-size: 22px; cursor: pointer; color: var(--ink-soft, #585d62); }
+    .rf-modal-lista { padding: 12px 18px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+    .rf-modal-item { display: grid; grid-template-columns: 1.4fr 1fr 150px; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: #f7f8fa; }
+    .rf-modal-item.rf-modal-falta { outline: 2px solid #c07a66; }
+    .rf-modal-arq { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rf-modal-arq small { display: block; font-weight: 400; color: var(--ink-soft, #585d62); }
+    .rf-modal-item input { font-size: 12px; padding: 6px 8px; border: 1px solid var(--border, #eef0f2); border-radius: 10px; font-family: inherit; }
+    .rf-modal-acoes { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border, #eef0f2); }
+  `;
+
+  window.AtlasRelatorioFinal = {
+    montar, importarArquivos, lerArquivo, listar, remover, linhasDoRelatorio, linhasDaAdmissao, temRelatorio,
+    auditar, confrontoDaAdmissao, exportarExcel, garantirCalculo, garantirMotor,
+    CATEGORIAS, CATS_FALTA, garantirXLSX, garantirExcelJS,
+    _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui },
+  };
+})();

@@ -497,15 +497,18 @@ const App = {
   // Tailwind ou motion — a ferramenta é offline e sem build; os ícones são
   // os mesmos Tabler, já vendorizados em libs/.
   //
-  // O que aparece aqui é decisão do Pedro (16/09/2026): Visão Geral, Calcular,
+  // O que aparece aqui é decisão do Pedro (16/09/2026): Visão Geral, Inspeção,
   // Auditoria, Relatórios · Importar Sistema (o QVIS) e Produção · Base
   // Tabela, Médicos, De-Para · Configurações. Gerenciais, Produção Médica,
   // Controle de Notas, Consolidação, Unidades e os 12 Desempenhos continuam
   // registrados em App.telas (a lógica fica), só não têm botão.
+  // ATLAS v1.3: a ATLAS não faz repasse, audita — o CALCULAR saiu do dock e a
+  // INSPEÇÃO (admissão + relatório final) entrou no lugar. O Calcular segue
+  // registrado e suas regras rodam por baixo (AtlasCalcular.calcularESalvar).
   // ──────────────────────────────────────────────────────────────────────
   DOCK_ITENS: [
     { tela: 'dashboard',         titulo: 'Visão Geral',       icone: 'ti-home' },
-    { tela: 'calcular',          titulo: 'Calcular Repasse',  icone: 'ti-calculator' },
+    { tela: 'inspecao',          titulo: 'Inspeção',          icone: 'ti-zoom-check' },
     { tela: 'auditoria',         titulo: 'Auditoria',         icone: 'ti-clipboard-check' },
     { tela: 'relatorios',        titulo: 'Relatórios',        icone: 'ti-report' },
     { sep: true },
@@ -524,6 +527,7 @@ const App = {
     const d = (this.DOCK_ITENS || []).find(i => i.tela === tela);
     if (d) return d.icone;
     const extra = {
+      calcular: 'ti-calculator',   // ATLAS v1.3: sem botão, mas com marca própria
       gerenciais: 'ti-adjustments', 'producao-medica': 'ti-layout-grid', 'controle-notas': 'ti-receipt',
       consolidacao: 'ti-lock-check', unidades: 'ti-building', backup: 'ti-database-export',
       administracao: 'ti-settings', 'balanco-retroativo': 'ti-flask',
@@ -734,6 +738,7 @@ const App = {
   _renderizarTelaNaoImplementada(tela) {
     const titulos = {
       'importar-qvis':        'Importar Sistema',
+      'inspecao':             'Inspeção',
       'calcular':             'Calcular Repasse',
       'pagamentos-externos':  'Pagamentos Externos',
       'auditoria':            'Auditoria',

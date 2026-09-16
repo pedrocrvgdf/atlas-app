@@ -945,6 +945,38 @@
     ]
   };
 
+  // ── ATLAS v1.3: INSPEÇÃO (admissão + relatório final) ──────────────────
+  window.AtlasDocs['inspecao'] = {
+    titulo: 'Inspeção',
+    secoes: [
+      { titulo: 'O que este módulo faz', tipo: 'paragrafo', conteudo: [
+        'É o módulo de **auditoria** da ATLAS. A aba **Admissão** rastreia uma admissão pelas quatro bases — como ela **chega do sistema**, como fica no **Consolidado** da ferramenta, como aparece na **produção analítica** e o que o médico **de fato recebeu** no relatório final — e diz onde ela parou.',
+        'A aba **Relatório final** importa os relatórios que os médicos receberam (um arquivo por médico e mês de pagamento, vários de uma vez) e faz a auditoria em lote: confronta o que a ferramenta manda pagar com o que foi pago e lista **o que falta pagar** ao médico.'
+      ] },
+      { titulo: 'Como operar (passo a passo)', tipo: 'passos', conteudo: [
+        'Importe o **relatório do sistema** (Importar Sistema) dos meses auditados e tenha a **Base Tabela** vigente na época — o "deveria" nasce deles.',
+        'Na aba **Relatório final**, importe os relatórios dos médicos (.xlsx/.xls/.csv). Médico e competência saem do arquivo; o que faltar é perguntado.',
+        'Marque os relatórios (ou nenhum, para todos) e clique em **Auditar**. Meses sem cálculo salvo são calculados na hora, com as regras do Calcular.',
+        'Leia o resultado: totais por médico e mês, categorias e a lista item a item. Clique num item para abrir a admissão na aba **Admissão**.',
+        'Exporte o Excel (**Falta pagar**, Conforme, Avisos, Resumo) ou mande as admissões com valor faltante para a **pauta**.'
+      ] },
+      { titulo: 'Categorias do confronto', tipo: 'lista', conteudo: [
+        '**Conforme** — deveria = recebido.',
+        '**Pago a menor** — recebeu menos que a regra manda: falta a diferença.',
+        '**Papel não pago** — a admissão está no relatório final, mas aquele papel (auxiliar, indicante, laudo…) não foi pago.',
+        '**Não consta no relatório final** — a admissão foi recebida pelo hospital e calculada, e não aparece no relatório do médico.',
+        '**Com regra e sem pagamento** — linha do sistema com regra na Base Tabela e sem pagamento em lugar nenhum.',
+        '**Recebido sem lastro / Pago a maior / Glosa / Estorno / Aguardando convênio** — informativos: não somam na cobrança.'
+      ] },
+      { titulo: 'Regras de leitura do relatório final', tipo: 'lista', conteudo: [
+        'Nunca deduplica: a soma das linhas é o valor da nota; linhas repetidas e **negativas (estornos)** contam.',
+        '**GLOSA vale zero** no confronto.',
+        'Competência = **mês do pagamento** ("Pagamentos liberados entre …", "Competência: …", nome do arquivo).',
+        'Layout manual sem coluna de admissão: a admissão é resolvida por **paciente + data** na produção e no sistema.'
+      ] },
+    ]
+  };
+
   window.AtlasDocs['relatorios'] = {
     titulo: 'Relatórios',
     secoes: [

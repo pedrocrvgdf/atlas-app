@@ -1258,7 +1258,7 @@ const RelatoriosApp = (function () {
             <button type="button" class="rel-btn-exportar" id="rel-abrir-export" title="Exportar relatório">↓ Exportar relatório</button>
             <button type="button" class="rel-btn-exportar" id="rel-export-filtrado" title="Extração rápida da matriz do Consolidado EXATAMENTE como está filtrada na tela (colunas marcadas + 'contém')">⇩ Extração filtrada</button><!-- V902 -->
             <button type="button" class="rel-btn-exportar" id="rel-abrir-check" title="Check de regra — preencha uma linha (formato da matriz) e veja qual versão da tabela e qual regra se aplicam">🧪 Check de regra</button><!-- V642 -->
-            <button type="button" class="rel-btn-exportar" id="rel-abrir-inspecao" title="Inspeção da admissão — rastreia uma admissão pelo QVIS, pelo Consolidado e pela Produção e diz onde ela parou">🔎 Inspeção</button><!-- V943: de volta, sem cofre -->
+            <!-- ATLAS v1.3: o botão 🔎 Inspeção saiu daqui — a Inspeção é tela do dock -->
           </div>
         </header>
 
@@ -1512,12 +1512,12 @@ const RelatoriosApp = (function () {
     if (sc) sc.scrollLeft = sc.scrollWidth;
   }
   // linhas COMPLETAS (todas as colunas) de uma competência — p/ a aba "Repasse" do export
-  function mmLinhasCompletas(comp) {
+  function mmLinhasCompletas(comp, opts) {
     const compAnt = state.competencia, cacheAnt = _consCache;
     try {
       state.competencia = comp;
       _consCache = { comp: null, linhas: null };
-      return coletarLinhas(null, null) || [];
+      return coletarLinhas(null, null, opts) || [];
     } finally { state.competencia = compAnt; _consCache = cacheAnt; }
   }
   async function exportarMesAMes() {
@@ -1800,12 +1800,7 @@ const RelatoriosApp = (function () {
         trocarConteudo();
       });
     });
-    // V943: Inspeção da Admissão de volta — abre direto (sem frase de acesso)
-    const btnInsp = document.getElementById('rel-abrir-inspecao');
-    if (btnInsp) btnInsp.addEventListener('click', () => {
-      if (window.AtlasInspecao && typeof AtlasInspecao.abrir === 'function') AtlasInspecao.abrir();
-      else Utilidades.toast?.('Módulo Inspeção não carregado. Recarregue a página (Ctrl+Shift+R).', 'error', 4000);
-    });
+    // ATLAS v1.3: a Inspeção virou tela do dock (App.navegarPara('inspecao'))
     const btnExp = document.getElementById('rel-abrir-export');
     if (btnExp) btnExp.addEventListener('click', async () => {
       if (!await avisarLembretes(true)) return;   // V550/V814: extração FINAL
@@ -2011,7 +2006,7 @@ const RelatoriosApp = (function () {
   // V619: MÊS CONSOLIDADO = FOTO CONGELADA. Depois de consolidar, o consolidado
   // do mês é servido da foto gravada na consolidação — mudanças posteriores de
   // regras/cadastros NÃO recalculam o passado. Mês aberto segue ao vivo.
-  function coletarLinhas(abasSet, statusSet) {
+  function coletarLinhas(abasSet, statusSet, opts) {
     const AC = window.AtlasConsolidacao;
     const comp = state.competencia;
     if (AC && AC.estaConsolidado && AC.estaConsolidado(comp)) {
@@ -2028,10 +2023,14 @@ const RelatoriosApp = (function () {
         return true;
       });
     }
-    return coletarLinhasLive(abasSet, statusSet);
+    return coletarLinhasLive(abasSet, statusSet, opts);
   }
 
-  function coletarLinhasLive(abasSet, statusSet) {
+  // ATLAS v1.3: opts.semFiltroIH = true → NÃO descarta o médico sem vínculo
+  // INTERNO/HÍBRIDO. A auditoria do Relatório final precisa do "deveria" de
+  // QUALQUER médico auditado, cadastrado ou não com vínculo.
+  function coletarLinhasLive(abasSet, statusSet, opts) {
+    const semFiltroIH = !!(opts && opts.semFiltroIH);
     const out = [];
     // V625: profissionais DESCARTADOS pelo filtro interno/híbrido — antes sumiam em
     // silêncio (médico "não recebia" sem ninguém saber). Agora são coletados e o
@@ -2075,7 +2074,7 @@ const RelatoriosApp = (function () {
         // regra: só médicos INTERNO/HIBRIDO — exceção: taxas de equipamento
         // (são da proprietária; o uso já é restrito a IH nos adaptadores)
         const ehTaxa = String(p.papel || '').toUpperCase().indexOf('TAXA') >= 0;
-        if (!ehTaxa && !ehProducaoConsulta && !ehIH(p._medicoReal || p.profissional)) {
+        if (!ehTaxa && !ehProducaoConsulta && !semFiltroIH && !ehIH(p._medicoReal || p.profissional)) {
           // V625: registra o descarte pro aviso do Consolidado (nome já pós de-para)
           const nomeDesc = String(p.profissional || '').trim();
           if (nomeDesc && nomeDesc !== '—' && (Number(p.valor) || 0) !== 0) {
@@ -2249,7 +2248,7 @@ const RelatoriosApp = (function () {
   // V614: a Consolidação de Repasse exporta o consolidado final com o MESMO
   // layout dos exports do Relatórios (modelo importado, colunas e estilos)
   window.AtlasRelatorios = Object.assign(window.AtlasRelatorios, {
-    linhasCompletasComp: (comp) => mmLinhasCompletas(comp),
+    linhasCompletasComp: (comp, opts) => mmLinhasCompletas(comp, opts),   // ATLAS v1.3: opts.semFiltroIH
     wbDeLinhas: (linhas, aba) => wbDeLinhas(linhas, aba),
     baixarWb: (wb, nome) => baixarWb(wb, nome),
   });

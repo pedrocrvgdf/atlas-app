@@ -653,6 +653,55 @@ CREATE TABLE IF NOT EXISTS config_inspecao (
   atualizado_em   TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ATLAS v1.3: RELATÓRIO FINAL — o relatório que o MÉDICO recebeu (um arquivo
+-- por médico × mês de pagamento), importado pela aba "Relatório final" da
+-- Inspeção. É a régua do que foi PAGO: a auditoria confronta o que a
+-- ferramenta calcula (Relatórios) com estas linhas e diz o que falta pagar.
+-- Regras de leitura: nunca deduplica, linha negativa é estorno e conta,
+-- GLOSA vale zero (glosa = 1), competência = mês do pagamento.
+CREATE TABLE IF NOT EXISTS relatorio_final (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  medico          TEXT NOT NULL,            -- nome oficial (de-para) ou como veio
+  medico_norm     TEXT NOT NULL,
+  competencia     TEXT NOT NULL,            -- 'YYYY-MM' (mês do pagamento)
+  layout          TEXT,                     -- 'ferramenta' | 'manual2' | 'manual1'
+  arquivo         TEXT,
+  periodo_ini     TEXT,                     -- "Pagamentos liberados entre … e …"
+  periodo_fim     TEXT,
+  n_linhas        INTEGER NOT NULL DEFAULT 0,
+  total           REAL NOT NULL DEFAULT 0,  -- soma das linhas (glosa fora, estorno dentro)
+  importado_em    TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_rf_med_comp ON relatorio_final(medico_norm, competencia);
+
+CREATE TABLE IF NOT EXISTS relatorio_final_linhas (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  relatorio_id    INTEGER NOT NULL,
+  competencia     TEXT,
+  medico          TEXT,
+  medico_norm     TEXT,
+  admissao        TEXT,
+  admissao_norm   TEXT,
+  data            TEXT,                     -- ISO 'YYYY-MM-DD'
+  paciente        TEXT,
+  paciente_norm   TEXT,
+  papel           TEXT,
+  papel_canon     TEXT,
+  procedimento    TEXT,
+  procedimento_norm TEXT,
+  valor           REAL NOT NULL DEFAULT 0,
+  status          TEXT,
+  modulo          TEXT,
+  origem          TEXT,
+  convenio        TEXT,
+  glosa           INTEGER NOT NULL DEFAULT 0,
+  linha_origem    INTEGER,
+  FOREIGN KEY (relatorio_id) REFERENCES relatorio_final(id)
+);
+CREATE INDEX IF NOT EXISTS idx_rfl_rel  ON relatorio_final_linhas(relatorio_id);
+CREATE INDEX IF NOT EXISTS idx_rfl_adm  ON relatorio_final_linhas(admissao_norm);
+CREATE INDEX IF NOT EXISTS idx_rfl_med  ON relatorio_final_linhas(medico_norm, competencia);
+
 -- V938: Ajuste Unidades — o que o médico do Períodos recebe além do plantão.
 -- Só o que DIFERE do padrão (Consultas × Convênio fora da Matriz não paga) é gravado.
 CREATE TABLE IF NOT EXISTS unidades_regras (

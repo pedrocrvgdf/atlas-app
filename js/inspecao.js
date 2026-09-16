@@ -24,6 +24,13 @@
  * pré-carrega, na lista da direita, as admissões encontradas.
  *
  * Módulo GLOBAL (carrega no boot): window.AtlasInspecao.abrir().
+ *
+ * ATLAS v1.3: a Inspeção vira TELA do dock (js/telas/inspecao.js), montada
+ * dentro de um contêiner por AtlasInspecao.montar(container) — o overlay
+ * (abrir) continua existindo. A planilha específica saiu: a PAUTA da lateral
+ * passa a vir dos RELATÓRIOS FINAIS importados na aba própria
+ * (js/relatorio_final.js), e o rastreio ganha o 4º painel — o que o médico
+ * de fato RECEBEU — com o confronto no diagnóstico.
  * ==========================================================================*/
 (function () {
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => (
@@ -3825,6 +3832,20 @@
     { rot: 'Produzido', get: r => r.linha.produzido || '', num: true },
     { rot: 'Valor', get: r => 'R$ ' + fmtN(valorConsolidado(r.linha)), num: true, rep: true },   // V962
   ];
+  // ATLAS v1.3: colunas do 4º painel (relatório final importado)
+  const COLS_FINAL = [
+    { rot: 'Competência', get: l => l.competencia || '' },
+    { rot: 'Médico', get: l => CodigoMedico.exibir(l.medico || '') },
+    { rot: 'Status', get: l => l.status || '' },
+    { rot: 'Módulo', get: l => l.modulo || '' },
+    { rot: 'Data', get: l => dataBR(l.data) },
+    { rot: 'Papel', get: l => l.papel || '' },
+    { rot: 'Paciente', get: l => nomePaciente(l.paciente) },
+    { rot: 'Origem', html: true, get: l => l.origem ? Utilidades.badgeFonte(l.origem) : '' },
+    { rot: 'Convênio', get: l => l.convenio || '' },
+    { rot: 'Procedimento', get: l => l.procedimento || '' },
+    { rot: 'Valor', get: l => 'R$ ' + fmtN(l.glosa ? 0 : (Number(l.valor) || 0)), num: true, rep: true },
+  ];
   function vazio(msg) {
     return `<div class="insp-vazio">${esc(msg)}</div>`;
   }
@@ -3835,17 +3856,29 @@
     const ov = document.createElement('div');
     ov.id = 'insp-overlay';
     ov.className = 'insp-overlay';
-    ov.innerHTML = `
-      <div class="insp-tela" role="dialog" aria-modal="true" aria-label="Inspeção de admissão">
+    ov.innerHTML = _markup(false);
+    document.body.appendChild(ov);
+    _ligar(ov, false);
+  }
+  /** ATLAS v1.3: a Inspeção montada DENTRO de um contêiner (tela do dock). */
+  function montar(container) {
+    if (!container) return;
+    Utilidades.garantirEstilos && Utilidades.garantirEstilos('css-inspecao', CSS);
+    container.innerHTML = _markup(true);
+    _ligar(container, true);
+  }
+  function _markup(inline) {
+    return `
+      <div class="insp-tela ${inline ? 'insp-inline' : ''}" role="${inline ? 'region' : 'dialog'}" ${inline ? '' : 'aria-modal="true"'} aria-label="Inspeção de admissão">
         <header class="insp-head">
           <div>
-            <h3>🔎 Inspeção de admissão</h3>
-            <p>Rastreia a admissão nas três bases: como ela <strong>chega do QVIS</strong>, como fica no <strong>Relatório Repasse</strong> e como aparece na <strong>produção analítica</strong>.</p>
+            ${inline ? '' : '<h3>🔎 Inspeção de admissão</h3>'}
+            <p>Rastreia a admissão nas quatro bases: como ela <strong>chega do sistema</strong>, como fica no <strong>Consolidado</strong> da ferramenta, como aparece na <strong>produção analítica</strong> e o que o médico <strong>de fato recebeu</strong> no relatório final.</p>
           </div>
           <div class="insp-head-acoes">
             <button class="insp-btn insp-btn-mini" id="insp-ocultar"
                     title="Trocar os nomes por código (médico) e iniciais (paciente) na tela"></button>
-            <button class="insp-x" id="insp-fechar" title="Fechar">×</button>
+            ${inline ? '' : '<button class="insp-x" id="insp-fechar" title="Fechar">×</button>'}
           </div>
         </header>
 
@@ -3893,18 +3926,14 @@
             <!-- V787: a lateral recolhe para a DIREITA, liberando a área dos
                  painéis; a aba fina fica visível para trazer de volta. -->
             <button class="insp-lat-retrair" id="insp-lat-retrair"
-                    title="Recolher a Planilha do médico">›</button>
+                    title="Recolher a pauta">›</button>
             <div class="insp-lat-head">
-              <strong>Planilha do médico</strong>
-              <small>nome + data, ou só a coluna de ADMISSÕES</small><!-- V907 -->
+              <strong>Pauta de admissões</strong>
+              <small>vem dos relatórios finais importados (aba Relatório final)</small><!-- ATLAS v1.3 -->
             </div>
             <div class="insp-lat-acoes">
-              <label class="insp-btn insp-btn-mini" title="Importar a planilha (colunas NOME+DATA, uma coluna de ADMISSÃO, ou só os números de admissão sem cabeçalho)">
-                Importar
-                <input type="file" id="insp-arquivo" accept=".xlsx,.xls,.csv" hidden>
-              </label>
-              <button class="insp-btn insp-btn-mini" id="insp-exportar-lista" title="Exporta a lista com a situação de cada admissão (pago × pendente)">Exportar</button>
-              <button class="insp-btn insp-btn-mini" id="insp-limpar-lista" title="Esvaziar a lista">Limpar</button>
+              <button class="insp-btn insp-btn-mini" id="insp-exportar-lista" title="Exporta a pauta com a situação de cada admissão (pago × pendente)">Exportar</button>
+              <button class="insp-btn insp-btn-mini" id="insp-limpar-lista" title="Esvaziar a pauta">Limpar</button>
             </div>
             <!-- V846: com vigia ativa, a extração ganha a coluna REPASSE FALTANTE
                  e a aba "Valor a Repassar" (verificação pura da regra) -->
@@ -3972,13 +4001,16 @@
           </aside>
         </div>
       </div>`;
-    document.body.appendChild(ov);
-
+  }
+  /** Liga os comportamentos ao markup montado em `ov` (overlay ou contêiner). */
+  function _ligar(ov, inline) {
     const $ = (id) => document.getElementById(id);
-    const fechar = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+    const fechar = () => { if (inline) return; ov.remove(); document.removeEventListener('keydown', onKey); };
     function onKey(e) { if (e.key === 'Escape') fechar(); }
-    document.addEventListener('keydown', onKey);
-    ov.addEventListener('click', (e) => { if (e.target === ov) fechar(); });
+    if (!inline) {
+      document.addEventListener('keydown', onKey);
+      ov.addEventListener('click', (e) => { if (e.target === ov) fechar(); });
+    }
     // V808: ocultar/mostrar nomes — repinta tudo o que está na tela
     function pintarBotaoOcultar() {
       const b = $('insp-ocultar');
@@ -3995,7 +4027,7 @@
       const alvo = $('insp-adm')?.value?.trim();
       if (alvo && $('insp-paineis')?.querySelector('.insp-painel')) $('insp-buscar').click();
     });
-    $('insp-fechar').addEventListener('click', fechar);
+    if (!inline) $('insp-fechar').addEventListener('click', fechar);
 
     // ── V787: lateral retrátil (estado lembrado entre aberturas) ──
     const LAT_KEY = 'insp_lateral_recolhida_v1';
@@ -4004,7 +4036,7 @@
       if (!lat || !bt) return;
       lat.classList.toggle('recolhida', recolhida);
       bt.textContent = recolhida ? '‹' : '›';
-      bt.title = recolhida ? 'Mostrar a Planilha do médico' : 'Recolher a Planilha do médico';
+      bt.title = recolhida ? 'Mostrar a pauta' : 'Recolher a pauta';
       try { localStorage.setItem(LAT_KEY, recolhida ? '1' : '0'); } catch (e) {}
     }
     $('insp-lat-retrair').addEventListener('click', () =>
@@ -4016,7 +4048,7 @@
       const itens = lerLista();
       const alvo = $('insp-lista');
       if (!itens.length) {
-        alvo.innerHTML = `<div class="insp-lat-vazio">Nenhuma planilha importada.<br>As admissões encontradas aparecem aqui.</div>`;
+        alvo.innerHTML = `<div class="insp-lat-vazio">Pauta vazia.<br>Na aba <strong>Relatório final</strong>, importe os relatórios dos médicos e mande as admissões para cá.</div>`;
         return;
       }
       // V752: quem AINDA não foi pago pelo convênio (fora do QVIS) → #46688c
@@ -4514,38 +4546,8 @@
         if (btnExpLista) { btnExpLista.disabled = false; btnExpLista.textContent = rotuloExp; }
       }
     });
-    $('insp-arquivo').addEventListener('change', async (e) => {
-      const arq = e.target.files && e.target.files[0];
-      if (!arq) return;
-      e.target.value = '';
-      if (typeof XLSX === 'undefined') {
-        Utilidades.toast?.('Biblioteca de Excel não carregada. Recarregue (Ctrl+Shift+R).', 'error', 4000); return;
-      }
-      try {
-        const { itens, adms, erro } = await lerPlanilha(arq);
-        if (erro) { Utilidades.toast?.(erro, 'error', 4500); return; }
-        // V907: admissões diretas + nome+data — união sem duplicar
-        const porAdm = adms && adms.length ? resolverAdmissoes(adms) : [];
-        const porNome = itens.length ? casarNaProducao(itens) : [];
-        const mapa = new Map();
-        for (const x of [...porAdm, ...porNome]) {
-          const k = normAdm(x.admissao);
-          if (k && !mapa.has(k)) mapa.set(k, x);
-        }
-        const achados = [...mapa.values()];
-        salvarLista(achados);
-        pintarLista();
-        pintarProdutos(); pintarSituacao(); pintarMedicos(); pintarPapeis();   // as pré-listas acompanham a lista
-        const partes = [];
-        if (porAdm.length) partes.push(`${porAdm.length} direto pela admissão`);
-        if (itens.length) partes.push(`${porNome.length} de ${itens.length} por nome+data`);
-        Utilidades.toast?.(`✓ ${achados.length} admissões na lista — ${partes.join(' · ')}`,
-          achados.length ? 'success' : 'warning', 4200);
-      } catch (err) {
-        console.error(err);
-        Utilidades.toast?.('Falha ao ler a planilha: ' + err.message, 'error', 4500);
-      }
-    });
+    // ATLAS v1.3: a importação de planilha saiu daqui — a pauta é alimentada
+    // pela aba Relatório final (AtlasInspecao.definirPauta).
 
     // ── busca ──
     const nomeEl = $('insp-nome'), dataEl = $('insp-data'), admEl = $('insp-adm');
@@ -4637,6 +4639,15 @@
         // V791: o bloco 2 mostra o CONSOLIDADO do módulo Relatórios
         const totCons = consolidado.reduce((s, r) => s + valorConsolidado(r.linha), 0);
         const totProd = prod.reduce((s, l) => s + (Number(l.valor) || 0), 0);
+        // ATLAS v1.3: 4º painel — o que o médico de fato RECEBEU (relatório
+        // final importado) e o confronto com o Consolidado (o "deveria").
+        const RF = window.AtlasRelatorioFinal;
+        let finais = [], confronto = null;
+        try {
+          finais = RF ? RF.linhasDaAdmissao(adm) : [];
+          confronto = RF ? RF.confrontoDaAdmissao(adm, consolidado, finais) : null;
+        } catch (e) { console.warn('[inspecao] relatório final:', e); }
+        const totFinal = finais.reduce((s, l) => s + (l.glosa ? 0 : (Number(l.valor) || 0)), 0);
         alvo.innerHTML = `
           <div class="insp-diag insp-diag-${dg.tom}" id="insp-diag">
             <button class="insp-diag-retrair" id="insp-diag-retrair"
@@ -4667,6 +4678,21 @@
                     <span class="insp-diverg-val">R$ ${fmtN(n.valor)}</span>
                   </div>`).join('')}
               </div>` : ''}
+            ${confronto ? `
+              <div class="insp-confronto insp-confronto-${esc(confronto.tom)}" id="insp-confronto">
+                <strong>${esc(confronto.titulo)}</strong>
+                ${confronto.texto ? `<span class="insp-confronto-tx">${esc(confronto.texto)}</span>` : ''}
+                ${(confronto.itens || []).map(i => `
+                  <div class="insp-confronto-l">
+                    <span class="insp-conf-cat cat-${esc(i.categoria)}">${esc(i.rotulo)}</span>
+                    <span class="insp-analit-proc">${esc(i.procedimento || '—')}</span> —
+                    <strong class="insp-diverg-papel">${esc(i.papel || '—')}</strong>
+                    · <span class="insp-analit-med">${esc(CodigoMedico.exibir(i.medico || ''))}</span>
+                    · deveria <span data-ocultavel>R$ ${fmtN(i.deveria)}</span>
+                    · recebeu <span data-ocultavel>R$ ${fmtN(i.recebido)}</span>
+                    ${i.falta > 0.004 ? `· falta <span class="insp-diverg-val" data-ocultavel>R$ ${fmtN(i.falta)}</span>` : ''}
+                  </div>`).join('')}
+              </div>` : ''}
           </div>
 
           <section class="insp-painel">
@@ -4694,6 +4720,15 @@
               <span class="insp-tot">${prod.length} linha${prod.length !== 1 ? 's' : ''} · R$ ${fmtN(totProd)}</span>
             </div>
             ${prod.length ? tabela(prod, colunasProducao(prod)) : vazio('Esta admissão não está na produção importada.')}
+          </section>
+
+          <section class="insp-painel insp-painel-final">
+            <div class="insp-painel-head">
+              <span class="insp-num">4</span>
+              <div><strong>Relatório final</strong><small>o que o médico de fato recebeu — relatórios importados na aba Relatório final</small></div>
+              <span class="insp-tot">${finais.length} linha${finais.length !== 1 ? 's' : ''} · recebido R$ ${fmtN(totFinal)}</span>
+            </div>
+            ${finais.length ? tabela(finais, COLS_FINAL) : vazio('Esta admissão não consta em nenhum relatório final importado.')}
           </section>`;
         Utilidades.aplicarMascaraValores?.();
         // V788: o card do pagamento recolhe/expande (estado lembrado)
@@ -4715,7 +4750,33 @@
       }, 16);
     }
 
-    setTimeout(() => admEl.focus(), 60);
+    // ATLAS v1.3: a instância viva — a tela do dock e a aba Relatório final
+    // mandam admissões para cá (inspecionarAdmissao / definirPauta).
+    _viva = { root: ov, inspecionar, pintarLista, repintarFiltros: () => { pintarProdutos(); pintarSituacao(); pintarMedicos(); pintarPapeis(); } };
+    if (!inline) setTimeout(() => admEl.focus(), 60);
+  }
+  let _viva = null;
+  /** ATLAS v1.3: abre uma admissão na instância montada (tela ou overlay). */
+  function inspecionarAdmissao(adm) {
+    if (!_viva || !document.body.contains(_viva.root)) return false;
+    const el = document.getElementById('insp-adm');
+    if (el) el.value = String(adm || '');
+    const nome = document.getElementById('insp-nome'), data = document.getElementById('insp-data');
+    if (nome) nome.value = '';
+    if (data) { data.value = ''; data.disabled = true; }
+    _viva.inspecionar(String(adm || ''));
+    return true;
+  }
+  /** ATLAS v1.3: troca a pauta da lateral (itens {admissao, paciente, data}). */
+  function definirPauta(itens) {
+    const mapa = new Map();
+    for (const x of itens || []) {
+      const k = normAdm(x.admissao);
+      if (k && !mapa.has(k)) mapa.set(k, { admissao: String(x.admissao), paciente: x.paciente || '', data: normData(x.data) });
+    }
+    salvarLista([...mapa.values()]);
+    if (_viva && document.body.contains(_viva.root)) { _viva.pintarLista(); _viva.repintarFiltros(); }
+    return mapa.size;
   }
 
   const CSS = `
@@ -5034,12 +5095,50 @@
       font-size: 10.5px; color: #46688c; font-weight: 600;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+
+    /* ATLAS v1.3: modo INLINE — a Inspeção como tela do dock */
+    .insp-tela.insp-inline {
+      width: 100%; height: auto; min-height: 0; border: none; box-shadow: none;
+      border-radius: 0; background: transparent; overflow: visible;
+    }
+    .insp-inline .insp-head { padding: 0 0 10px; border-bottom: none; }
+    .insp-inline .insp-head p { white-space: normal; font-size: 12.5px; line-height: 1.45; }
+    .insp-inline .insp-filtros {
+      border: 1px solid var(--border, #eef0f2); border-radius: 16px; background: #fff; padding: 8px 10px;
+    }
+    .insp-inline .insp-corpo { height: calc(100vh - 390px); min-height: 540px; margin-top: 12px; }
+    .insp-inline .insp-paineis { padding: 0 0 8px; }
+    .insp-inline .insp-lateral { border-radius: 16px; border: 1px solid var(--border, #eef0f2); }
+    .insp-painel-final .insp-num { background: #3f6489; }
+    .insp-confronto {
+      margin-top: 8px; padding: 8px 10px; border-radius: 10px;
+      border: 1px dashed rgba(63, 100, 137, .45); background: rgba(255, 255, 255, .55);
+    }
+    .insp-confronto > strong { display: block; font-size: 12px; margin-bottom: 2px; }
+    .insp-confronto-tx { display: block; font-size: 11px; color: #585d62; margin-bottom: 4px; }
+    .insp-confronto-l { font-size: 11px; line-height: 1.55; color: #1d1f20; }
+    .insp-conf-cat {
+      display: inline-block; font-size: 9.5px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .3px; padding: 1px 7px; border-radius: 999px; background: #eef2f6; color: #3f6489; margin-right: 4px;
+    }
+    .insp-conf-cat.cat-a_menor, .insp-conf-cat.cat-nao_pago, .insp-conf-cat.cat-nao_consta,
+    .insp-conf-cat.cat-regra_nao_paga { background: #faf5f3; color: #a15646; }
+    .insp-conf-cat.cat-sem_lastro, .insp-conf-cat.cat-a_maior { background: #fbf3e3; color: #8a6d2f; }
+    .insp-conf-cat.cat-conforme { background: #e9f1e9; color: #3c6b45; }
+    .insp-confronto-falta { border-color: #c07a66; background: #faf5f3; }
+    .insp-confronto-ok { border-color: #4f8a5b; background: #e9f1e9; }
+    .insp-confronto-sem { border-color: #B8965A; background: #FBF3E3; }
+    .insp-confronto-info { border-color: #8a9096; background: #f2f3f5; }
   `;
 
   // V870: as réguas de "é o mesmo procedimento?" entram no _interno para poder
   // ser conferidas par a par pelo teste de regressão (é onde mora o defeito da
   // nomenclatura; conferir só pela extração esconde qual das três falhou).
-  window.AtlasInspecao = { abrir, _interno: { normAdm, normNome, normData, casarNaProducao, diagnosticar,
+  window.AtlasInspecao = { abrir, montar, inspecionarAdmissao, definirPauta,   // ATLAS v1.3
+    _interno: { normAdm, normNome, normData, casarNaProducao, diagnosticar,
+    // ATLAS v1.3: o que o RELATÓRIO FINAL (js/relatorio_final.js) reaproveita
+    papelCanonico, nomeOficialMedico, temRegraDeRepasse, competenciasComSnapshot, variantesAdm, sqlIn,
+    produtoRepassavel, ehMedicoInstitucional, lerLista, valorConsolidado, dataBR, nomePaciente, resolverAdmissoes,
     lerPlanilha, buscarQvis, buscarRepasse, buscarProducao, buscarAdmissoesPorPaciente,
     mesmoProduto, mesmoExame, mesmoConteudo,
     // V871: o repasse faltante e a resolução de versão por data de admissão
