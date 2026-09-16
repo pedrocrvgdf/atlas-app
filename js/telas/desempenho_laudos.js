@@ -635,9 +635,9 @@ App.telas['desempenho-laudos'] = function () {
 
     return `
       <div class="laudos-abas">
-        ${aba('PACOTE',   getRot('aba_PACOTE'),   '#189AD3')}
-        ${aba('IMPRESSO', getRot('aba_IMPRESSO'), '#005073')}
-        ${aba('EXTERNO',  getRot('aba_EXTERNO'),  '#189AD3')}
+        ${aba('PACOTE',   getRot('aba_PACOTE'),   '#2a5a8c')}
+        ${aba('IMPRESSO', getRot('aba_IMPRESSO'), '#143352')}
+        ${aba('EXTERNO',  getRot('aba_EXTERNO'),  '#2a5a8c')}
       </div>
     `;
   }
@@ -1751,13 +1751,13 @@ App.telas['desempenho-laudos'] = function () {
         display: flex; align-items: stretch;
         padding: 6px;
         background: #fff;
-        border: 1px solid #e2ebf2;
+        border: 1px solid #e4ecf4;
         border-radius: 12px;
-        box-shadow: 0 1px 2px rgba(20,50,80,.04), 0 10px 26px -20px rgba(20,50,80,.26);
+        box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
         flex-wrap: wrap;
       }
       .laud-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-      .laud-sb-celwrap:not(:last-child) .laud-sb-cel { border-right: 1px solid #eef3f7; }
+      .laud-sb-celwrap:not(:last-child) .laud-sb-cel { border-right: 1px solid #f0f4f8; }
       .laud-sb-cel {
         flex: 1; min-width: 0;
         display: flex; align-items: center; gap: 9px;
@@ -1766,69 +1766,69 @@ App.telas['desempenho-laudos'] = function () {
         font-family: inherit; text-align: left;
         transition: background-color 120ms;
       }
-      .laud-sb-cel:hover, .laud-sb-cel.ativo, .laud-sb-cel.aberta { background: #f4fafd; }
-      .laud-sb-cel:focus-visible { outline: 2px solid #2f8fc4; outline-offset: 2px; }
+      .laud-sb-cel:hover, .laud-sb-cel.ativo, .laud-sb-cel.aberta { background: #f6f4ef; }
+      .laud-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
       .laud-sb-tile {
         width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
         display: flex; align-items: center; justify-content: center;
-        background: #f0f5f9; color: #5b6c7c;
+        background: #f0f5f9; color: #5a6879;
       }
-      .laud-sb-cel.ativo .laud-sb-tile, .laud-sb-cel.aberta .laud-sb-tile { background: #dbeef8; color: #1c6fa8; }
+      .laud-sb-cel.ativo .laud-sb-tile, .laud-sb-cel.aberta .laud-sb-tile { background: #e4ecf4; color: #1d4470; }
       .laud-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
       .laud-sb-rot {
         font-size: 10px; font-weight: 700; text-transform: uppercase;
-        letter-spacing: .09em; color: #5b6c7c; white-space: nowrap;
+        letter-spacing: .09em; color: #5a6879; white-space: nowrap;
       }
       .laud-sb-val {
-        font-size: 13px; font-weight: 500; color: #4f6274;
+        font-size: 13px; font-weight: 500; color: #5a6879;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
-      .laud-sb-cel.ativo .laud-sb-val { font-weight: 700; color: #14384f; }
-      .laud-sb-chev { color: #7d8fa0; flex-shrink: 0; display: flex; transition: transform 140ms; }
+      .laud-sb-cel.ativo .laud-sb-val { font-weight: 700; color: #12304f; }
+      .laud-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
       .laud-sb-cel.aberta .laud-sb-chev { transform: rotate(180deg); }
 
       /* painel ancorado na célula, por cima dos KPIs */
       .laud-sb-painel {
         position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
         min-width: 100%; width: max-content; max-width: 340px;
-        background: #fff; border: 1px solid #dfe8f0; border-radius: 12px;
-        box-shadow: 0 18px 44px -14px rgba(15,37,68,.42);
+        background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
+        box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
         overflow: hidden;
       }
       .laud-sb-buscabox {
         display: flex; align-items: center; gap: 8px;
-        padding: 11px 12px 10px; border-bottom: 1px solid #edf2f6;
+        padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
       }
       .laud-sb-buscabox .laud-sb-busca-ic { color: #6b7d8e; display: flex; }
       .laud-sb-busca {
-        flex: 1; height: 30px; border: 1px solid #dfe8f0; border-radius: 8px;
-        background: #f7fafc; padding: 0 10px; font-size: 13px;
-        font-family: inherit; color: #14384f; outline: none;
+        flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
+        background: #f6f4ef; padding: 0 10px; font-size: 13px;
+        font-family: inherit; color: #12304f; outline: none;
       }
-      .laud-sb-busca::placeholder { color: #9aabb8; }
-      .laud-sb-busca:focus { border-color: #2f8fc4; }
+      .laud-sb-busca::placeholder { color: #96a2b1; }
+      .laud-sb-busca:focus { border-color: #2a5a8c; }
       .laud-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
       .laud-sb-lista::-webkit-scrollbar { width: 8px; }
-      .laud-sb-lista::-webkit-scrollbar-track { background: #f2f6f9; }
-      .laud-sb-lista::-webkit-scrollbar-thumb { background: #c3d5e2; border-radius: 4px; }
+      .laud-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
+      .laud-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
       .laud-sb-it {
         display: flex; align-items: center; gap: 10px;
         height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-        font-size: 13px; color: #14384f;
+        font-size: 13px; color: #12304f;
       }
-      .laud-sb-it:hover, .laud-sb-it.foco { background: #f2f7fb; }
-      .laud-sb-it.sel { background: #eaf4fb; font-weight: 700; }
+      .laud-sb-it:hover, .laud-sb-it.foco { background: #f0f4f8; }
+      .laud-sb-it.sel { background: #f0f4f8; font-weight: 700; }
       .laud-sb-it-todos { font-weight: 700; }
       .laud-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .laud-sb-ck { color: #1c6fa8; display: flex; }
+      .laud-sb-ck { color: #1d4470; display: flex; }
       .laud-sb-chip {
         width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
         display: flex; align-items: center; justify-content: center;
-        background: #eaf4fb; color: #1c6fa8; font-size: 9.5px; font-weight: 700;
+        background: #f0f4f8; color: #1d4470; font-size: 9.5px; font-weight: 700;
       }
       .laud-sb-rodape {
-        padding: 7px 12px; border-top: 1px solid #edf2f6;
-        font-size: 10.5px; font-weight: 600; color: #7d8fa0;
+        padding: 7px 12px; border-top: 1px solid #f0f4f8;
+        font-size: 10.5px; font-weight: 600; color: #96a2b1;
       }
       @media (max-width: 1280px) { .laud-sb-celwrap { flex-basis: 32%; } }
       @media (max-width: 900px)  { .laud-sb-celwrap { flex-basis: 48%; } }
@@ -1873,7 +1873,7 @@ App.telas['desempenho-laudos'] = function () {
       .laudos-btn-importar:hover {
         background: var(--primary-hover);
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 80, 115, 0.20);
+        box-shadow: 0 4px 12px rgba(20, 51, 82, 0.20);
       }
       .laudos-btn-importar:active {
         transform: translateY(0);
@@ -1929,7 +1929,7 @@ App.telas['desempenho-laudos'] = function () {
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
       }
       .laudos-kpi:hover {
-        box-shadow: 0 6px 16px rgba(20,68,61,0.14);
+        box-shadow: 0 6px 16px rgba(11, 35, 64,0.14);
         transform: translateY(-2px);
       }
       .laudos-kpi-faixa {
@@ -1941,7 +1941,7 @@ App.telas['desempenho-laudos'] = function () {
         text-transform: uppercase;
         letter-spacing: 0.06em;
         margin-bottom: 4px;
-        color: #06283A; /* V849: título dos cards totalizadores */
+        color: #0f1d2e; /* V849: título dos cards totalizadores */
       }
       .laudos-kpi-valor {
         font-size: 24px;
@@ -1961,14 +1961,14 @@ App.telas['desempenho-laudos'] = function () {
         background: linear-gradient(135deg, #E1F5EE 0%, #C5E8DC 100%);
         color: #0F6E56;
       }
-      .laudos-kpi-verde .laudos-kpi-faixa { background: #005073; }
+      .laudos-kpi-verde .laudos-kpi-faixa { background: #143352; }
       .laudos-kpi-verde .laudos-kpi-valor { color: var(--ink); }
 
       .laudos-kpi-bege {
-        background: linear-gradient(135deg, #E1EFF6 0%, #F5D9A6 100%);
-        color: #005073;
+        background: linear-gradient(135deg, #e4ecf4 0%, #F5D9A6 100%);
+        color: #143352;
       }
-      .laudos-kpi-bege .laudos-kpi-faixa { background: #189AD3; }
+      .laudos-kpi-bege .laudos-kpi-faixa { background: #2a5a8c; }
       .laudos-kpi-bege .laudos-kpi-valor { color: var(--ink); }
 
       .laudos-kpi-roxo {
@@ -1979,11 +1979,11 @@ App.telas['desempenho-laudos'] = function () {
       .laudos-kpi-roxo .laudos-kpi-valor { color: var(--ink); }
 
       .laudos-kpi-destaque {
-        background: linear-gradient(135deg, #005073 0%, #0F2925 100%);
+        background: linear-gradient(135deg, #143352 0%, #0F2925 100%);
         color: #D9B475;
       }
-      .laudos-kpi-destaque .laudos-kpi-faixa { background: #189AD3; }
-      .laudos-kpi-destaque .laudos-kpi-valor { color: #005073; }
+      .laudos-kpi-destaque .laudos-kpi-faixa { background: #2a5a8c; }
+      .laudos-kpi-destaque .laudos-kpi-valor { color: #143352; }
       .laudos-kpi-destaque .laudos-kpi-sub { color: #D9B475; }
 
       /* ── ABAS estilo botão sólido ── */
@@ -2009,7 +2009,7 @@ App.telas['desempenho-laudos'] = function () {
         border-radius: 8px;
         min-height: 40px;
         transition: background-color 180ms cubic-bezier(0.4, 0, 0.2, 1), color 180ms cubic-bezier(0.4, 0, 0.2, 1), border-color 180ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 180ms cubic-bezier(0.4, 0, 0.2, 1), transform 180ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 1px 2px rgba(20,68,61,0.04);
+        box-shadow: 0 1px 2px rgba(11, 35, 64,0.04);
       }
       .laudos-aba:hover:not(.laudos-aba-ativa) {
         background: var(--bg-sunken);
@@ -2021,7 +2021,7 @@ App.telas['desempenho-laudos'] = function () {
         background: var(--primary);
         color: white;
         border-color: var(--primary);
-        box-shadow: 0 3px 10px rgba(0, 80, 115, 0.28);
+        box-shadow: 0 3px 10px rgba(20, 51, 82, 0.28);
       }
       .laudos-aba-bullet {
         width: 9px; height: 9px; border-radius: 50%;
@@ -2137,14 +2137,14 @@ App.telas['desempenho-laudos'] = function () {
       .laudos-tela .laudos-tabela .num {
         text-align: right !important;
       }
-      /* V968: zebra PADRÃO da ferramenta (branco + azul var(--bg-sunken) #E4EEF4,
+      /* V968: zebra PADRÃO da ferramenta (branco + azul var(--bg-sunken) #e4ecf4,
          hover accent-soft — igual ao LIO/V717). Antes era um creme a 45%.
          Nas abas PLANAS (Pacote/Impressos) a zebra é por posição; na aba
          Externo (médico → exame → detalhe) ela é marcada em JS por exame
          (.laudos-zebra), reiniciando a cada médico. */
       .laudos-tabela.laudos-tabela-plana tbody tr:nth-child(even) td,
       .laudos-tabela tbody tr.laudos-zebra td {
-        background: var(--bg-sunken, #E4EEF4);
+        background: var(--bg-sunken, #e4ecf4);
       }
       .laudos-tabela tbody tr:hover td {
         background: var(--accent-soft, #e3efeb) !important;
@@ -2172,7 +2172,7 @@ App.telas['desempenho-laudos'] = function () {
 
       /* Linhas com flag PARTICULAR */
       .laudos-linha-particular td {
-        background: rgba(24, 154, 211, 0.05) !important;
+        background: rgba(42, 90, 140, 0.05) !important;
       }
       .laudos-badge-particular {
         display: inline-block;
@@ -2180,9 +2180,9 @@ App.telas['desempenho-laudos'] = function () {
         font-weight: 800;
         padding: 2px 7px;
         border-radius: 999px;
-        background: rgba(24, 154, 211, 0.14);
-        color: #005073;
-        border: 1px solid rgba(24, 154, 211, 0.40);
+        background: rgba(42, 90, 140, 0.14);
+        color: #143352;
+        border: 1px solid rgba(42, 90, 140, 0.40);
         text-transform: uppercase;
         letter-spacing: 0.05em;
       }
@@ -2204,9 +2204,9 @@ App.telas['desempenho-laudos'] = function () {
         font-weight: 700;
         letter-spacing: 0.05em;
       }
-      /* V969: no Laudos a linha Total NÃO usa a barra preta global (#021A1C,
+      /* V969: no Laudos a linha Total NÃO usa a barra preta global (#071a30,
          style.css V181): fundo branco, rótulo na cor normal e só o valor de
-         repasse em #189AD3 (.atlas-rep). Escopo: só este módulo. */
+         repasse em #2a5a8c (.atlas-rep). Escopo: só este módulo. */
       .main .laudos-tabela tfoot td,
       .main .laudos-tabela tfoot tr:hover td {
         background: #FFFFFF !important;
@@ -2217,18 +2217,18 @@ App.telas['desempenho-laudos'] = function () {
       .main .laudos-tabela tfoot td * { color: var(--ink-soft) !important; }
       .main .laudos-tabela tfoot td.laudos-total-label { color: var(--ink-soft) !important; }
       .main .laudos-tabela tfoot td.atlas-rep,
-      .main .laudos-tabela tfoot td.atlas-rep * { color: #189AD3 !important; }
+      .main .laudos-tabela tfoot td.atlas-rep * { color: #2a5a8c !important; }
 
       /* ───────── DRILLDOWN EXTERNO ───────── */
       .laudos-ext-medico-row td {
-        background: #E4EEF4 !important;   /* V968: era o degradê bege #F0EBDF→#E8E0CB */
+        background: #e4ecf4 !important;   /* V968: era o degradê bege #F0EBDF→#E8E0CB */
         border-top: 2px solid var(--accent) !important;
         padding: 13px 14px !important;
         font-size: 13px;
       }
       .laudos-ext-medico-row strong { color: var(--primary); font-size: 14px; }
       /* V969: quantidade e total do médico na cor padrão do repasse (o nome fica) */
-      .laudos-ext-medico-row td.atlas-rep strong { color: #189AD3; }
+      .laudos-ext-medico-row td.atlas-rep strong { color: #2a5a8c; }
       .laudos-ext-mini-stats {
         margin-left: 12px;
         font-size: 11px;
@@ -2240,7 +2240,7 @@ App.telas['desempenho-laudos'] = function () {
         transition: background 120ms;
       }
       .laudos-ext-exame-row:hover td {
-        background: rgba(24, 154, 211, 0.10) !important;
+        background: rgba(42, 90, 140, 0.10) !important;
       }
       .laudos-ext-exame-row.aberto td {
         background: var(--accent-soft) !important;
@@ -2261,16 +2261,16 @@ App.telas['desempenho-laudos'] = function () {
         color: var(--ink);
       }
       .laudos-ext-chip-qtd {
-        background: rgba(24, 154, 211, 0.15);
-        color: #189AD3;   /* V969: era #005073 — só o texto muda, a pílula fica */
+        background: rgba(42, 90, 140, 0.15);
+        color: #2a5a8c;   /* V969: era #143352 — só o texto muda, a pílula fica */
         padding: 2px 8px;
         border-radius: 999px;
         font-size: 10.5px;
         font-weight: 800;
-        border: 1px solid rgba(24, 154, 211, 0.35);
+        border: 1px solid rgba(42, 90, 140, 0.35);
       }
       .laudos-ext-detalhe td {
-        background: #FFFFFF !important;   /* V968: era o creme rgba(245,242,236,.6) */
+        background: #FFFFFF !important;   /* V968: era o creme rgba(246, 244, 239,.6) */
         font-size: 11px;
         color: var(--ink-soft);
         border-bottom: 1px dashed var(--border) !important;
@@ -2362,7 +2362,7 @@ App.telas['desempenho-laudos'] = function () {
         vertical-align: middle;
       }
       .laudos-ajuste-tabela tbody td.num { text-align: right; }
-      .laudos-ajuste-tabela tbody tr:hover td { background: rgba(245, 242, 236, 0.5); }
+      .laudos-ajuste-tabela tbody tr:hover td { background: rgba(246, 244, 239, 0.5); }
 
       .laudos-ajuste-input {
         padding: 6px 10px;
@@ -2379,7 +2379,7 @@ App.telas['desempenho-laudos'] = function () {
       }
       .laudos-ajuste-input:focus {
         border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(0, 80, 115, 0.10);
+        box-shadow: 0 0 0 3px rgba(20, 51, 82, 0.10);
       }
 
       .btn-acao-mini {
@@ -2417,14 +2417,14 @@ App.telas['desempenho-laudos'] = function () {
         letter-spacing: 0.05em;
       }
       .laudos-tag-pacote {
-        background: rgba(24, 154, 211, 0.14);
-        color: #005073;
-        border: 1px solid rgba(24, 154, 211, 0.35);
+        background: rgba(42, 90, 140, 0.14);
+        color: #143352;
+        border: 1px solid rgba(42, 90, 140, 0.35);
       }
       .laudos-tag-impresso {
-        background: rgba(0, 80, 115, 0.10);
+        background: rgba(20, 51, 82, 0.10);
         color: var(--primary);
-        border: 1px solid rgba(0, 80, 115, 0.30);
+        border: 1px solid rgba(20, 51, 82, 0.30);
       }
       .laudos-tag-externo {
         background: rgba(83, 74, 183, 0.10);
@@ -2553,7 +2553,7 @@ App.telas['desempenho-laudos'] = function () {
       }
       .laudos-pers-input:focus {
         border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(0, 80, 115, 0.12);
+        box-shadow: 0 0 0 3px rgba(20, 51, 82, 0.12);
       }
       .laudos-pers-padrao {
         position: absolute;

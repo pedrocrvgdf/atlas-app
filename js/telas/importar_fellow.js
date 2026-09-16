@@ -1006,12 +1006,12 @@
       .impfel-mes-atribuir-sub { font-size: 11.5px; color: #8A5A1F; margin: 4px 0 10px; line-height: 1.4; }
       .impfel-mes-atribuir-linha {
         display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        padding: 5px 0; font-size: 13px; color: var(--ink, #042222);
+        padding: 5px 0; font-size: 13px; color: var(--ink, #071a30);
       }
-      .impfel-mes-atribuir-linha small { color: var(--ink-faint, #5B736C); }
+      .impfel-mes-atribuir-linha small { color: var(--ink-faint, #5a6879); }
       .impfel-input-mes {
         padding: 6px 9px; font-family: inherit; font-size: 14px;
-        border: 1.5px solid var(--primary, #005073); border-radius: 8px; background: #fff; cursor: pointer;
+        border: 1.5px solid var(--primary, #143352); border-radius: 8px; background: #fff; cursor: pointer;
       }
       .impfel-mes-seletor-label { font-size: 12px; color: var(--ink-soft); }
       .impfel-select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--mono); font-size: 12px; flex: 1; }
@@ -1029,7 +1029,7 @@
       .impfel-mes-nome { font-weight: 600; min-width: 60px; color: var(--primary); }
       .impfel-mes-tag { padding: 2px 8px; border-radius: 12px; font-size: 10px; text-transform: uppercase; font-weight: 700; }
       .impfel-tag-novo { background: #E1F5EE; color: #085041; }
-      .impfel-tag-aviso { background: #E1EFF6; color: #854F0B; }
+      .impfel-tag-aviso { background: #e4ecf4; color: #854F0B; }
       .impfel-mes-stat { margin-left: auto; color: var(--ink-soft); font-size: 11px; }
 
       .impfel-cadastro-opt {
@@ -1042,7 +1042,7 @@
       .impfel-aviso-fellows {
         margin-top: 14px;
         padding: 10px 12px;
-        background: #E1EFF6;
+        background: #e4ecf4;
         border: 1px solid #BA7517;
         border-radius: 8px;
         font-size: 12px;

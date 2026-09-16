@@ -1322,7 +1322,7 @@ const RelatoriosApp = (function () {
           <td>${esc(convenioComPerfil(l))}</td>
           <td class="rel-proc">${esc(l.procedimento || '—')}</td>
           <td>${esc(especialidadeDe(espMap, l.admissao, l.procedimento))}</td><!-- V503: Especialidade (Produção, produto predomina) -->
-          <td class="rel-num${/^R\$/.test(repasse) ? ' atlas-rep' : ''}">${repasse}</td><!-- V962: valor de repasse em #107DAC -->
+          <td class="rel-num${/^R\$/.test(repasse) ? ' atlas-rep' : ''}">${repasse}</td><!-- V962: valor de repasse em #1d4470 -->
         </tr>`;
     }).join('');
 
@@ -2383,7 +2383,7 @@ const RelatoriosApp = (function () {
           <td>${esc(l.especialidade || '')}</td><!-- V500.1: Especialidade (Produção) -->
           <td class="rel-mono">${esc(l.vtab || '')}</td><!-- V638: V.TAB -->
           <td class="rel-num">${l.produzido == null ? '' : (typeof l.produzido === 'number' ? 'R$ ' + fmt(l.produzido) : esc(l.produzido))}</td>
-          <td class="rel-num${(Number(l.valor) || 0) === 0 ? '' : ' atlas-rep'}"${window.AtlasMemoria ? AtlasMemoria.ref('rel-cons', l, 'consolidado') : ''} title="Passe o mouse: memória de cálculo · clique fixa">${valor}</td><!-- V962: valor de repasse em #107DAC · V996: memória -->
+          <td class="rel-num${(Number(l.valor) || 0) === 0 ? '' : ' atlas-rep'}"${window.AtlasMemoria ? AtlasMemoria.ref('rel-cons', l, 'consolidado') : ''} title="Passe o mouse: memória de cálculo · clique fixa">${valor}</td><!-- V962: valor de repasse em #1d4470 · V996: memória -->
         </tr>`;
     }).join('');
 
@@ -3514,7 +3514,7 @@ const RelatoriosApp = (function () {
     /* V922: filtro ativo SEM o destaque azul (pedido do usuário — parecia crítica);
        só o negrito marca que há filtro aplicado */
     .rel-msel-btn.rel-msel-on { font-weight: 700; }
-    .rel-msel-btn.rel-msel-aberto { border-color: #189AD3; box-shadow: 0 0 0 2px rgba(24,154,211,0.15); }
+    .rel-msel-btn.rel-msel-aberto { border-color: #2a5a8c; box-shadow: 0 0 0 2px rgba(42, 90, 140,0.15); }
     .rel-msel-pop {
       position: fixed;
       width: max-content; max-width: 360px;
@@ -3531,15 +3531,15 @@ const RelatoriosApp = (function () {
       padding: 6px 8px; border-radius: 6px; cursor: pointer;
       font-size: 11.5px; color: var(--ink); line-height: 1.3;
     }
-    .rel-msel-opt:hover { background: rgba(24,154,211,0.08); }
-    .rel-msel-opt.on { color: #107DAC; font-weight: 600; }
+    .rel-msel-opt:hover { background: rgba(42, 90, 140,0.08); }
+    .rel-msel-opt.on { color: #1d4470; font-weight: 600; }
     .rel-msel-cbx {
       flex: 0 0 14px; width: 14px; height: 14px; margin-top: 1px;
       display: inline-flex; align-items: center; justify-content: center;
       border: 1.5px solid #9DBECE; border-radius: 4px; background: #fff;
       color: #fff; font-size: 10px; font-weight: 800; line-height: 1;
     }
-    .rel-msel-cbx.on { background: #189AD3; border-color: #189AD3; }
+    .rel-msel-cbx.on { background: #2a5a8c; border-color: #2a5a8c; }
     /* V904: no FILTRO o texto sai inteiro (sem "…") e em caixa alta */
     .rel-msel-txt {
       text-transform: uppercase;
@@ -3551,7 +3551,7 @@ const RelatoriosApp = (function () {
       width: 100%; box-sizing: border-box; padding: 4px 7px; font-family: inherit; font-size: 11.5px;
       border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elevated); color: var(--ink);
     }
-    .rel-cons-fil:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0, 80, 115,0.12); }
+    .rel-cons-fil:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(20, 51, 82,0.12); }
     .rel-cons-fil::placeholder { color: var(--ink-faint); font-size: 10.5px; }
     .rel-tab-cons thead tr:first-child th { position: sticky; top: 0; }
     .rel-trunc { margin-top: 10px; padding: 8px 12px; font-size: 12px; color: var(--ink-soft); background: var(--bg-sunken); border-radius: 8px; }
@@ -3574,7 +3574,7 @@ const RelatoriosApp = (function () {
     .rel-modal-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 8px; }
     .rel-tipo-opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .rel-radio { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms; }
-    .rel-radio.ativo { border-color: var(--primary); background: rgba(0, 80, 115,0.05); }
+    .rel-radio.ativo { border-color: var(--primary); background: rgba(20, 51, 82,0.05); }
     .rel-radio input { margin-top: 2px; }
     .rel-radio span { display: flex; flex-direction: column; gap: 2px; }
     .rel-radio strong { font-size: 13px; color: var(--ink); }
@@ -3633,10 +3633,10 @@ const RelatoriosApp = (function () {
     .rel-resumo { display: flex; gap: 22px; }
     .rel-acoes { display: flex; align-items: center; gap: 10px; }
     .rel-kpi { padding: 11px 16px; }
-    .rel-kpi-lbl { font-size: 11px; color: #06283A; } /* V849: título dos cards totalizadores */
+    .rel-kpi-lbl { font-size: 11px; color: #0f1d2e; } /* V849: título dos cards totalizadores */
     .rel-kpi-val { font-size: 18px; font-weight: 500; font-family: var(--font-mono); }
     .rel-kpi-verde { color: var(--primary); }
-    .rel-btn-excel { font-size: 12px; font-weight: 600; color: #fff; background: #189AD3; border: none; padding: 9px 16px; border-radius: 8px; cursor: pointer; }
+    .rel-btn-excel { font-size: 12px; font-weight: 600; color: #fff; background: #2a5a8c; border: none; padding: 9px 16px; border-radius: 8px; cursor: pointer; }
     .rel-btn-excel:hover { background: #2BA9A9; }
 
     .rel-tab-wrap { border: 1px solid var(--bg-sunken); border-radius: 10px; overflow: auto; max-height: 64vh; }
@@ -3676,24 +3676,24 @@ const RelatoriosApp = (function () {
       font-weight: 700; color: var(--ink-soft, #4b5a55); }
     .mmov-ord select { padding: 7px 10px; }
     /* V599: visão AMPLIADA (overlay quase tela cheia) */
-    .mmov-ov { position: fixed; inset: 0; z-index: 100000; background: rgba(15,37,68,.5);
+    .mmov-ov { position: fixed; inset: 0; z-index: 100000; background: rgba(11, 35, 64,.5);
       display: flex; align-items: center; justify-content: center; padding: 22px; }
     .mmov-painel { background: var(--bg-elevated, #fff); border-radius: 16px; width: 100%; height: 100%;
-      max-width: 1780px; box-shadow: 0 24px 60px -20px rgba(15,37,68,.45); overflow: hidden;
+      max-width: 1780px; box-shadow: 0 24px 60px -20px rgba(11, 35, 64,.45); overflow: hidden;
       display: flex; flex-direction: column; }
     .mmov-head { display: flex; align-items: center; justify-content: space-between; gap: 14px;
-      padding: 14px 20px; border-bottom: 1px solid var(--border, #DEE3E1); }
-    .mmov-titulo { font: 700 16px/1.2 'Inter Tight', -apple-system, sans-serif; color: var(--ink, #06283A); }
+      padding: 14px 20px; border-bottom: 1px solid var(--border, #dfe4ea); }
+    .mmov-titulo { font: 700 16px/1.2 'Inter Tight', -apple-system, sans-serif; color: var(--ink, #0f1d2e); }
     .mmov-sub { font-size: 11.5px; color: var(--ink-faint, #7a8079); margin-top: 2px; }
     .mmov-acoes { display: flex; align-items: center; gap: 8px; }
-    .mmov-x { width: 32px; height: 32px; border-radius: 8px; border: none; background: #f2f6f9;
-      color: #5b6c7c; font-size: 18px; line-height: 1; cursor: pointer; padding: 0; }
-    .mmov-x:hover { background: #e5edf3; color: #14384f; }
+    .mmov-x { width: 32px; height: 32px; border-radius: 8px; border: none; background: #f0f4f8;
+      color: #5a6879; font-size: 18px; line-height: 1; cursor: pointer; padding: 0; }
+    .mmov-x:hover { background: #e5edf3; color: #12304f; }
     .mmov-corpo { flex: 1; min-height: 0; padding: 14px 20px 18px; display: flex; flex-direction: column; }
     .mmov-corpo .mm-scroll { flex: 1; max-height: none; }   /* ocupa a tela toda */
     .rel-tab { width: 100%; border-collapse: collapse; font-size: 12px; }
     .rel-tab thead th { position: sticky; top: 0; background: #F7F3E9; color: var(--ink-soft); text-align: left; font-weight: 500; padding: 9px 10px; border-bottom: 1px solid var(--border); z-index: 1; }
-    .rel-tab tbody td { padding: 8px 10px; border-top: 1px solid #E8F1F7; color: var(--ink); }
+    .rel-tab tbody td { padding: 8px 10px; border-top: 1px solid #e9edf1; color: var(--ink); }
     .rel-tab tbody tr:nth-child(even) td { background: #FAFAF7; }
     .rel-mono { font-family: var(--font-mono); }
     .rel-data { color: var(--ink-soft); white-space: nowrap; }
@@ -3704,10 +3704,10 @@ const RelatoriosApp = (function () {
     .rel-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; color: #fff; }
     .rel-tag-qvis { background: #2C7A5B; }
     .rel-tag-glosa { background: #9B3A3A; }
-    .rel-tag-atlas { background: #5B736C; }
+    .rel-tag-atlas { background: #5a6879; }
     .rel-tag-neutra { background: #B4B2A9; }
     .rel-tag-papel { background: var(--primary); }
-    .rel-tag-desemp { background: #189AD3; }
+    .rel-tag-desemp { background: #2a5a8c; }
     .rel-zero { color: var(--ink-faint); }
     .rel-desc { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
 

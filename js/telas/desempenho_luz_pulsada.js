@@ -571,7 +571,7 @@ App.telas['desempenho-luz-pulsada'] = function () {
           <div class="lp-card-titulo">Admissões de Luz Pulsada</div>
           <div class="lp-card-valor mono" data-ocultavel>${k.admissoes}</div>
           <div class="lp-card-breakdown">
-            <div class="lp-bd-item"><span class="lp-bd-dot" style="background: #003A54"></span> Convênio: <strong data-ocultavel>${k.admConvenio}</strong></div>
+            <div class="lp-bd-item"><span class="lp-bd-dot" style="background: #102d4b"></span> Convênio: <strong data-ocultavel>${k.admConvenio}</strong></div>
             <div class="lp-bd-item"><span class="lp-bd-dot" style="background: #6B4587"></span> Particular: <strong data-ocultavel>${k.admParticular}</strong></div>
           </div>
           ${linhaComp(k.admissoes, kLM?.admissoes, kLY?.admissoes)}
@@ -703,7 +703,7 @@ App.telas['desempenho-luz-pulsada'] = function () {
         ${vinculoBadge}
       </td>`;
       if (c.id === 'origem')       return `<td>${origemBadge}</td>`;
-      if (c.id === 'producao')     return `<td class="num mono" data-ocultavel style="font-weight: 700; color: #189AD3">R$ ${Utilidades.formatarNumero(a.base_calculo, 2)}</td>`;   // V946
+      if (c.id === 'producao')     return `<td class="num mono" data-ocultavel style="font-weight: 700; color: #2a5a8c">R$ ${Utilidades.formatarNumero(a.base_calculo, 2)}</td>`;   // V946
       return '<td></td>';
     }).join('');
 
@@ -1383,36 +1383,36 @@ App.telas['desempenho-luz-pulsada'] = function () {
         .lp-btn-info {
           width: 28px; height: 28px; border-radius: 50%;
           background: var(--bg-elevated); border: 1px solid var(--border);
-          color: #189AD3; font-size: 15px; font-weight: 700;
+          color: #2a5a8c; font-size: 15px; font-weight: 700;
           cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
           transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
         }
-        .lp-btn-info:hover { background: #189AD3; color: white; transform: scale(1.08); }
+        .lp-btn-info:hover { background: #2a5a8c; color: white; transform: scale(1.08); }
         .lp-header-acoes { display: flex; gap: 8px; }
 
         /* Filtros */
         .lp-snapshot-bar {
           display: flex; align-items: center; gap: 10px;
           margin: 14px 0 8px; padding: 8px 14px;
-          background: linear-gradient(135deg, #E8F1F7, #DBF0F9);
-          border: 1px solid #DDE7E3;   /* V946 */
-          border-left: 4px solid #189AD3;
+          background: linear-gradient(135deg, #e9edf1, #e4ecf4);
+          border: 1px solid #dfe4ea;   /* V946 */
+          border-left: 4px solid #2a5a8c;
           border-radius: 8px;
         }
         .lp-snapshot-icone { font-size: 14px; }
         .lp-snapshot-label {
           font-size: 11px; font-weight: 700;
           letter-spacing: 0.05em; text-transform: uppercase;
-          color: #003A54;
+          color: #102d4b;
         }
         .lp-snapshot-select {
           padding: 5px 10px; font-size: 13px; font-weight: 700;
-          background: white; border: 1px solid #DDE7E3;   /* V946 */
+          background: white; border: 1px solid #dfe4ea;   /* V946 */
           color: var(--primary); cursor: pointer;
           border-radius: 5px;
         }
         .lp-snapshot-hint {
-          font-size: 10px; color: #005073; font-style: italic;
+          font-size: 10px; color: #143352; font-style: italic;
           margin-left: auto;
         }
         /* Contêiner da peça 20C (.lp-sb) + botão "✕ Limpar filtros".
@@ -1441,13 +1441,13 @@ App.telas['desempenho-luz-pulsada'] = function () {
           display: flex; align-items: stretch;
           padding: 6px;
           background: #fff;
-          border: 1px solid #e2ebf2;
+          border: 1px solid #e4ecf4;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20,50,80,.04), 0 10px 26px -20px rgba(20,50,80,.26);
+          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
           flex-wrap: wrap;
         }
         .lp-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-        .lp-sb-celwrap:not(:last-child) .lp-sb-cel { border-right: 1px solid #eef3f7; }
+        .lp-sb-celwrap:not(:last-child) .lp-sb-cel { border-right: 1px solid #f0f4f8; }
         .lp-sb-cel {
           flex: 1; min-width: 0;
           display: flex; align-items: center; gap: 9px;
@@ -1456,64 +1456,64 @@ App.telas['desempenho-luz-pulsada'] = function () {
           font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .lp-sb-cel:hover, .lp-sb-cel.ativo, .lp-sb-cel.aberta { background: #f4fafd; }
-        .lp-sb-cel:focus-visible { outline: 2px solid #2f8fc4; outline-offset: 2px; }
+        .lp-sb-cel:hover, .lp-sb-cel.ativo, .lp-sb-cel.aberta { background: #f6f4ef; }
+        .lp-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
         .lp-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f5f9; color: #5b6c7c;
+          background: #f0f5f9; color: #5a6879;
         }
-        .lp-sb-cel.ativo .lp-sb-tile, .lp-sb-cel.aberta .lp-sb-tile { background: #dbeef8; color: #1c6fa8; }
+        .lp-sb-cel.ativo .lp-sb-tile, .lp-sb-cel.aberta .lp-sb-tile { background: #e4ecf4; color: #1d4470; }
         .lp-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
         .lp-sb-rot {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .09em; color: #5b6c7c; white-space: nowrap;
+          letter-spacing: .09em; color: #5a6879; white-space: nowrap;
         }
         .lp-sb-val {
-          font-size: 13px; font-weight: 500; color: #4f6274;
+          font-size: 13px; font-weight: 500; color: #5a6879;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .lp-sb-cel.ativo .lp-sb-val { font-weight: 700; color: #14384f; }
-        .lp-sb-chev { color: #7d8fa0; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .lp-sb-cel.ativo .lp-sb-val { font-weight: 700; color: #12304f; }
+        .lp-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .lp-sb-cel.aberta .lp-sb-chev { transform: rotate(180deg); }
 
         /* painel ancorado na célula, por cima dos cards */
         .lp-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 340px;
-          background: #fff; border: 1px solid #dfe8f0; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(15,37,68,.42);
+          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
           overflow: hidden;
         }
         .lp-sb-buscabox {
           display: flex; align-items: center; gap: 8px;
-          padding: 11px 12px 10px; border-bottom: 1px solid #edf2f6;
+          padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
         }
         .lp-sb-buscabox .lp-sb-busca-ic { color: #6b7d8e; display: flex; }
         .lp-sb-busca {
-          flex: 1; height: 30px; border: 1px solid #dfe8f0; border-radius: 8px;
-          background: #f7fafc; padding: 0 10px; font-size: 13px;
-          font-family: inherit; color: #14384f; outline: none;
+          flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
+          background: #f6f4ef; padding: 0 10px; font-size: 13px;
+          font-family: inherit; color: #12304f; outline: none;
         }
-        .lp-sb-busca::placeholder { color: #9aabb8; }
-        .lp-sb-busca:focus { border-color: #2f8fc4; }
+        .lp-sb-busca::placeholder { color: #96a2b1; }
+        .lp-sb-busca:focus { border-color: #2a5a8c; }
         .lp-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
         .lp-sb-lista::-webkit-scrollbar { width: 8px; }
-        .lp-sb-lista::-webkit-scrollbar-track { background: #f2f6f9; }
-        .lp-sb-lista::-webkit-scrollbar-thumb { background: #c3d5e2; border-radius: 4px; }
+        .lp-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
+        .lp-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
         .lp-sb-it {
           display: flex; align-items: center; gap: 10px;
           height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-          font-size: 13px; color: #14384f;
+          font-size: 13px; color: #12304f;
         }
-        .lp-sb-it:hover, .lp-sb-it.foco { background: #f2f7fb; }
-        .lp-sb-it.sel { background: #eaf4fb; font-weight: 700; }
+        .lp-sb-it:hover, .lp-sb-it.foco { background: #f0f4f8; }
+        .lp-sb-it.sel { background: #f0f4f8; font-weight: 700; }
         .lp-sb-it-todos { font-weight: 700; }
         .lp-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .lp-sb-ck { color: #1c6fa8; display: flex; }
+        .lp-sb-ck { color: #1d4470; display: flex; }
         .lp-sb-rodape {
-          padding: 7px 12px; border-top: 1px solid #edf2f6;
-          font-size: 10.5px; font-weight: 600; color: #7d8fa0;
+          padding: 7px 12px; border-top: 1px solid #f0f4f8;
+          font-size: 10.5px; font-weight: 600; color: #96a2b1;
         }
         @media (max-width: 1280px) { .lp-sb-celwrap { flex-basis: 32%; } }
         @media (max-width: 900px)  { .lp-sb-celwrap { flex-basis: 48%; } }
@@ -1532,23 +1532,23 @@ App.telas['desempenho-luz-pulsada'] = function () {
         .lp-card-titulo {
           font-size: 9px; font-weight: 700; text-transform: uppercase;
           letter-spacing: 0.06em; margin-bottom: 6px;
-          color: #06283A; /* V849: título dos cards totalizadores (variantes coloridas mantêm a própria) */
+          color: #0f1d2e; /* V849: título dos cards totalizadores (variantes coloridas mantêm a própria) */
         }
         .lp-card-valor { font-size: 20px; font-weight: 800; line-height: 1.1; }
         .lp-card-sub { padding-top: 6px; font-size: 10px; color: var(--ink-soft); line-height: 1.4; }
         .lp-card-verde   { background: linear-gradient(135deg, #E8F1EE, #D4E4DF); border-color: #A8C8C0; }
-        .lp-card-verde .lp-card-faixa { background: #005073; }
-        .lp-card-verde .lp-card-titulo, .lp-card-verde .lp-card-valor { color: #005073; }
+        .lp-card-verde .lp-card-faixa { background: #143352; }
+        .lp-card-verde .lp-card-titulo, .lp-card-verde .lp-card-valor { color: #143352; }
         .lp-card-roxo    { background: linear-gradient(135deg, #ECE5F2, #DAC8E4); border-color: #C0A8D0; }
         .lp-card-roxo .lp-card-faixa { background: #6B4587; }
         .lp-card-roxo .lp-card-titulo, .lp-card-roxo .lp-card-valor { color: #6B4587; }
-        .lp-card-bege    { background: linear-gradient(135deg, #E8F1F7, #CDEBDD); border-color: #C8D6D2; }   /* V946 */
-        .lp-card-bege .lp-card-faixa { background: #005073; }
-        .lp-card-bege .lp-card-titulo, .lp-card-bege .lp-card-valor { color: #005073; }
-        .lp-card-destaque { background: linear-gradient(135deg, #005073, #0C3A2F); border-color: #005073; box-shadow: 0 4px 12px rgba(0, 80, 115,.2); }
-        .lp-card-destaque .lp-card-titulo { color: #56645E; }
-        .lp-card-destaque .lp-card-valor { color: #005073; }
-        .lp-card-destaque .lp-card-sub { color: #B9D4CB; }
+        .lp-card-bege    { background: linear-gradient(135deg, #e9edf1, #e4ecf4); border-color: #C8D6D2; }   /* V946 */
+        .lp-card-bege .lp-card-faixa { background: #143352; }
+        .lp-card-bege .lp-card-titulo, .lp-card-bege .lp-card-valor { color: #143352; }
+        .lp-card-destaque { background: linear-gradient(135deg, #143352, #0b2340); border-color: #143352; box-shadow: 0 4px 12px rgba(20, 51, 82,.2); }
+        .lp-card-destaque .lp-card-titulo { color: #5a6879; }
+        .lp-card-destaque .lp-card-valor { color: #143352; }
+        .lp-card-destaque .lp-card-sub { color: #c5d5e5; }
 
         .lp-card-breakdown {
           padding-top: 6px;
@@ -1570,18 +1570,18 @@ App.telas['desempenho-luz-pulsada'] = function () {
         .lp-comp-down  { color: #9B3A3A; font-weight: 700; }
         .lp-comp-igual { color: var(--ink-soft); font-weight: 600; }
         .lp-comp-vazio { color: var(--ink-faint); }
-        .lp-card-destaque .lp-card-comp { border-top-color: #56645E; }
-        .lp-card-destaque .lp-card-comp-lbl { color: #B9D4CB; }
+        .lp-card-destaque .lp-card-comp { border-top-color: #5a6879; }
+        .lp-card-destaque .lp-card-comp-lbl { color: #c5d5e5; }
         .lp-card-destaque .lp-comp-up    { color: #C8F5C0; }
         .lp-card-destaque .lp-comp-down  { color: #F5B5B5; }
         .lp-card-destaque .lp-comp-igual,
-        .lp-card-destaque .lp-comp-vazio { color: #B9D4CB; }
+        .lp-card-destaque .lp-comp-vazio { color: #c5d5e5; }
 
         /* Card destacado da Taxa */
         .lp-card-taxa {
-          background: linear-gradient(135deg, #E8F1F7 0%, #DBF0F9 100%);
-          border: 1px solid #DDE7E3;   /* V946 */
-          border-left: 5px solid #189AD3;
+          background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%);
+          border: 1px solid #dfe4ea;   /* V946 */
+          border-left: 5px solid #2a5a8c;
           border-radius: 12px;
           padding: 18px 22px;
           margin-bottom: 18px;
@@ -1591,7 +1591,7 @@ App.telas['desempenho-luz-pulsada'] = function () {
         }
         .lp-card-taxa-icone { font-size: 20px; }
         .lp-card-taxa-titulo {
-          font-size: 12px; font-weight: 700; color: #003A54;
+          font-size: 12px; font-weight: 700; color: #102d4b;
           text-transform: uppercase; letter-spacing: 0.06em;
         }
         .lp-card-taxa-info {
@@ -1602,20 +1602,20 @@ App.telas['desempenho-luz-pulsada'] = function () {
         }
         @media (max-width: 800px) { .lp-card-taxa-info { grid-template-columns: 1fr; } }
         .lp-info-label {
-          font-size: 9px; color: #005073; font-weight: 700;
+          font-size: 9px; color: #143352; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
         }
         .lp-info-valor {
           font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3;
         }
         .lp-card-taxa-calc {
-          background: #005073;
-          color: #F1F7F7;
+          background: #143352;
+          color: #f6f4ef;
           padding: 12px 18px;
           border-radius: 8px;
         }
         .lp-calc-label {
-          font-size: 10px; font-weight: 700; color: #189AD3;
+          font-size: 10px; font-weight: 700; color: #2a5a8c;
           text-transform: uppercase; letter-spacing: 0.06em;
           margin-bottom: 6px;
         }
@@ -1720,8 +1720,8 @@ App.telas['desempenho-luz-pulsada'] = function () {
           border: 1px solid var(--border);
         }
         .lp-ocultar-fixa {
-          background: rgba(0, 80, 115, 0.04);
-          border-color: rgba(0, 80, 115, 0.15);
+          background: rgba(20, 51, 82, 0.04);
+          border-color: rgba(20, 51, 82, 0.15);
         }
         .lp-ocultar-chk { display: flex; align-items: center; cursor: pointer; }
         .lp-ocultar-chk input { cursor: pointer; }
@@ -1738,7 +1738,7 @@ App.telas['desempenho-luz-pulsada'] = function () {
           font-size: 9px; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.05em;
           color: var(--ink-faint);
-          background: rgba(0, 80, 115, 0.08);
+          background: rgba(20, 51, 82, 0.08);
           padding: 2px 7px; border-radius: 4px;
         }
         .lp-ocultar-acoes { margin-top: 12px; display: flex; align-items: center; gap: 12px; }

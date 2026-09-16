@@ -113,19 +113,19 @@ App.telas['base-tabela'] = function () {
     <style>
       .bt-tipo-overlay {
         position: fixed; inset: 0; z-index: 9999;
-        background: rgba(0, 80, 115, 0.35);
+        background: rgba(20, 51, 82, 0.35);
         display: flex; align-items: center; justify-content: center;
       }
       .bt-tipo-modal {
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #DDE7E3);
+        border: 1px solid var(--border, #dfe4ea);
         border-radius: var(--radius-md, 10px);
         box-shadow: 0 12px 40px rgba(0,0,0,0.18);
         padding: 22px; width: 420px; max-width: 92vw;
       }
       .bt-sim-modal {
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #DDE7E3);
+        border: 1px solid var(--border, #dfe4ea);
         border-radius: var(--radius-md, 10px);
         box-shadow: 0 12px 40px rgba(0,0,0,0.18);
         width: 880px; max-width: 95vw; max-height: 90vh;
@@ -134,20 +134,20 @@ App.telas['base-tabela'] = function () {
       .bt-sim-top { display: flex; justify-content: space-between; align-items: center; }
       .bt-sim-sub { font-size: 13px; color: var(--ink-soft); margin: 8px 0 10px; }
       .bt-sim-ctrl { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 13px; }
-      .bt-sim-lista { overflow: auto; border: 1px solid var(--border, #DDE7E3); border-radius: 8px; padding: 6px; flex: 1; min-height: 0; }
-      .bt-sim-bloco { padding: 8px; border-bottom: 1px solid var(--bg-sunken, #E8F1F7); }
+      .bt-sim-lista { overflow: auto; border: 1px solid var(--border, #dfe4ea); border-radius: 8px; padding: 6px; flex: 1; min-height: 0; }
+      .bt-sim-bloco { padding: 8px; border-bottom: 1px solid var(--bg-sunken, #e9edf1); }
       .bt-sim-head { display: flex; flex-direction: column; margin-bottom: 4px; }
-      .bt-sim-vals { font-size: 11px; color: var(--accent, #189AD3); }
+      .bt-sim-vals { font-size: 11px; color: var(--accent, #2a5a8c); }
       .bt-sim-row { display: flex; align-items: center; gap: 8px; padding: 3px 0 3px 14px; font-size: 13px; cursor: pointer; }
-      .bt-sim-row:hover { background: var(--bg-sunken, #E8F1F7); border-radius: 4px; }
+      .bt-sim-row:hover { background: var(--bg-sunken, #e9edf1); border-radius: 4px; }
       .bt-sim-score { font-weight: 700; font-size: 11px; width: 40px; text-align: right; flex-shrink: 0; }
       .bt-sim-score.alto { color: #0A7A5A; }
-      .bt-sim-score.medio { color: #189AD3; }
+      .bt-sim-score.medio { color: #2a5a8c; }
       .bt-sim-score.baixo { color: #9B3A3A; }
       .bt-sim-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
       .col-usar { width: 48px; text-align: center; }
       .cel-usar { text-align: center; }
-      .chk-usar { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary, #005073); }
+      .chk-usar { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary, #143352); }
       tr.proc-inativo { opacity: 0.45; }
       tr.proc-inativo .nome-proc { text-decoration: line-through; }
       .btn-toggle {
@@ -182,7 +182,7 @@ App.telas['base-tabela'] = function () {
       .tabela-valores thead th {
         padding: 12px 14px;
         text-align: left;
-        color: #F1F7F7;
+        color: #f6f4ef;
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -200,7 +200,7 @@ App.telas['base-tabela'] = function () {
         font-family: inherit; font-size: 12px; outline: none;
         transition: border-color 150ms, box-shadow 150ms;
       }
-      .nomenclatura-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(30, 187, 215,.14); }
+      .nomenclatura-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79, 127, 176,.14); }
       .nomenclatura-input::placeholder { color: var(--ink-faint); }
       /* V554: colunas de classificação vindas da PRODUÇÃO (editáveis) */
       .tabela-valores th.col-classif { width: 118px; }
@@ -213,7 +213,7 @@ App.telas['base-tabela'] = function () {
         font-family: inherit; font-size: 12px; outline: none;
         transition: border-color 150ms, box-shadow 150ms;
       }
-      .classif-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(30, 187, 215,.14); }
+      .classif-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79, 127, 176,.14); }
       .classif-input::placeholder { color: var(--ink-faint); }
       .tabela-valores tbody tr {
         border-bottom: 1px solid var(--border);
@@ -365,12 +365,12 @@ App.telas['base-tabela'] = function () {
       /* ===== V489/V490: TRAVA DA BASE TABELA (FABs ficam no style.css) ===== */
       .bt-trava-overlay {
         position: fixed; inset: 0; z-index: 10000;
-        background: rgba(0, 0, 61, 0.42);
+        background: rgba(11, 35, 64, 0.42);
         display: flex; align-items: center; justify-content: center;
       }
       .bt-trava-modal {
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #DDE7E3);
+        border: 1px solid var(--border, #dfe4ea);
         border-radius: var(--radius-md, 10px);
         box-shadow: 0 18px 50px rgba(0,0,0,0.22);
         width: 480px; max-width: 94vw;
@@ -378,7 +378,7 @@ App.telas['base-tabela'] = function () {
         overflow: hidden;
       }
       .bt-trava-head {
-        background: var(--primary, #00003D);
+        background: var(--primary, #0b2340);
         color: #FFF; padding: 14px 18px;
         display: flex; align-items: center; gap: 10px;
       }
@@ -393,13 +393,13 @@ App.telas['base-tabela'] = function () {
       .bt-trava-passo {
         flex: 1; font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
         color: var(--ink-faint, #9AA); text-align: center;
-        padding-bottom: 6px; border-bottom: 2px solid var(--border, #DDE7E3);
+        padding-bottom: 6px; border-bottom: 2px solid var(--border, #dfe4ea);
       }
-      .bt-trava-passo.ativo { color: var(--primary, #00003D); border-bottom-color: var(--primary, #00003D); font-weight: 700; }
+      .bt-trava-passo.ativo { color: var(--primary, #0b2340); border-bottom-color: var(--primary, #0b2340); font-weight: 700; }
       .bt-trava-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
       .bt-trava-input {
         width: 100%; box-sizing: border-box; height: 38px; padding: 0 12px;
-        border: 1px solid var(--border, #DDE7E3); border-radius: 8px;
+        border: 1px solid var(--border, #dfe4ea); border-radius: 8px;
         background: var(--bg-elevated, #FFF); color: var(--ink);
         font-family: inherit; font-size: 14px; outline: none;
         transition: border-color 150ms, box-shadow 150ms;
@@ -409,16 +409,16 @@ App.telas['base-tabela'] = function () {
       .bt-motivos { display: flex; flex-direction: column; gap: 8px; }
       .bt-motivo-op {
         display: flex; align-items: center; gap: 10px;
-        padding: 10px 12px; border: 1px solid var(--border, #DDE7E3);
+        padding: 10px 12px; border: 1px solid var(--border, #dfe4ea);
         border-radius: 8px; cursor: pointer; font-size: 13px;
         transition: border-color 140ms, background-color 140ms;
       }
       .bt-motivo-op:hover { background: var(--bg-sunken, #F3F6FA); }
       .bt-motivo-op.sel { border-color: var(--primary); background: var(--primary-soft, #EEF1FF); font-weight: 600; }
-      .bt-motivo-op input { accent-color: var(--primary, #00003D); }
+      .bt-motivo-op input { accent-color: var(--primary, #0b2340); }
       .bt-trava-foot {
         display: flex; justify-content: flex-end; gap: 10px;
-        padding: 14px 18px; border-top: 1px solid var(--border, #DDE7E3);
+        padding: 14px 18px; border-top: 1px solid var(--border, #dfe4ea);
         background: var(--bg-sunken, #F7F9FC);
       }
       .bt-trava-aviso {
@@ -430,7 +430,7 @@ App.telas['base-tabela'] = function () {
       /* ===== V489: HISTÓRICO / SNAPSHOTS ===== */
       .bt-hist-modal {
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #DDE7E3);
+        border: 1px solid var(--border, #dfe4ea);
         border-radius: var(--radius-md, 10px);
         box-shadow: 0 18px 50px rgba(0,0,0,0.22);
         width: 860px; max-width: 95vw; max-height: 88vh;
@@ -439,7 +439,7 @@ App.telas['base-tabela'] = function () {
       .bt-hist-body { padding: 0; overflow: auto; flex: 1; min-height: 0; }
       .bt-snap-item {
         display: flex; align-items: center; gap: 14px;
-        padding: 12px 18px; border-bottom: 1px solid var(--border, #DDE7E3);
+        padding: 12px 18px; border-bottom: 1px solid var(--border, #dfe4ea);
         cursor: pointer; transition: background-color 120ms;
       }
       .bt-snap-item:hover { background: var(--bg-sunken, #F3F6FA); }
@@ -452,12 +452,12 @@ App.telas['base-tabela'] = function () {
       }
       .bt-diff-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
       .bt-diff-tab thead th {
-        position: sticky; top: 0; background: var(--primary, #00003D); color: #F1F7F7;
+        position: sticky; top: 0; background: var(--primary, #0b2340); color: #f6f4ef;
         font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase;
         padding: 9px 12px; text-align: left;
       }
       .bt-diff-tab thead th.num { text-align: right; }
-      .bt-diff-tab tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border, #DDE7E3); }
+      .bt-diff-tab tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border, #dfe4ea); }
       .bt-diff-tab tbody td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
       .bt-diff-antes { color: var(--danger, #9B3A3A); text-decoration: line-through; }
       .bt-diff-depois { color: #0A7A5A; font-weight: 700; }
@@ -470,13 +470,13 @@ App.telas['base-tabela'] = function () {
         letter-spacing: 0.03em; vertical-align: 1px;
       }
       .bt-sub-versao:empty { display: none; }
-      .bt-sub-versao.vig  { background: rgba(16, 125, 172, 0.12); color: #107DAC; border: 1px solid rgba(16, 125, 172, 0.35); }
+      .bt-sub-versao.vig  { background: rgba(29, 68, 112, 0.12); color: #1d4470; border: 1px solid rgba(29, 68, 112, 0.35); }
       .bt-sub-versao.rasc { background: rgba(176, 122, 10, 0.12); color: #8A5E00; border: 1px solid rgba(176, 122, 10, 0.35); }
       .bt-sub-versao.hist { background: rgba(2, 26, 28, 0.08); color: #032C2E; border: 1px solid rgba(2, 26, 28, 0.25); }
       /* V565: painel de versões (ícone flutuante) */
       .bt-ver-linha {
         display: flex; align-items: center; justify-content: space-between;
-        gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--bg-sunken, #E8F1F7);
+        gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--bg-sunken, #e9edf1);
         font-size: 13px;
       }
       .bt-ver-linha:last-child { border-bottom: none; }
@@ -1009,7 +1009,7 @@ App.telas['base-tabela'] = function () {
           <h3>Snapshot #${snapId}</h3>
           <button class="bt-trava-close" id="bt-det-x" title="Fechar">✕</button>
         </div>
-        <div style="padding:14px 18px; border-bottom:1px solid var(--border,#DDE7E3); background:var(--bg-sunken,#F7F9FC)">
+        <div style="padding:14px 18px; border-bottom:1px solid var(--border,#dfe4ea); background:var(--bg-sunken,#F7F9FC)">
           <div style="display:flex; gap:26px; flex-wrap:wrap; font-size:12.5px">
             <div><span style="color:var(--ink-soft)">Data</span><br><strong>${dt.data}</strong></div>
             <div><span style="color:var(--ink-soft)">Horário</span><br><strong>${dt.hora}</strong></div>
@@ -1293,7 +1293,7 @@ App.telas['base-tabela'] = function () {
               </label>`).join('')}
           </div>
         </div>` : ''}
-        <div id="rj-previa" class="small" style="background: var(--bg-sunken, #E8F1F7); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; min-height: 64px; color: var(--ink-soft)"></div>
+        <div id="rj-previa" class="small" style="background: var(--bg-sunken, #e9edf1); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; min-height: 64px; color: var(--ink-soft)"></div>
         <div style="display: flex; justify-content: flex-end; gap: 10px">
           <button class="btn" id="rj-cancelar">Cancelar</button>
           <button class="btn btn-primary" id="rj-aplicar" disabled>Aplicar reajuste</button>

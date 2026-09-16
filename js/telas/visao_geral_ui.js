@@ -1009,7 +1009,7 @@ App.telas['dashboard'] = function () {
    * !important) pintava tudo — "vs LM" ficava verde junto com o percentual.
    * Ao lado, os indicadores dos outros cards já mostravam o rótulo em cinza e
    * só o valor colorido; eram dois layouts para a mesma informação.
-   * Agora o rótulo é um <span> próprio, sempre em #5A7180 (--ink-faint, o mesmo
+   * Agora o rótulo é um <span> próprio, sempre em #6b7a8c (--ink-faint, o mesmo
    * cinza dos outros cards), e a variação de cor fica só no valor.
    */
   function badgeVar(rotulo, v, extraCls) {
@@ -1340,7 +1340,7 @@ App.telas['dashboard'] = function () {
               <td class="num">${moeda(T.glosa)}<span class="vg-esp-pct">${pct(T.glosa, T.produzido)}</span></td>
               ${modoPerda
                 ? `<td class="num vg-esp-perdido">${moeda(T.perdido)}<span class="vg-esp-pct">${pct(T.perdido, T.glosa)}</span></td>`
-                : `<td class="num vg-esp-rep">${moeda(T.repasse)}<span class="vg-esp-pct">${pct(T.repasse, T.recebido)}</span></td>`}<!-- V963: total do repasse em #107DAC -->
+                : `<td class="num vg-esp-rep">${moeda(T.repasse)}<span class="vg-esp-pct">${pct(T.repasse, T.recebido)}</span></td>`}<!-- V963: total do repasse em #1d4470 -->
             </tr></tfoot>
           </table>
         </div>
@@ -1875,8 +1875,8 @@ function injetarEstilosVG() {
       font: inherit; font-size: 11.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px;
       cursor: pointer; transition: background-color 130ms, color 130ms, border-color 130ms;
     }
-    .vg-cmp-chip:hover { border-color: #189AD3; color: #107DAC; }
-    .vg-cmp-chip.on { background: #107DAC; border-color: #107DAC; color: #fff; }
+    .vg-cmp-chip:hover { border-color: #2a5a8c; color: #1d4470; }
+    .vg-cmp-chip.on { background: #1d4470; border-color: #1d4470; color: #fff; }
     /* V518: % GLOSA PERDIDA ao lado do valor do card de glosa */
     /* V921: % das GLOSAS afastada do valor e entre parênteses.
        V922: MENOR (11px) e com folga reduzida pra caber SEMPRE na mesma linha
@@ -1895,7 +1895,7 @@ function injetarEstilosVG() {
     .vg-glosa-dupla { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 3px 12px;
       align-content: end; margin-top: 2px; }
     .vg-glosa-sep { grid-row: 1 / span 2; grid-column: 2; width: 1px; height: 100%;
-      background: var(--border, #DEE3E1); }
+      background: var(--border, #dfe4ea); }
     .vg-glosa-dupla .vg-glosa-rot { align-self: end; min-width: 0; }
     .vg-glosa-dupla .vg-glosa-vlr { align-self: start; min-width: 0; }
     .vg-glosa-rot { font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #9B3A3A; line-height: 1.3; }
@@ -1976,7 +1976,7 @@ function injetarEstilosVG() {
     }
     .vg-cmp-mes { font-size: 16px; font-weight: 700; color: #24313d; padding: 6px 8px 2px; }
     .vg-cmp-bloco { border-radius: 8px; padding: 14px 14px 16px; }
-    .vg-cmp-bloco-rep { background: #eaf4fb; }
+    .vg-cmp-bloco-rep { background: #f0f4f8; }
     .vg-cmp-bloco-pm  { background: #f4f5f6; }
     .vg-cmp-titulo { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 10px; }
     .vg-cmp-bloco-rep .vg-cmp-titulo { color: #4d6b80; }
@@ -2004,7 +2004,7 @@ function injetarEstilosVG() {
     .vg-cmp-kpi > span:last-child { font-weight: 600; white-space: nowrap; text-align: right; color: #24313d; }
     .vg-cmp-kpi em { font-style: normal; font-weight: 600; }
     /* ── V688: barra de pesquisa unificada 12C (handoff Claude Design) ── */
-    .vg-aic .aic-lbl { color: #06283A; }   /* V849: título dos cards totalizadores */   /* rótulo dos cards (PRODUÇÃO TOTAL, REPASSE TOTAL…) */
+    .vg-aic .aic-lbl { color: #0f1d2e; }   /* V849: título dos cards totalizadores */   /* rótulo dos cards (PRODUÇÃO TOTAL, REPASSE TOTAL…) */
     /* o container precisa criar o contexto de empilhamento ACIMA dos cards
        (que são position:relative) — senão o painel abre ATRÁS deles */
     /* V935: FILTRO CONGELADO — acompanha a rolagem até o fim da página.
@@ -2018,63 +2018,63 @@ function injetarEstilosVG() {
        Geral ele rola junto com a página — some conforme a rolagem avança. */
     body[data-tela="dashboard"] .import-dock-wrap { position: relative; top: auto; z-index: 3; }
     #vg-filtros { position: sticky; top: 0; z-index: 50; padding-top: 6px; margin-top: -6px; }
-    #vg-filtros.vg-preso { background: linear-gradient(to bottom, var(--bg, #F5FAFD) 0%, var(--bg, #F5FAFD) 78%, rgba(245,250,253,0) 100%); padding-bottom: 10px; }
-    #vg-filtros.vg-preso .vg-sb { margin-bottom: 0; box-shadow: 0 2px 4px rgba(20,50,80,.06), 0 18px 34px -16px rgba(20,50,80,.35); border-color: #d6e2eb; }
-    .vg-sb { display: flex; align-items: stretch; background: #fff; border: 1px solid #e2ebf2; border-radius: 14px;
+    #vg-filtros.vg-preso { background: linear-gradient(to bottom, var(--bg, #f6f4ef) 0%, var(--bg, #f6f4ef) 78%, rgba(245,250,253,0) 100%); padding-bottom: 10px; }
+    #vg-filtros.vg-preso .vg-sb { margin-bottom: 0; box-shadow: 0 2px 4px rgba(20, 51, 82,.06), 0 18px 34px -16px rgba(20, 51, 82,.35); border-color: #d6e2eb; }
+    .vg-sb { display: flex; align-items: stretch; background: #fff; border: 1px solid #e4ecf4; border-radius: 14px;
       padding: 6px; margin: 4px 0 20px; position: relative; z-index: 30;
-      box-shadow: 0 1px 2px rgba(20,50,80,.04), 0 10px 28px -20px rgba(20,50,80,.18); }
+      box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 28px -20px rgba(20, 51, 82,.18); }
     .vg-sb-celwrap { position: relative; display: flex; min-width: 0; }
-    .vg-sb-div { width: 1px; background: #eef3f7; margin: 6px 0; flex: none; }
+    .vg-sb-div { width: 1px; background: #f0f4f8; margin: 6px 0; flex: none; }
     .vg-sb-cel { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; padding: 10px 14px;
       border: none; border-radius: 10px; background: transparent; cursor: pointer; font: inherit; text-align: left; }
-    .vg-sb-cel:hover, .vg-sb-cel.ativo, .vg-sb-cel.aberto { background: #f4fafd; }
-    .vg-sb-cel:focus-visible { outline: 2px solid #2f8fc4; outline-offset: 2px; }
-    .vg-sb-tile { width: 30px; height: 30px; flex: none; border-radius: 8px; background: #f0f5f9; color: #5b6c7c;
+    .vg-sb-cel:hover, .vg-sb-cel.ativo, .vg-sb-cel.aberto { background: #f6f4ef; }
+    .vg-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+    .vg-sb-tile { width: 30px; height: 30px; flex: none; border-radius: 8px; background: #f0f5f9; color: #5a6879;
       display: flex; align-items: center; justify-content: center; }
-    .vg-sb-cel.aberto .vg-sb-tile, .vg-sb-cel.ativo .vg-sb-tile { background: #dbeef8; color: #1c6fa8; }
+    .vg-sb-cel.aberto .vg-sb-tile, .vg-sb-cel.ativo .vg-sb-tile { background: #e4ecf4; color: #1d4470; }
     .vg-sb-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
-    .vg-sb-rot { font-size: 9.5px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: #90a1ae; }
-    .vg-sb-cel.aberto .vg-sb-rot { color: #1c6fa8; }
-    .vg-sb-val { font-size: 13.5px; font-weight: 700; color: #14384f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .vg-sb-chev { flex: none; color: #90a1ae; display: flex; transition: transform .15s; }
-    .vg-sb-cel.aberto .vg-sb-chev { color: #1c6fa8; transform: rotate(180deg); }
+    .vg-sb-rot { font-size: 9.5px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: #96a2b1; }
+    .vg-sb-cel.aberto .vg-sb-rot { color: #1d4470; }
+    .vg-sb-val { font-size: 13.5px; font-weight: 700; color: #12304f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vg-sb-chev { flex: none; color: #96a2b1; display: flex; transition: transform .15s; }
+    .vg-sb-cel.aberto .vg-sb-chev { color: #1d4470; transform: rotate(180deg); }
     .vg-sb-acao { flex: none; display: flex; align-items: center; padding: 0 6px 0 14px; }
-    .vg-sb-btn { height: 50px; padding: 0 18px; border: none; border-radius: 10px; background: #1c6fa8; color: #fff;
+    .vg-sb-btn { height: 50px; padding: 0 18px; border: none; border-radius: 10px; background: #1d4470; color: #fff;
       font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;
       box-shadow: 0 6px 16px -8px rgba(28,111,168,.8); white-space: nowrap; }
-    .vg-sb-btn:hover { background: #14547f; }
+    .vg-sb-btn:hover { background: #143352; }
     .vg-sb-conta-slot { height: 50px; display: flex; align-items: center; padding: 0 14px; font-size: 13px;
-      font-weight: 700; color: #5b6c7c; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      font-weight: 700; color: #5a6879; white-space: nowrap; font-variant-numeric: tabular-nums; }
     /* painel ancorado na célula (a largura acompanha a célula) */
     .vg-sb-painel { position: absolute; top: 100%; left: 6px; right: 6px; margin-top: 8px; z-index: 40; min-width: 240px;
-      background: #fff; border: 1px solid #dfe8f0; border-radius: 12px; overflow: hidden;
-      box-shadow: 0 18px 44px -14px rgba(15,37,68,.42); }
+      background: #fff; border: 1px solid #dfe4ea; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42); }
     .vg-sb-buscabox { display: flex; align-items: center; gap: 8px; margin: 11px 12px 10px; padding: 0 10px; height: 38px;
-      background: #f7fafc; border: 1px solid #dfe8f0; border-radius: 8px; color: #6b7d8e; }
+      background: #f6f4ef; border: 1px solid #dfe4ea; border-radius: 8px; color: #6b7d8e; }
     .vg-sb-painel > .vg-sb-buscabox { box-sizing: border-box; }
-    .vg-sb-busca { flex: 1; min-width: 0; border: none; background: none; font: inherit; font-size: 13.5px; color: #14384f; }
+    .vg-sb-busca { flex: 1; min-width: 0; border: none; background: none; font: inherit; font-size: 13.5px; color: #12304f; }
     .vg-sb-busca:focus { outline: none; }
-    .vg-sb-busca::placeholder { color: #9aabb8; }
-    .vg-sb-busca-x { width: 20px; height: 20px; flex: none; border: none; border-radius: 999px; background: #dfe8f0;
-      color: #5b6c7c; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
-    .vg-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; border-top: 1px solid #edf2f6; }
+    .vg-sb-busca::placeholder { color: #96a2b1; }
+    .vg-sb-busca-x { width: 20px; height: 20px; flex: none; border: none; border-radius: 999px; background: #dfe4ea;
+      color: #5a6879; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .vg-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; border-top: 1px solid #f0f4f8; }
     .vg-sb-painel > .vg-sb-lista:first-child { border-top: none; }
     .vg-sb-lista::-webkit-scrollbar { width: 8px; }
-    .vg-sb-lista::-webkit-scrollbar-track { background: #f2f6f9; }
-    .vg-sb-lista::-webkit-scrollbar-thumb { background: #c3d5e2; border-radius: 4px; }
+    .vg-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
+    .vg-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
     .vg-sb-it { height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 8px; border-radius: 8px;
-      cursor: pointer; font-size: 13.5px; font-weight: 500; color: #14384f; }
-    .vg-sb-it:hover, .vg-sb-it.hl { background: #f2f7fb; }
-    .vg-sb-it.sel { background: #eaf4fb; }
+      cursor: pointer; font-size: 13.5px; font-weight: 500; color: #12304f; }
+    .vg-sb-it:hover, .vg-sb-it.hl { background: #f0f4f8; }
+    .vg-sb-it.sel { background: #f0f4f8; }
     .vg-sb-it.sel .vg-sb-it-nome, .vg-sb-it-todos .vg-sb-it-nome { font-weight: 700; }
     .vg-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .vg-sb-chip { width: 24px; height: 24px; flex: none; border-radius: 999px; background: #eaf4fb; color: #1c6fa8;
+    .vg-sb-chip { width: 24px; height: 24px; flex: none; border-radius: 999px; background: #f0f4f8; color: #1d4470;
       font-size: 9.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; letter-spacing: .02em; }
-    .vg-sb-ck { flex: none; color: #1c6fa8; display: flex; }
-    .vg-sb-vazio { font-size: 13px; color: #90a1ae; padding: 18px 10px; }
+    .vg-sb-ck { flex: none; color: #1d4470; display: flex; }
+    .vg-sb-vazio { font-size: 13px; color: #96a2b1; padding: 18px 10px; }
     .vg-sb-rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      padding: 9px 13px; border-top: 1px solid #edf2f6; background: #fbfdfe; font-size: 11.5px; color: #5b6c7c; }
-    .vg-sb-dica { font-size: 11px; color: #90a1ae; }
+      padding: 9px 13px; border-top: 1px solid #f0f4f8; background: #fbfdfe; font-size: 11.5px; color: #5a6879; }
+    .vg-sb-dica { font-size: 11px; color: #96a2b1; }
     @media (max-width: 1200px) {
       .vg-sb { flex-wrap: wrap; gap: 2px; }
       .vg-sb-celwrap { flex: 1 1 46% !important; }
@@ -2091,7 +2091,7 @@ function injetarEstilosVG() {
        no lugar da faixa interna de 5px só à esquerda (V688). */
     .vg-aic { position: relative !important; height: auto !important; display: flex;
       border-radius: 13px; margin-top: 5px; margin-left: 5px; background: var(--bg-elevated, #fff);
-      box-shadow: -4px -3px 10px rgba(30,187,215,.30), 0 8px 18px rgba(0,58,84,.13); }
+      box-shadow: -4px -3px 10px rgba(79, 127, 176,.30), 0 8px 18px rgba(16, 45, 75,.13); }
     /* V888: a Visão Geral tem a MOLDURA PRÓPRIA dela (esta regra), e por isso
        não tinha acompanhado a V887 — a camada de degradê vive na lista global
        do style.css, que não alcança o .vg-aic. Aqui vai o mesmo filete em L:
@@ -2101,13 +2101,13 @@ function injetarEstilosVG() {
        arredondamento e afina no canto como a sombra sólida fazia. */
     .vg-aic { background:
         linear-gradient(var(--bg-elevated, #fff) 0 0) padding-box,
-        linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%) border-box;
+        linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%) border-box;
       border-style: solid; border-color: transparent; border-width: 3px 0 0 4px; }
     .vg-aic::after { content: none; }
     /* o card de GLOSA não é azul: moldura própria, sem borda em degradê */
     .vg-aic-glosa { background: var(--bg-elevated, #fff); border: none; }
     /* o card de GLOSA não é azul — fica exatamente como está (V887) */
-    .vg-aic-glosa { box-shadow: -4px -3px 0 0 #c0563f, -4px -3px 10px rgba(192,86,63,.28), 0 8px 18px rgba(0,58,84,.13); }
+    .vg-aic-glosa { box-shadow: -4px -3px 0 0 #c0563f, -4px -3px 10px rgba(192,86,63,.28), 0 8px 18px rgba(16, 45, 75,.13); }
     .vg-aic-glosa::after { content: none; }
     .vg-aic .aic-verde { display: none !important; }
     /* V529: conteúdo alinhado ao TOPO (era center) — com a faixa fixa do valor,
@@ -2133,13 +2133,13 @@ function injetarEstilosVG() {
        #15a34a (pedido do usuário), subindo ou caindo. */
     .vg-var.vg-var-lm { color: #15a34a !important; }
     /* V863: o rótulo NÃO acompanha a cor do indicador — fica sempre no cinza
-       #5A7180, como nos demais cards. Precisa da mesma força das regras acima
+       #6b7a8c, como nos demais cards. Precisa da mesma força das regras acima
        (elas usam !important por causa da regra global do style.css) e de
        especificidade maior, já que aqui o rótulo é filho do badge colorido. */
     .vg-var .vg-var-lbl,
     .vg-var.comp-up .vg-var-lbl,
     .vg-var.comp-down .vg-var-lbl,
-    .vg-var.vg-var-lm .vg-var-lbl { color: #5A7180 !important; font-weight: 600; }
+    .vg-var.vg-var-lm .vg-var-lbl { color: #6b7a8c !important; font-weight: 600; }
     .vg-calc { font-size: 16px; color: var(--ink-faint); font-style: italic; font-weight: 500; }
     .vg-calc-sub { font-size: 11px; color: var(--ink-faint); }
     .vg-glosa-nota { color: var(--ink-faint); font-style: italic; font-size: 11px; }
@@ -2168,11 +2168,11 @@ function injetarEstilosVG() {
     .vg-evolucao-bloco { background: #fff; border: 1px solid #eceff2; border-radius: 16px;
       padding: 22px 24px 18px; margin-bottom: 0; height: 100%; box-sizing: border-box;
       display: flex; flex-direction: column;
-      box-shadow: 0 1px 2px rgba(30,45,60,.04), 0 12px 32px -18px rgba(30,45,60,.16); }
+      box-shadow: 0 1px 2px rgba(15, 29, 46,.04), 0 12px 32px -18px rgba(15, 29, 46,.16); }
     /* o gráfico ocupa a altura livre do card (não fica espremido no rodapé) */
     .vg-evolucao-bloco .vg-chart-wrap { flex: 1; min-height: 0; display: flex; }
     .vg-charts-2col .vg-chart { min-width: 0; width: 100%; height: 100%; }
-    .vg-bloco { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 6px 16px rgba(0, 58, 84,.05); }
+    .vg-bloco { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 6px 16px rgba(16, 45, 75,.05); }
     .vg-bloco-titulo { font-size: 14px; font-weight: 800; color: var(--ink); letter-spacing: .01em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
     .vg-bloco-titulo span { font-weight: 500; color: var(--ink-faint); font-size: 12px; }
     .vg-chart-wrap { width: 100%; overflow-x: auto; }
@@ -2181,10 +2181,10 @@ function injetarEstilosVG() {
     .vg-evo-head { justify-content: space-between; }
     .vg-evo-ano-lbl { font-size: 12px; font-weight: 600; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 6px; }
     .vg-evo-ano { font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ink); padding: 5px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-elevated); cursor: pointer; }
-    .vg-evo-ano:focus { outline: none; border-color: #1EBBD7; box-shadow: 0 0 0 3px rgba(30,187,215,.14); }
-    .vg-bar { fill: #06283A; transition: fill .15s; }
-    .vg-bar-g:hover .vg-bar { fill: #005073; }
-    .vg-bar-atual { fill: #1EBBD7 !important; }
+    .vg-evo-ano:focus { outline: none; border-color: #4f7fb0; box-shadow: 0 0 0 3px rgba(79, 127, 176,.14); }
+    .vg-bar { fill: #0f1d2e; transition: fill .15s; }
+    .vg-bar-g:hover .vg-bar { fill: #143352; }
+    .vg-bar-atual { fill: #4f7fb0 !important; }
     .vg-bar-val { font-size: 11px; fill: var(--ink-faint); text-anchor: middle; font-weight: 600; }
     .vg-bar-lbl { font-size: 11px; fill: var(--ink-faint); text-anchor: middle; }
     .vg-grid { stroke: #EDF1EF; stroke-width: 1; }
@@ -2197,8 +2197,8 @@ function injetarEstilosVG() {
     /* V931: tabela por especialidade (sem gráfico) */
     .vg-esp-card { margin-bottom: 20px; }
     .vg-esp-acoes { display: flex; align-items: center; gap: 14px; }
-    .vg-esp-export { border: 1px solid #DDE7E3; background: #fff; border-radius: 9px; padding: 7px 12px; font-size: 12px; font-weight: 700; color: #005073; cursor: pointer; }
-    .vg-esp-export:hover { background: #EAF4FB; border-color: #189AD3; }
+    .vg-esp-export { border: 1px solid #dfe4ea; background: #fff; border-radius: 9px; padding: 7px 12px; font-size: 12px; font-weight: 700; color: #143352; cursor: pointer; }
+    .vg-esp-export:hover { background: #f0f4f8; border-color: #2a5a8c; }
     /* V956: sem barra visível no fim da matriz — a rolagem horizontal continua
        funcionando (tela estreita), mas a barra fica invisível; e a alça de
        redimensionar coluna (cabeçalho) não acende em ciano ao passar o mouse */
@@ -2206,16 +2206,16 @@ function injetarEstilosVG() {
     .vg-esp-wrap::-webkit-scrollbar { display: none; height: 0; }
     .vg-esp-tab .atlas-col-resize:hover, .vg-esp-tab .atlas-col-resize.ativa { background: transparent; }
     .vg-esp-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    .vg-esp-tab th { background: #107DAC; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; padding: 9px 12px; text-align: left; white-space: nowrap; }
+    .vg-esp-tab th { background: #1d4470; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; padding: 9px 12px; text-align: left; white-space: nowrap; }
     .vg-esp-tab th.num, .vg-esp-tab td.num { text-align: right; font-family: var(--font-mono); white-space: nowrap; }
     /* V952: alinhado pelo TOPO — o R$ de todas as células fica na mesma linha,
        mesmo quando só algumas têm o % embaixo (com middle o R$ da célula com %
        subia e o da vizinha sem % ficava centrado, desalinhados). */
-    .vg-esp-tab td { padding: 8px 12px; border-bottom: 1px solid #EDF2F0; color: #042222; vertical-align: top; }
-    .vg-esp-tab tbody tr:hover td { background: #F4FAFD; }
-    .vg-esp-nome { font-weight: 700; color: #06283A; }
-    .vg-esp-adm { display: block; font-size: 10.5px; font-weight: 500; color: #56645E; font-family: var(--font-body, inherit); }
-    .vg-esp-pct { display: block; font-size: 10.5px; color: #56645E; font-family: var(--font-body, inherit); }
+    .vg-esp-tab td { padding: 8px 12px; border-bottom: 1px solid #EDF2F0; color: #071a30; vertical-align: top; }
+    .vg-esp-tab tbody tr:hover td { background: #f6f4ef; }
+    .vg-esp-nome { font-weight: 700; color: #0f1d2e; }
+    .vg-esp-adm { display: block; font-size: 10.5px; font-weight: 500; color: #5a6879; font-family: var(--font-body, inherit); }
+    .vg-esp-pct { display: block; font-size: 10.5px; color: #5a6879; font-family: var(--font-body, inherit); }
     .vg-esp-glosa { color: #9B3A3A; font-weight: 400; }   /* V956: sem negrito na Glosa */
     .vg-esp-rep { color: #0E7A57; font-weight: 700; }
     /* V955: modo "repasse glosado" — coluna Glosa clicável; a coluna Repasse
@@ -2226,12 +2226,12 @@ function injetarEstilosVG() {
     .vg-esp-perdido, .vg-esp-sub td.num.vg-esp-perdido { color: #C0392B !important; font-weight: 700; }
     .main .vg-esp-tab tfoot td.vg-esp-perdido, .main .vg-esp-tab tfoot td.vg-esp-perdido * { color: #C0392B !important; }
     /* V934: sem a tarja preta global do style.css (.main table tfoot td) — rodapé claro, só em negrito */
-    .main .vg-esp-tab tfoot td, .main .vg-esp-tab tfoot tr:hover td { font-weight: 800; background: #F6F9FB !important; color: #06283A !important; border-top: 2px solid #DDE7E3 !important; border-bottom: none !important; border-color: #DDE7E3 !important; }
-    .main .vg-esp-tab tfoot td * { color: #56645E !important; }
+    .main .vg-esp-tab tfoot td, .main .vg-esp-tab tfoot tr:hover td { font-weight: 800; background: #F6F9FB !important; color: #0f1d2e !important; border-top: 2px solid #dfe4ea !important; border-bottom: none !important; border-color: #dfe4ea !important; }
+    .main .vg-esp-tab tfoot td * { color: #5a6879 !important; }
     /* V934: drilldown Categoria › Subcategoria */
     .vg-esp-cat-dd { cursor: pointer; }
-    .vg-esp-seta { display: inline-block; width: 14px; color: #107DAC; font-size: 11px; }
-    .vg-esp-aberta td { background: #F4FAFD; }
+    .vg-esp-seta { display: inline-block; width: 14px; color: #1d4470; font-size: 11px; }
+    .vg-esp-aberta td { background: #f6f4ef; }
     .vg-esp-sub td { background: #FAFCFD; border-bottom: 1px dashed #E4ECE9; }
     .vg-esp-sub .vg-esp-nome { font-weight: 600; color: #2E4A57; padding-left: 34px; font-size: 12px; }
     .vg-esp-sub .vg-esp-adm { font-size: 10px; }
@@ -2240,7 +2240,7 @@ function injetarEstilosVG() {
     .vg-esp-sub td.num.vg-esp-rep { color: #0E7A57; }
     .vg-esp-nota { margin-top: 10px; font-size: 11.5px; color: #8A5A1F; background: #FBF0DA; border-radius: 8px; padding: 8px 12px; }
     .vg-il-card { background: #fff; border: 1px solid #eceff2; border-radius: 16px; padding: 22px 24px 18px;
-      box-shadow: 0 1px 2px rgba(30,45,60,.04), 0 12px 32px -18px rgba(30,45,60,.16); }
+      box-shadow: 0 1px 2px rgba(15, 29, 46,.04), 0 12px 32px -18px rgba(15, 29, 46,.16); }
     .vg-il-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 6px; }
     .vg-il-titulo { font-size: 17px; font-weight: 700; color: #1b2733; letter-spacing: -.01em; }
     .vg-il-sub { font-size: 12.5px; color: #8b98a5; margin-top: 3px; }
@@ -2252,7 +2252,7 @@ function injetarEstilosVG() {
     .vg-il-mk { width: 10px; height: 10px; border-radius: 2px; flex: none; display: inline-block; }
     /* V546: azul do PRODUZIDO = mesmo gradiente da barra do Top 10 (gráfico ao lado) */
     .vg-il-mk-pro { background: linear-gradient(90deg, #14364a, #3fb6d4); }
-    .vg-il-mk-glo { background: #e0483f; } .vg-il-mk-rep { background: #1EBBD7; }   /* V547: ciano */
+    .vg-il-mk-glo { background: #e0483f; } .vg-il-mk-rep { background: #4f7fb0; }   /* V547: ciano */
     .vg-il-leg-obs { margin-left: auto; color: #94a1ad; }
     .vg-il-lista { display: flex; flex-direction: column; }
     /* V580: Performance com TODOS os elegíveis — rola na altura do Top 10 */
@@ -2265,8 +2265,8 @@ function injetarEstilosVG() {
     .vg-il-row:hover { background: #fafcfd; }
     .vg-il-pos { width: 30px; height: 30px; border-radius: 50%; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
     /* V953: a numeração do Top 10 ganhou o MESMO efeito da Performance médica
-       (círculo claro #eef2f5, número #52606d) — antes era marinho com branco */
-    .vg-il-pos-rank, .vg-il-pos-neutra { background: #eef2f5; color: #52606d; }
+       (círculo claro #eef2f5, número #5a6879) — antes era marinho com branco */
+    .vg-il-pos-rank, .vg-il-pos-neutra { background: #eef2f5; color: #5a6879; }
     .vg-il-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
     .vg-il-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
     .vg-il-nome { font-size: 14px; font-weight: 700; color: #1b2733; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2283,7 +2283,7 @@ function injetarEstilosVG() {
     .vg-il-stack { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: #eef2f5; min-width: 2px; }
     .vg-il-seg { height: 14px; }
     .vg-il-seg-pro { background: linear-gradient(90deg, #14364a, #3fb6d4); }   /* V546: = Top 10 */
-    .vg-il-seg-glo { background: #e0483f; } .vg-il-seg-rep { background: #1EBBD7; }   /* V547: ciano */
+    .vg-il-seg-glo { background: #e0483f; } .vg-il-seg-rep { background: #4f7fb0; }   /* V547: ciano */
     .vg-il-c-pro { color: #1c7fb0; font-weight: 700; } .vg-il-cmp-pro { color: #7fb1cd; font-weight: 600; }
     .vg-il-c-glo { color: #c03a3a; font-weight: 700; } .vg-il-cmp-glo { color: #d9908c; font-weight: 600; }
     .vg-il-c-rep { color: #128FA6; font-weight: 700; } .vg-il-cmp-rep { color: #7EC8D8; font-weight: 600; }   /* V547: ciano (texto legível) */
@@ -2297,22 +2297,22 @@ function injetarEstilosVG() {
        eixo Y fixo, gridlines, pílula da diferença. Geometria do handoff. */
     .vg-dr-card { background: #fff; border: 1px solid #e4eaef; border-radius: 8px;
       padding: 18px 20px 16px; margin-bottom: 20px;
-      box-shadow: 0 1px 2px rgba(16,42,66,.05), 0 12px 28px -20px rgba(16,42,66,.28); }
+      box-shadow: 0 1px 2px rgba(16, 45, 75,.05), 0 12px 28px -20px rgba(16, 45, 75,.28); }
     .vg-dr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
-    .vg-dr-titulo { font-size: 16px; font-weight: 700; color: #14384f; letter-spacing: -.005em; }
-    .vg-dr-sub { font-size: 12px; color: #90a1ae; margin-top: 3px; }
+    .vg-dr-titulo { font-size: 16px; font-weight: 700; color: #12304f; letter-spacing: -.005em; }
+    .vg-dr-sub { font-size: 12px; color: #96a2b1; margin-top: 3px; }
     .vg-dr-leg { display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
-      font-size: 12px; font-weight: 600; color: #14384f;
+      font-size: 12px; font-weight: 600; color: #12304f;
       padding-bottom: 14px; border-bottom: 1px solid #edf1f4; }
     .vg-dr-leg > span { display: flex; align-items: center; gap: 7px; }
     .vg-dr-leg b { color: #5d7385; font-weight: 700; }
     .vg-dr-sw { width: 11px; height: 11px; border-radius: 2px; flex: none; display: inline-block;
-      box-shadow: 0 1px 2px rgba(16,42,66,.25); }
-    .vg-dr-sw-des { background: linear-gradient(180deg, #4fd3ec, #1aa9c9); }
+      box-shadow: 0 1px 2px rgba(16, 45, 75,.25); }
+    .vg-dr-sw-des { background: linear-gradient(180deg, #8faccb, #1aa9c9); }
     .vg-dr-sw-rep { background: linear-gradient(180deg, #14364a, #3fb6d4); }   /* V582 */
     .vg-dr-plot { display: flex; align-items: flex-start; }
     .vg-dr-eixoy { position: relative; flex: none; width: 56px; margin-top: 24px; }
-    .vg-dr-ylbl { position: absolute; right: 10px; font-size: 10.5px; font-weight: 600; color: #a4b2bd;
+    .vg-dr-ylbl { position: absolute; right: 10px; font-size: 10.5px; font-weight: 600; color: #96a2b1;
       transform: translateY(50%); white-space: nowrap; }
     .vg-dr-scroller { overflow-x: auto; overflow-y: hidden; flex: 1; min-width: 0; }
     .vg-dr-scroller::-webkit-scrollbar { height: 8px; }
@@ -2327,12 +2327,12 @@ function injetarEstilosVG() {
     .vg-dr-barras { display: flex; align-items: flex-end; justify-content: center; gap: 0; width: 100%; }   /* V579: coladas */
     .vg-dr-barra-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
     .vg-dr-val { font-size: 10px; font-weight: 700; padding-bottom: 7px; white-space: nowrap; }   /* V584: 10px */
-    .vg-dr-val-des { color: #14384f; }
-    .vg-dr-val-rep { color: #16456b; }
+    .vg-dr-val-des { color: #12304f; }
+    .vg-dr-val-rep { color: #143352; }
     .vg-dr-bar { position: relative; width: 54px; transition: filter .12s ease; }
     .vg-dr-bar-des { border-radius: 4px 0 0 0; }
     .vg-dr-bar-rep { border-radius: 0 4px 0 0; }
-    .vg-dr-bar-des { background: linear-gradient(180deg, #4fd3ec 0%, #29c0e0 55%, #1aa9c9 100%);
+    .vg-dr-bar-des { background: linear-gradient(180deg, #8faccb 0%, #29c0e0 55%, #1aa9c9 100%);
       box-shadow: 0 -1px 0 rgba(255,255,255,.5) inset, 0 10px 18px -10px rgba(26,169,201,.75); }
     .vg-dr-bar-rep { background: linear-gradient(180deg, #14364a, #3fb6d4);   /* V582: = barra do Top 10 */
       box-shadow: 0 -1px 0 rgba(255,255,255,.28) inset, 0 10px 18px -10px rgba(20,54,74,.7); }
@@ -2349,7 +2349,7 @@ function injetarEstilosVG() {
     .vg-dr-pill { font-size: 10px; font-weight: 700; color: #1b2733; white-space: nowrap; }
     .vg-dr-pill-pos { background: #15a34a; }   /* V711 (era #1d8f5f) */
     .vg-dr-pill-neg { background: #c0563f; }
-    .vg-dr-pill-zero { background: #a4b2bd; }
+    .vg-dr-pill-zero { background: #96a2b1; }
     .vg-dr-pill-pct { background: transparent; }   /* V583: sem fundo */
 
     .vg-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -2364,7 +2364,7 @@ function injetarEstilosVG() {
     .vg-gc-bloco { background: #fff; border: 1px solid #eceff2; border-radius: 16px;
       padding: 22px 24px 18px; margin-bottom: 0; height: 100%; box-sizing: border-box;
       display: flex; flex-direction: column;
-      box-shadow: 0 1px 2px rgba(30,45,60,.04), 0 12px 32px -18px rgba(30,45,60,.16); }
+      box-shadow: 0 1px 2px rgba(15, 29, 46,.04), 0 12px 32px -18px rgba(15, 29, 46,.16); }
     .vg-gc-loading { padding: 40px 0; text-align: center; }
     /* V872: "Evolução da Glosa Fato" — mesmo cartão do 2B, só que em LARGURA
        TOTAL e com altura própria (fora da grade 50/50, height:100% não vale) */
@@ -2393,7 +2393,7 @@ function injetarEstilosVG() {
     .vg-gc-chip-red .vg-gc-chip-lbl { color: #c78d88; }
     .vg-gc-chip-val { font-size: 15px; font-weight: 700; color: #1b2733; white-space: nowrap; }
     .vg-gc-chip-red .vg-gc-chip-val { color: #c03a3a; }
-    .vg-gc-legenda { display: flex; gap: 16px; align-items: center; font-size: 11.5px; color: #52606d; flex-wrap: wrap; margin-bottom: 14px; }
+    .vg-gc-legenda { display: flex; gap: 16px; align-items: center; font-size: 11.5px; color: #5a6879; flex-wrap: wrap; margin-bottom: 14px; }
     .vg-gc-legenda > span { display: flex; align-items: center; gap: 8px; }
     .vg-gc-mk { display: inline-block; flex: none; }
     .vg-gc-plot { display: flex; align-items: flex-end; gap: 0; flex: 1; }   /* V548: plot cresce */
@@ -2425,22 +2425,22 @@ function injetarEstilosVG() {
       display: flex; flex-direction: column; align-items: center; gap: 2px; white-space: nowrap; z-index: 7; }
     .vg-gc-sobre .vg-gc-perdido { position: static; transform: none; margin: 0; }
     .vg-gc-meses { display: flex; gap: 30px; padding-top: 14px; border-top: 1px solid #e4e9ee; }
-    .vg-gc-mes { width: 88px; flex-shrink: 0; text-align: center; font-size: 13px; font-weight: 600; color: #52606d; }
+    .vg-gc-mes { width: 88px; flex-shrink: 0; text-align: center; font-size: 13px; font-weight: 600; color: #5a6879; }
     .vg-gc-foot { font-size: 12px; color: #a6b1bc; padding-left: 76px; margin-top: 4px; }
     .vg-rank-scroll { max-height: 520px; overflow-y: auto; padding-right: 6px; }
     .vg-rank-scroll::-webkit-scrollbar { width: 7px; }
     .vg-rank-scroll::-webkit-scrollbar-thumb { background: #D3DEDA; border-radius: 4px; }
     .vg-rank-row { display: flex; gap: 12px; align-items: center; padding: 4px 6px; border-radius: 9px; transition: background .12s; }
     .vg-rank-row:hover { background: #F5F8F6; }
-    .vg-rank-pos { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%; background: #06283A; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .vg-rank-pos { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%; background: #0f1d2e; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
     .vg-pos-glosa { background: #A35A2A; }
     .vg-rank-body { flex: 1; min-width: 0; }
     .vg-rank-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
     .vg-rank-nome { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.25; }
-    .vg-rank-val { font-size: 13px; font-weight: 800; color: #005073; white-space: nowrap; }
+    .vg-rank-val { font-size: 13px; font-weight: 800; color: #143352; white-space: nowrap; }
     .vg-val-glosa { color: #A35A2A; }
     .vg-rank-barra { height: 6px; background: #EDF1EF; border-radius: 4px; margin: 4px 0 2px; overflow: hidden; }
-    .vg-rank-fill { height: 100%; background: linear-gradient(90deg, #005073, #1EBBD7); border-radius: 4px; }
+    .vg-rank-fill { height: 100%; background: linear-gradient(90deg, #143352, #4f7fb0); border-radius: 4px; }
     .vg-fill-glosa { background: linear-gradient(90deg, #A35A2A, #D89A5A); }
     .vg-rank-pct { font-size: 11px; color: var(--ink-faint); }
     .vg-vazio { color: var(--ink-faint); font-size: 13px; padding: 12px 4px; }

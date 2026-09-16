@@ -693,7 +693,7 @@ App.telas['de-para-nomes'] = function () {
           <div style="font-weight: 600">${escapeHTML(l.nome)}</div>
           ${badgeStatus ? `<div style="margin-top: 3px">${badgeStatus}</div>` : ''}
           ${ehJuscelino ? `
-            <div style="font-size: 10px; color: #005073; margin-top: 3px">
+            <div style="font-size: 10px; color: #143352; margin-top: 3px">
               ⚠ Parece nome de pessoa pública — possível erro no sistema do hospital
             </div>
           ` : ''}
@@ -745,7 +745,7 @@ App.telas['de-para-nomes'] = function () {
         <option value="__NOVO__">+ Cadastrar como novo médico</option>
         <option value="__IGNORAR__">— Ignorar (não vincular) —</option>
         ${l.sugestao ? `
-          <option value="${l.sugestao.id}" ${l.status === 'pendente' ? 'selected' : ''} style="font-weight: 600; background: #E1EFF6">
+          <option value="${l.sugestao.id}" ${l.status === 'pendente' ? 'selected' : ''} style="font-weight: 600; background: #e4ecf4">
             ✨ ${escapeHTML(l.sugestao.nome_oficial)} (sugestão)
           </option>
         ` : ''}
@@ -1200,7 +1200,7 @@ App.telas['de-para-nomes'] = function () {
           align-items: center;
         }
 
-        .dp-tabela tr.dp-linha-sugestao { background: #E1EFF6; }
+        .dp-tabela tr.dp-linha-sugestao { background: #e4ecf4; }
         .dp-tabela tr.dp-linha-ok       { background: rgba(216, 234, 211, 0.3); }
         .dp-tabela tr.dp-linha-ignorado { background: rgba(0, 0, 0, 0.025); }
         .dp-tabela tr.dp-linha-ignorado td { color: var(--ink-faint); }
@@ -1216,7 +1216,7 @@ App.telas['de-para-nomes'] = function () {
         }
         .dp-select-sugestao {
           border-color: var(--accent);
-          background: #E1EFF6;
+          background: #e4ecf4;
           font-weight: 600;
         }
 
@@ -1238,8 +1238,8 @@ App.telas['de-para-nomes'] = function () {
         .dp-badge-ok {
           display: inline-block;
           padding: 1px 6px;
-          background: #DBF0F9;
-          color: #005073;
+          background: #e4ecf4;
+          color: #143352;
           border: 1px solid #9FD9C7;
           border-radius: 4px;
           font-size: 9px;
@@ -1249,7 +1249,7 @@ App.telas['de-para-nomes'] = function () {
           display: inline-block;
           padding: 1px 6px;
           background: #E8EDE9;
-          color: #005073;
+          color: #143352;
           border: 1px solid #C2D2C9;
           border-radius: 4px;
           font-size: 9px;
@@ -1280,7 +1280,7 @@ App.telas['de-para-nomes'] = function () {
           color: white;
           border-color: var(--primary);
         }
-        .dp-btn-aceitar:hover { background: var(--primary-hover, #0C3A2F); }
+        .dp-btn-aceitar:hover { background: var(--primary-hover, #0b2340); }
         .dp-btn-vincular {
           background: var(--bg-elevated);
           color: var(--ink-soft);

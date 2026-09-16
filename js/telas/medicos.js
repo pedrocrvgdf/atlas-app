@@ -119,7 +119,7 @@ App.telas['medicos'] = function () {
           }
           .medico-stat-card.is-ativo {
             border-color: var(--primary);
-            background: #F1F7F7;
+            background: #f6f4ef;
             box-shadow: inset 0 0 0 1px var(--primary);
           }
           .medico-stat-card::before {
@@ -130,10 +130,10 @@ App.telas['medicos'] = function () {
           }
           .medico-stat-card.is-ativo::before { width: 5px; }
           .medico-stat-total::before    { background: var(--primary); }
-          .medico-stat-interno::before  { background: #005073; }
-          .medico-stat-hibrido::before  { background: #005073; }
+          .medico-stat-interno::before  { background: #143352; }
+          .medico-stat-hibrido::before  { background: #143352; }
           .medico-stat-externo::before  { background: #8A4B1F; }
-          .medico-stat-fellow::before   { background: #189AD3; }
+          .medico-stat-fellow::before   { background: #2a5a8c; }
           .medico-stat-aviso::before    { background: #9B3A3A; }
           .medico-stat-label {
             font-size: 10px;
@@ -232,7 +232,7 @@ App.telas['medicos'] = function () {
       }
       .esp-btn.ativo {
         background: var(--primary);
-        color: #F1F7F7;
+        color: #f6f4ef;
         border-color: var(--primary);
       }
       .esp-btn .qtd {
@@ -258,7 +258,7 @@ App.telas['medicos'] = function () {
       .lista-medicos-table thead th {
         padding: 12px 14px;
         text-align: left;
-        color: #F1F7F7;
+        color: #f6f4ef;
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -392,13 +392,13 @@ App.telas['medicos'] = function () {
   // consistente entre sessões.
 
   const PALETA_ESPECIALIDADES = [
-    { bg: '#E8EDE9', fg: '#005073', bd: '#C2D2C9' },  // verde profundo
-    { bg: '#DBF0F9', fg: '#005073', bd: '#9FE6C9' },  // dourado/âmbar
+    { bg: '#E8EDE9', fg: '#143352', bd: '#C2D2C9' },  // verde profundo
+    { bg: '#e4ecf4', fg: '#143352', bd: '#9FE6C9' },  // dourado/âmbar
     { bg: '#E0E8F0', fg: '#2A4A6E', bd: '#B5C5D8' },  // azul aço
     { bg: '#F0E0E0', fg: '#7A2C2C', bd: '#D8B5B5' },  // vermelho terra
     { bg: '#EAE3F0', fg: '#5A3A78', bd: '#C8B8D8' },  // roxo suave
     { bg: '#FBE8D6', fg: '#8A4B1F', bd: '#E8C5A0' },  // laranja queimado
-    { bg: '#DBF0F9', fg: '#005073', bd: '#9FD9C7' },  // verde água
+    { bg: '#e4ecf4', fg: '#143352', bd: '#9FD9C7' },  // verde água
     { bg: '#F5E0E8', fg: '#7A2C58', bd: '#DDB5C8' },  // rosa antigo
     { bg: '#E6E0D4', fg: '#5A4A2C', bd: '#C8BCA5' },  // bege/oliva
     { bg: '#D8E3E8', fg: '#2C5462', bd: '#A8C0CA' },  // teal escuro
@@ -1178,7 +1178,7 @@ function abrirModal({ titulo, conteudo, acoes, onAcao, apos, aoFechar }) {
   const overlay = document.createElement('div');
   overlay.id = 'app-modal-overlay';
   overlay.style.cssText = `
-    position: fixed; inset: 0; background: rgba(26, 36, 33, 0.5);
+    position: fixed; inset: 0; background: rgba(15, 29, 46, 0.5);
     display: flex; align-items: center; justify-content: center;
     z-index: 5000; padding: 20px; 
     animation: fade-in-up 200ms;
@@ -1284,7 +1284,7 @@ async function abrirEdicaoMedico(medicoId) {
         </div>
         <!-- V699: médico externo/híbrido pertence a uma clínica (módulo Externos) -->
         <div class="field" id="modal-clinica-wrap" style="${med.tipo_vinculo === 'EXTERNO' || med.tipo_vinculo === 'HIBRIDO' ? '' : 'display:none'}">
-          <label>Clínica externa (módulo Externos)</label>
+          <label>Clínica externa</label>
           <select class="select" id="modal-clinica">
             <option value="">— Sem clínica —</option>
             ${Banco.query('SELECT id, nome, cnpj FROM externos_clinicas WHERE ativo = 1 ORDER BY nome')

@@ -80,8 +80,8 @@
     const n = norm(nome).replace(/[ÇC]/g, 'C');
     if (n.indexOf('QVIS') >= 0) return '#2C7A5B';                 // rel-tag-qvis
     if (n.indexOf('GLOSA') >= 0) return '#9B3A3A';               // rel-tag-glosa
-    if (n.indexOf('AJUSTE') >= 0 || n.indexOf('PRODU') >= 0) return '#5B736C'; // rel-tag-atlas
-    if (n.indexOf('DESEMPENHO') >= 0) return '#189AD3';         // rel-tag-desemp
+    if (n.indexOf('AJUSTE') >= 0 || n.indexOf('PRODU') >= 0) return '#5a6879'; // rel-tag-atlas
+    if (n.indexOf('DESEMPENHO') >= 0) return '#2a5a8c';         // rel-tag-desemp
     return '#B4B2A9';                                            // rel-tag-neutra
   }
 

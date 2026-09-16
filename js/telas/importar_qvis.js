@@ -142,7 +142,7 @@ App.telas['importar-qvis'] = function () {
       console.error('Erro Importação QVIS:', e);
       document.getElementById('conteudo').innerHTML = `
         <div class="page-content">
-          <header class="page-header"><h2>Importação QVIS</h2></header>
+          <header class="page-header"><h2>Importar Sistema</h2></header>
           <div class="card" style="background: #FEE; border-color: #D88; padding: 18px">
             <h3 style="margin: 0 0 8px; color: #9B3A3A">⚠ Erro</h3>
             <pre style="font-size: 11px; white-space: pre-wrap">${escapeHTML(e.message)}\n\n${escapeHTML(e.stack || '')}</pre>
@@ -257,8 +257,8 @@ App.telas['importar-qvis'] = function () {
       <div class="page-content impq-page">
         <header class="page-header">
           <div>
-            <h2>Importação QVIS</h2>
-            <div class="subtitle">Importe os relatórios mensais Convênio + Particular para alimentar os fichários de Desempenho</div>
+            <h2>Importar Sistema</h2>
+            <div class="subtitle">O relatório do sistema (QVIS) — importe os mensais Convênio + Particular; é dele que saem o cálculo e a auditoria</div>
           </div>
           <div class="impq-header-acoes">
             <button class="btn btn-secondary ${flt.aberto || temFiltro ? 'impq-filtro-on' : ''}" id="impq-btn-filtro"
@@ -296,7 +296,7 @@ App.telas['importar-qvis'] = function () {
 
     return `
       <div class="impq-drops-grid">
-        ${renderDropArea('convenio', '🏥', 'Convênio', '#003A54', window.__impQvis.arquivoConvenio, temConv)}
+        ${renderDropArea('convenio', '🏥', 'Convênio', '#102d4b', window.__impQvis.arquivoConvenio, temConv)}
         ${renderDropArea('particular', '💳', 'Particular', '#6B4587', window.__impQvis.arquivoParticular, temPart)}
       </div>
     `;
@@ -366,7 +366,7 @@ App.telas['importar-qvis'] = function () {
               </div>
               <div class="impq-resumo-linha">
                 <span class="impq-resumo-lbl">Adm. c/ RECEBIDO zero:</span>
-                <span class="impq-resumo-val mono" style="color: ${(p.estatisticas?.linhasRecebidoZero || 0) > 0 ? '#005073' : 'var(--ink)'}">${(p.estatisticas?.linhasRecebidoZero || 0).toLocaleString('pt-BR')}</span>
+                <span class="impq-resumo-val mono" style="color: ${(p.estatisticas?.linhasRecebidoZero || 0) > 0 ? '#143352' : 'var(--ink)'}">${(p.estatisticas?.linhasRecebidoZero || 0).toLocaleString('pt-BR')}</span>
               </div>
               ${temProb ? `
                 <div class="impq-problemas">
@@ -467,7 +467,7 @@ App.telas['importar-qvis'] = function () {
           </div>
           <div class="impq-preview-item">
             <div class="impq-preview-lbl">Linhas a substituir</div>
-            <div class="impq-preview-val mono" style="color: ${temSubstituicao ? '#005073' : 'var(--ink-faint)'}">${temSubstituicao ? '−' : ''}${totalLinhasSubstituidas.toLocaleString('pt-BR')}</div>
+            <div class="impq-preview-val mono" style="color: ${temSubstituicao ? '#143352' : 'var(--ink-faint)'}">${temSubstituicao ? '−' : ''}${totalLinhasSubstituidas.toLocaleString('pt-BR')}</div>
           </div>
         </div>
 
@@ -872,7 +872,7 @@ App.telas['importar-qvis'] = function () {
               Adm. c/ RECEBIDO zero
               ${dados.adm_receb_zero > 0 ? `<button class="impq-extrair-mini" data-extrair-zero="${dados.mes_pagamento}|${dados.origem}|RECEBIDO" title="Exportar admissões com RECEBIDO=0">📥</button>` : ''}
             </span>
-            <span class="impq-detalhe-val mono" style="color:${dados.adm_receb_zero > 0 ? '#005073' : 'var(--ink)'}">${dados.adm_receb_zero.toLocaleString('pt-BR')}</span>
+            <span class="impq-detalhe-val mono" style="color:${dados.adm_receb_zero > 0 ? '#143352' : 'var(--ink)'}">${dados.adm_receb_zero.toLocaleString('pt-BR')}</span>
           </div>
           ${dados.arquivo_nome ? `
             <div class="impq-detalhe-linha impq-detalhe-arquivo">
@@ -897,7 +897,7 @@ App.telas['importar-qvis'] = function () {
         ${headerCompacto}
         <div class="impq-card-snap-corpo">
           <div class="impq-detalhe-grid">
-            ${renderDetalheOrigem('🏥 CONVÊNIO', '#003A54', s.conv)}
+            ${renderDetalheOrigem('🏥 CONVÊNIO', '#102d4b', s.conv)}
             ${renderDetalheOrigem('💳 PARTICULAR', '#6B4587', s.part)}
           </div>
           <div class="impq-detalhe-rodape">
@@ -1359,7 +1359,7 @@ App.telas['importar-qvis'] = function () {
   function pedirCodigoRelatorio(arquivoNome, tipo, codigoAtual = '', dataAtual = '') {
     return new Promise((resolve) => {
       const labelOrigem = tipo === 'convenio' ? 'Convênio' : 'Particular';
-      const corOrigem = tipo === 'convenio' ? '#003A54' : '#6B4587';
+      const corOrigem = tipo === 'convenio' ? '#102d4b' : '#6B4587';
       const isEdicao = !!codigoAtual;
 
       const overlay = document.createElement('div');
@@ -2481,7 +2481,7 @@ App.telas['importar-qvis'] = function () {
 
           ${qtdConv > 0 ? `
             <div class="impq-edit-pgto-campo">
-              <label class="impq-edit-pgto-label" style="color:#003A54">🏥 Código do relatório — Convênio</label>
+              <label class="impq-edit-pgto-label" style="color:#102d4b">🏥 Código do relatório — Convênio</label>
               <input type="text" id="impq-edit-cod-conv"
                      class="impq-codigo-input mono"
                      value="${escapeAttr(codConvAtual)}"
@@ -2704,7 +2704,7 @@ App.telas['importar-qvis'] = function () {
         .impq-filtro-grid .input { width: 100%; padding: 7px 9px; }
         .impq-filtro-rodape {
           margin-top: 9px; display: flex; align-items: center; gap: 10px;
-          font-size: 12px; color: var(--ink-soft, #56645E);
+          font-size: 12px; color: var(--ink-soft, #5a6879);
         }
         .impq-filtro-on {
           background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important;
@@ -2716,7 +2716,7 @@ App.telas['importar-qvis'] = function () {
           display: inline-block; padding: 1px 7px; border-radius: 999px;
           font-size: 10px; font-weight: 800; letter-spacing: .04em; color: #fff;
         }
-        .impq-f-convenio { background: #003A54; }
+        .impq-f-convenio { background: #102d4b; }
         .impq-f-particular { background: #6B4587; }
 
         .impq-drops-grid {
@@ -2785,11 +2785,11 @@ App.telas['importar-qvis'] = function () {
         }
         .impq-drop-zona:hover {
           border-color: var(--accent);
-          background: rgba(24, 154, 211, 0.05);
+          background: rgba(42, 90, 140, 0.05);
         }
         .impq-drop-zona.impq-drag-hover {
           border-color: var(--primary);
-          background: rgba(0, 80, 115, 0.06);
+          background: rgba(20, 51, 82, 0.06);
         }
         .impq-drop-area { text-align: center; padding: 10px; }
         .impq-drop-icone-grande { font-size: 24px; margin-bottom: 6px; opacity: 0.55; }
@@ -2824,30 +2824,30 @@ App.telas['importar-qvis'] = function () {
         .impq-problemas {
           margin-top: 8px;
           padding: 6px 10px;
-          background: #E1EFF6; border: 1px solid #9FE6C9;
+          background: #e4ecf4; border: 1px solid #9FE6C9;
           border-radius: 6px;
-          font-size: 10px; color: #005073;
+          font-size: 10px; color: #143352;
           display: flex; align-items: center; justify-content: space-between;
         }
         .impq-ver-problemas {
-          background: transparent; border: 1px solid #005073;
-          color: #005073; padding: 1px 8px; border-radius: 4px;
+          background: transparent; border: 1px solid #143352;
+          color: #143352; padding: 1px 8px; border-radius: 4px;
           font-size: 10px; cursor: pointer;
         }
-        .impq-ver-problemas:hover { background: #005073; color: white; }
+        .impq-ver-problemas:hover { background: #143352; color: white; }
 
         /* Preview */
         .impq-preview {
-          background: linear-gradient(135deg, #005073, #0C3A2F);
-          color: #F1F7F7;
+          background: linear-gradient(135deg, #143352, #0b2340);
+          color: #f6f4ef;
           border-radius: 12px; padding: 18px 22px;
           margin-bottom: 18px;
-          box-shadow: 0 4px 12px rgba(0, 80, 115,.2);
+          box-shadow: 0 4px 12px rgba(20, 51, 82,.2);
         }
         .impq-preview-titulo {
           font-size: 12px; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.06em;
-          color: #189AD3;
+          color: #2a5a8c;
           display: flex; align-items: center; gap: 8px;
           margin-bottom: 14px;
         }
@@ -2858,7 +2858,7 @@ App.telas['importar-qvis'] = function () {
         @media (max-width: 700px) { .impq-preview-grid { grid-template-columns: repeat(2, 1fr); } }
         .impq-preview-item {}
         .impq-preview-lbl {
-          font-size: 9px; color: #B9D4CB; font-weight: 700;
+          font-size: 9px; color: #c5d5e5; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.05em;
           margin-bottom: 4px;
         }
@@ -2876,8 +2876,8 @@ App.telas['importar-qvis'] = function () {
           display: flex; gap: 8px; justify-content: flex-end;
         }
         .impq-acoes .btn-pequeno {
-          background: transparent; color: #F1F7F7;
-          border: 1px solid #B9D4CB;
+          background: transparent; color: #f6f4ef;
+          border: 1px solid #c5d5e5;
         }
         .impq-acoes .btn-pequeno:hover {
           background: rgba(255,255,255,0.1);
@@ -2983,9 +2983,9 @@ App.telas['importar-qvis'] = function () {
           background: var(--bg-elevated);
           transition: background 150ms;
         }
-        .impq-card-snap-header:hover { background: rgba(24, 154, 211, 0.06); }
+        .impq-card-snap-header:hover { background: rgba(42, 90, 140, 0.06); }
         .impq-card-snap-expandido .impq-card-snap-header {
-          background: linear-gradient(135deg, #E8F1F7, #DBF0F9);
+          background: linear-gradient(135deg, #e9edf1, #e4ecf4);
           border-bottom: 1px solid var(--border);
         }
         .impq-card-snap-seta {
@@ -3101,14 +3101,14 @@ App.telas['importar-qvis'] = function () {
         /* Seletor de mês de pagamento na área de arquivo */
         .impq-mes-pgto {
           margin-top: 12px; padding: 10px 12px;
-          background: linear-gradient(135deg, #E8F1F7, #DBF0F9);
+          background: linear-gradient(135deg, #e9edf1, #e4ecf4);
           border: 1px solid #9FE6C9;
-          border-left: 3px solid #189AD3;
+          border-left: 3px solid #2a5a8c;
           border-radius: 6px;
         }
         .impq-mes-pgto-label {
           font-size: 10px; font-weight: 700;
-          color: #003A54; letter-spacing: 0.05em;
+          color: #102d4b; letter-spacing: 0.05em;
           text-transform: uppercase; margin-bottom: 6px;
         }
         .impq-mes-pgto-select {
@@ -3119,7 +3119,7 @@ App.telas['importar-qvis'] = function () {
           cursor: pointer;
         }
         .impq-mes-pgto-hint {
-          font-size: 10px; color: #005073;
+          font-size: 10px; color: #143352;
           margin-top: 4px; font-style: italic;
         }
 
@@ -3175,7 +3175,7 @@ App.telas['importar-qvis'] = function () {
           border: 1px solid var(--border); border-radius: 6px;
           cursor: pointer;
         }
-        .impq-comp-linha:hover { background: rgba(24, 154, 211, 0.08); }
+        .impq-comp-linha:hover { background: rgba(42, 90, 140, 0.08); }
         .impq-comp-linha input[type="radio"] { cursor: pointer; }
         .impq-comp-nome {
           flex: 1; font-weight: 700;
@@ -3188,14 +3188,14 @@ App.telas['importar-qvis'] = function () {
           font-size: 10px; padding: 2px 8px;
           border-radius: 4px; font-weight: 700;
         }
-        .impq-tag-conv { background: #DBF0F9; color: #005073; }
+        .impq-tag-conv { background: #e4ecf4; color: #143352; }
         .impq-tag-part { background: #ECE5F2; color: #6B4587; }
         .impq-tag-conv-sem-cod, .impq-tag-part-sem-cod {
           font-size: 10px; padding: 2px 8px;
           border-radius: 4px; font-weight: 700;
-          background: #E8F1F7;
+          background: #e9edf1;
           border: 1px dashed #9FE6C9;
-          color: #005073;
+          color: #143352;
         }
         .impq-tag-conv-sem-cod em, .impq-tag-part-sem-cod em {
           font-style: italic; font-weight: 500;
@@ -3235,7 +3235,7 @@ App.telas['importar-qvis'] = function () {
           font-size: 11px;
           color: var(--accent);
           font-weight: 700;
-          background: rgba(24, 154, 211, 0.12);
+          background: rgba(42, 90, 140, 0.12);
           padding: 2px 8px;
           border-radius: 10px;
         }
@@ -3336,7 +3336,7 @@ App.telas['importar-qvis'] = function () {
         }
         .impq-codigo-input:focus {
           border-color: var(--primary);
-          box-shadow: 0 0 0 3px rgba(0, 80, 115, 0.1);
+          box-shadow: 0 0 0 3px rgba(20, 51, 82, 0.1);
         }
         .impq-codigo-hint {
           font-size: 10px;
@@ -3349,14 +3349,14 @@ App.telas['importar-qvis'] = function () {
           font-family: var(--font-mono);
         }
         .impq-tag-adm {
-          background: #E8F1F7; color: #003A54;
+          background: #e9edf1; color: #102d4b;
           font-family: var(--font-mono);
         }
         .impq-aviso-modal {
           margin-top: 14px;
-          background: #E1EFF6; border-left: 3px solid #9FE6C9;
+          background: #e4ecf4; border-left: 3px solid #9FE6C9;
           padding: 10px 14px; border-radius: 6px;
-          font-size: 12px; color: #003A54; line-height: 1.5;
+          font-size: 12px; color: #102d4b; line-height: 1.5;
         }
 
         /* Lista detalhada de competências no Status */
@@ -3413,11 +3413,11 @@ App.telas['importar-qvis'] = function () {
           display: flex; align-items: center; gap: 6px;
         }
         .impq-pgto-ok {
-          padding: 2px 8px; background: #DBF0F9; color: #005073;
+          padding: 2px 8px; background: #e4ecf4; color: #143352;
           border-radius: 4px; font-size: 11px; font-weight: 700;
         }
         .impq-pgto-vazio {
-          padding: 2px 8px; background: #E1EFF6; color: #005073;
+          padding: 2px 8px; background: #e4ecf4; color: #143352;
           border-radius: 4px; font-size: 11px; font-weight: 700;
           font-style: italic;
         }
@@ -3435,7 +3435,7 @@ App.telas['importar-qvis'] = function () {
         .impq-comp-master {
           display: flex; justify-content: space-between; align-items: center;
           padding: 8px 12px;
-          background: rgba(0, 80, 115, 0.04);
+          background: rgba(20, 51, 82, 0.04);
           border: 1px solid var(--border);
           border-radius: 8px;
           margin-bottom: 10px;
@@ -3454,8 +3454,8 @@ App.telas['importar-qvis'] = function () {
         }
         .impq-resumo-exp {
           margin-top: 12px; padding: 10px 14px;
-          background: linear-gradient(135deg, #005073, #0C3A2F);
-          color: #F1F7F7;
+          background: linear-gradient(135deg, #143352, #0b2340);
+          color: #f6f4ef;
           border-radius: 8px; font-size: 13px;
         }
         .impq-resumo-exp strong { color: #9FE6C9; }
@@ -3522,7 +3522,7 @@ App.telas['importar-qvis'] = function () {
         .impq-snap-mes {
           font-weight: 700;
           color: var(--accent);
-          background: rgba(24, 154, 211, 0.1);
+          background: rgba(42, 90, 140, 0.1);
           padding: 4px 10px;
           border-radius: 6px;
           text-align: center;
@@ -3568,7 +3568,7 @@ App.telas['importar-qvis'] = function () {
           color: #C8F5C0; font-weight: 600;
         }
         .impq-snap-arrow {
-          color: #B9D4CB; font-weight: 700;
+          color: #c5d5e5; font-weight: 700;
         }
         .impq-aviso-erro {
           background: rgba(155, 58, 58, 0.15) !important;
@@ -3630,7 +3630,7 @@ App.telas['importar-qvis'] = function () {
           padding: 3px 9px;
           background: white;
           border: 1px dashed #D8B870;
-          color: #005073;
+          color: #143352;
           border-radius: 4px;
           font-weight: 600;
         }

@@ -25,31 +25,48 @@ html:not(.fonts-ready) .ti::before { visibility: hidden !important; }
 
 /* --- Tokens de design --- */
 :root {
-  /* Paleta ATLAS — azul (Dark Blue / Cerulean / Cyan) + neutros azul-claros */
-  --bg:               #F5FAFD;   /* branco-azulado */
+  /* ATLAS v1.1: a paleta da LOGO — o titã é azul-marinho #143352 sobre papel,
+     o globo é o cinza-azulado #757b8b. Toda a ferramenta usa os tons dessa
+     cor; verde/amarelo/vermelho ficam só como status. */
+  --azul-950:         #071a30;
+  --azul-900:         #0b2340;
+  --azul-800:         #102d4b;
+  --azul-700:         #12304f;
+  --marinho:          #143352;   /* A COR DA LOGO — primária */
+  --azul-600:         #1d4470;
+  --azul-500:         #2a5a8c;
+  --azul-400:         #4f7fb0;
+  --azul-300:         #8faccb;
+  --azul-200:         #c5d5e5;
+  --azul-100:         #e4ecf4;
+  --azul-50:          #f0f4f8;
+  --globo:            #757b8b;
+  --papel:            #f6f4ef;   /* o papel da logo */
+
+  --bg:               #f6f4ef;   /* papel */
   --bg-elevated:      #FFFFFF;
-  --bg-sunken:        #E4EEF4;   /* azul-acinzentado p/ zebrados/cabeçalhos */
-  --ink:              #06283A;   /* azul-marinho escuro (textos) */
-  --ink-soft:         #3A5464;
-  --ink-faint:        #5A7180;
+  --bg-sunken:        #e9edf1;   /* zebrados/cabeçalhos */
+  --ink:              #0f1d2e;   /* texto principal */
+  --ink-soft:         #5a6879;
+  --ink-faint:        #6b7a8c;
 
-  --primary:          #005073;   /* azul escuro (marca: headers, botões, destaques) */
-  --primary-hover:    #107dac;
-  --primary-soft:     #E1EFF6;
+  --primary:          #143352;   /* marinho (marca: headers, botões, destaques) */
+  --primary-hover:    #1d4470;
+  --primary-soft:     #e4ecf4;
 
-  --accent:           #189ad3;   /* azul (acentos) */
-  --accent-soft:      #DBF0F9;
-  --accent-vivid:     #1ebbd7;   /* ciano (estado ativo) */
+  --accent:           #2a5a8c;   /* acentos / interativo */
+  --accent-soft:      #e4ecf4;
+  --accent-vivid:     #4f7fb0;   /* estado ativo */
 
-  --success:          #0A7A5A;
+  --success:          #2e7d5b;
   --success-soft:     #DFF2EA;
-  --warning:          #B8864A;
+  --warning:          #b07f2e;
   --warning-soft:     #F4E8D2;
-  --danger:           #9B3A3A;
+  --danger:           #a33c3c;
   --danger-soft:      #F0DEDE;
 
-  --border:           #D3E0E9;
-  --border-strong:    #B4C8D5;
+  --border:           #dfe4ea;
+  --border-strong:    #c5d5e5;
 
   /* V131.38: Inter Tight pra texto, Geist Mono pra números — combo Stripe/Linear/Vercel */
   --font-display:     'Inter Tight', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
@@ -72,9 +89,9 @@ html:not(.fonts-ready) .ti::before { visibility: hidden !important; }
   --radius-lg:  12px;
   --radius-xl:  16px;
 
-  --shadow-sm: 0 1px 2px rgba(26, 36, 33, 0.04);
-  --shadow-md: 0 4px 12px rgba(26, 36, 33, 0.06), 0 1px 2px rgba(26, 36, 33, 0.04);
-  --shadow-lg: 0 12px 32px rgba(26, 36, 33, 0.08), 0 2px 6px rgba(26, 36, 33, 0.04);
+  --shadow-sm: 0 1px 2px rgba(15, 29, 46, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 29, 46, 0.06), 0 1px 2px rgba(15, 29, 46, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 29, 46, 0.08), 0 2px 6px rgba(15, 29, 46, 0.04);
 
   /* Transições */
   --t-fast:   120ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -140,16 +157,15 @@ input, select, textarea { font-family: inherit; }
   overflow-x: hidden;
   /* A sidebar EMPURRA o conteúdo (não sobrepõe): a faixa reservada cresce junto com a largura da
      cápsula. (V475 tinha deixado estático p/ FPS, mas sobrepunha o layout — revertido em V477.) */
-  padding-left: 68px;
-  /* V701: SEM transition aqui — animar padding relayouta a página inteira a
-     cada frame (travava nas telas pesadas). O deslize agora é FLIP por
-     transform no .main (App._alternarRail). */
+  /* ATLAS v1.1: sem menu lateral — o conteúdo usa a largura toda e deixa
+     espaço embaixo para o FLOATING DOCK (fixo, centralizado). */
+  padding-left: 0;
+  padding-bottom: 116px;
 }
-body.rail-aberto .app-shell { padding-left: 246px; }
 
 .sidebar {
-  background: #00003D;
-  color: #DCE8E3;
+  background: #0b2340;
+  color: #e9edf1;
   font-family: 'Poppins', 'Inter Tight', sans-serif;
   padding: var(--space-5) 0;
   position: sticky;
@@ -171,7 +187,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   letter-spacing: 0.14em;
   line-height: 1;
   margin: 0 0 8px;
-  color: #F1F7F7;
+  color: #f6f4ef;
 }
 
 .sidebar-brand p {
@@ -181,7 +197,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   font-weight: 500;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: #189AD3;
+  color: #2a5a8c;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,7 +206,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
 
 .sidebar-brand .traco {
   flex: 0 0 auto;
-  color: rgba(24, 154, 211, 0.6);
+  color: rgba(42, 90, 140, 0.6);
   font-weight: 400;
   letter-spacing: 0;
 }
@@ -203,7 +219,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #189AD3;
+  color: #2a5a8c;
   padding: var(--space-3) var(--space-3) var(--space-2);
   font-weight: 600;
 }
@@ -230,12 +246,12 @@ body.rail-aberto .app-shell { padding-left: 246px; }
 
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: #F1F7F7;
+  color: #f6f4ef;
 }
 
 .nav-item.active {
-  background: #0C3A2F;
-  color: #F1F7F7;
+  background: #0b2340;
+  color: #f6f4ef;
   font-weight: 700;
 }
 
@@ -303,8 +319,8 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   gap: 2px;
   padding: 2px;
   border-radius: 999px;
-  background: #00003D;
-  box-shadow: 0 10px 26px rgba(0, 0, 40, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: #0b2340;
+  box-shadow: 0 10px 26px rgba(7, 26, 48, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .idock-btn {
   display: inline-flex;
@@ -356,7 +372,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   flex-direction: column;
   gap: 2px;
   padding: 5px;
-  background: #021A1C;
+  background: #071a30;
   border-radius: 12px;
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   opacity: 0;
@@ -388,7 +404,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
 }
 .idock-menu-item i { font-size: 13px; opacity: 0.9; width: 16px; text-align: center; }
 .idock-menu-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-.idock-menu-item.active { background: #1EBBD7; color: #003A54; }
+.idock-menu-item.active { background: #4f7fb0; color: #102d4b; }
 .idock-menu-item.active i { opacity: 1; }
 .idock-drop.aberto .idock-menu-item { opacity: 1; transform: translateY(0); }
 .idock-drop.aberto .idock-menu-item:nth-child(1) { transition-delay: 0.04s; }
@@ -397,9 +413,9 @@ body.rail-aberto .app-shell { padding-left: 246px; }
 .idock-drop.aberto .idock-menu-item:nth-child(4) { transition-delay: 0.19s; }
 .idock-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.07); }
 .idock-btn.active {
-  background: rgba(95, 221, 247, 0.15);
+  background: rgba(143, 172, 203, 0.15);
   color: #72E4FF;
-  box-shadow: inset 0 0 0 1px rgba(95, 221, 247, 0.70), 0 0 12px rgba(95, 221, 247, 0.60);
+  box-shadow: inset 0 0 0 1px rgba(143, 172, 203, 0.70), 0 0 12px rgba(143, 172, 203, 0.60);
   transform: none;
 }
 .idock-btn.active .idock-ico { opacity: 1; }
@@ -446,7 +462,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   border-radius: 50%;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  color: #189AD3;
+  color: #2a5a8c;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
@@ -455,31 +471,31 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   justify-content: center;
   transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
   line-height: 1;
-  box-shadow: 0 1px 3px rgba(0, 80, 115, 0.08);
+  box-shadow: 0 1px 3px rgba(20, 51, 82, 0.08);
   font-family: inherit;
 }
 .fic-btn-info:hover {
-  background: #189AD3;
+  background: #2a5a8c;
   color: white;
-  border-color: #189AD3;
+  border-color: #2a5a8c;
   transform: scale(1.08);
-  box-shadow: 0 3px 8px rgba(24, 154, 211, 0.30);
+  box-shadow: 0 3px 8px rgba(42, 90, 140, 0.30);
 }
 .fic-btn-info-ativo {
-  background: #189AD3;
+  background: #2a5a8c;
   color: white;
-  border-color: #189AD3;
+  border-color: #2a5a8c;
 }
 .fic-popover-info {
   position: relative;
   margin: 8px 0 14px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-left: 4px solid #189AD3;
+  border-left: 4px solid #2a5a8c;
   border-radius: 8px;
   padding: 14px 18px 12px;
   max-width: 760px;
-  box-shadow: 0 4px 14px rgba(20, 68, 61, 0.10);
+  box-shadow: 0 4px 14px rgba(11, 35, 64, 0.10);
   animation: ficPopIn 200ms ease-out;
 }
 @keyframes ficPopIn {
@@ -496,7 +512,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #189AD3;
+  color: #2a5a8c;
 }
 .fic-popover-info-close {
   background: transparent;
@@ -589,7 +605,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #06283A; /* V849: título dos cards totalizadores */
+  color: #0f1d2e; /* V849: título dos cards totalizadores */
   font-weight: 600;
   margin-bottom: var(--space-2);
 }
@@ -641,7 +657,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
 
 .btn-primary {
   background: var(--primary);
-  color: #F1F7F7;
+  color: #f6f4ef;
   border-color: var(--primary);
 }
 
@@ -679,7 +695,7 @@ body.rail-aberto .app-shell { padding-left: 246px; }
 .textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 80, 115, 0.08);
+  box-shadow: 0 0 0 3px rgba(20, 51, 82, 0.08);
 }
 
 .field {
@@ -816,9 +832,9 @@ table.data-table {
   border-style: solid;
   border-width: 1px;
   line-height: 1.6;
-  background: #DCE8E3;
+  background: #e9edf1;
   color: #6B5418;
-  border-color: #189AD3;
+  border-color: #2a5a8c;
 }
 
 /* --- Badge "Situacional" — médico externo pontual --- */
@@ -931,7 +947,7 @@ table.data-table {
   bottom: var(--space-5);
   right: var(--space-5);
   background: var(--ink);
-  color: #F1F7F7;
+  color: #f6f4ef;
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
@@ -988,7 +1004,7 @@ table.data-table {
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at center, #0A83B8 0%, #0173AC 72%);
+  background: radial-gradient(ellipse at center, #0A83B8 0%, #143352 72%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1028,12 +1044,12 @@ table.data-table {
   border-radius: 50%;
   width: 56px;
   height: 56px;
-  filter: drop-shadow(0 0 14px rgba(0, 80, 115, 0.55));
+  filter: drop-shadow(0 0 14px rgba(20, 51, 82, 0.55));
 }
 .loading-overlay .atlas-loader { margin-bottom: 28px; }   /* espaço pro texto */
 /* tela de loading AZUL (não na variante transparente in-app): texto e anel claros p/ contraste */
 .loading-overlay:not(.sem-fundo) .message { color: rgba(255, 255, 255, 0.90); }
-.loading-overlay:not(.sem-fundo) .atlas-loader::before { border-top-color: #DBF0F9; }
+.loading-overlay:not(.sem-fundo) .atlas-loader::before { border-top-color: #e4ecf4; }
 .atlas-loader::before,
 .atlas-loader::after {
   content: '';
@@ -1048,11 +1064,11 @@ table.data-table {
   will-change: transform;
 }
 .atlas-loader::before {
-  border-top-color: #005073;
+  border-top-color: #143352;
   animation: atlas-loader-orbit-x 1.2s linear infinite;
 }
 .atlas-loader::after {
-  border-top-color: #1EBBD7;
+  border-top-color: #4f7fb0;
   animation: atlas-loader-orbit-y 1.2s linear infinite;
   animation-delay: -0.6s;
 }
@@ -1068,7 +1084,7 @@ table.data-table {
 .loading-overlay .message {
   font-size: 10.5px;
   font-weight: 600;
-  color: #5B736C;
+  color: #5a6879;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -1170,15 +1186,15 @@ td.valor-oculto::after { justify-content: flex-end; padding-right: 2px; }
 .btn-compact:hover { background: var(--bg-sunken); border-color: var(--ink-soft); }
 .btn-compact.ativo {
   background: var(--primary);
-  color: #E8F1F7;
+  color: #e9edf1;
   border-color: var(--primary);
 }
 .btn-compact-primary {
   background: var(--primary);
-  color: #E8F1F7;
+  color: #e9edf1;
   border-color: var(--primary);
 }
-.btn-compact-primary:hover { background: #003A54; border-color: #003A54; color: #E8F1F7; }
+.btn-compact-primary:hover { background: #102d4b; border-color: #102d4b; color: #e9edf1; }
 
 /* ─────────────────────────────────────────────────────────────────────
    Headers de fichários NÃO devem ter animation fade-in-up.
@@ -1198,53 +1214,35 @@ td.valor-oculto::after { justify-content: flex-end; padding-right: 2px; }
    Aplica em TODOS os títulos do app (fichários, telas de cadastro,
    importação, etc). Use `.no-deco` no título pra desativar quando precisar.
    ───────────────────────────────────────────────────────────────────── */
-/* V329: TÍTULO-BANNER — círculo com a logo ATLAS sobrepondo uma pílula escura
-   com o título, e um CONTORNO VERDE ÚNICO acompanhando toda a silhueta externa
-   (verde atrás da peça inteira; círculo + pílula por cima cobrindo a emenda).
-   As camadas .tb-* são montadas pelo decorador aplicar() (MutationObserver),
-   que troca o conteúdo do <h2> sem precisar editar o HTML de cada tela. */
+/* ATLAS v1.1: TÍTULO-BANNER limpo — a marca redonda ao lado de uma pílula
+   navy com o título. Saíram as camadas sobrepostas (círculo atrás, aro,
+   pílula clara, círculo por cima) da V329, que deixavam a logo cortada e
+   mal encaixada. O decorador aplicar() monta só .tb-marca + .tb-texto. */
 h2.titulo-banner,
 h1.titulo-banner {
-  display: inline-flex; align-items: center; position: relative;
-  min-height: 62px; padding: 0 0 0 28px; margin: 0;
+  display: inline-flex; align-items: center; gap: 12px; position: relative;
+  min-height: 48px; padding: 0; margin: 0;
   background: none; color: inherit; border-radius: 0; letter-spacing: normal;
   font-family: var(--font-display);
 }
 h2.titulo-banner::before,
 h1.titulo-banner::before { content: none; }
-
-/* círculo POR TRÁS — V715: o azul chapado #0000B2 virou o degradê da linha
-   do tempo (vale pra TODOS os títulos principais de módulo; o modo Externo
-   mantém o override de marca dele mais abaixo) */
-.titulo-banner .tb-greencirc {
-  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  width: 62px; height: 62px; border-radius: 50%;
-  background: linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%);
-  z-index: 0; box-shadow: 0 14px 28px rgba(6, 40, 58,.20);
+.titulo-banner .tb-marca {
+  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+  background: #f6f4ef url("../assets/atlas-mark.png") center / cover no-repeat;
+  box-shadow: 0 6px 16px rgba(20, 51, 82, .22);
 }
-/* aro POR TRÁS (pílula) + aro claro + pílula escura — V715: mesmo degradê */
-.titulo-banner .tb-pill-green {
-  position: relative; z-index: 1;
-  background: linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%);
-  border-radius: 999px;
-  padding: 3px; box-shadow: 0 16px 30px rgba(6, 40, 58,.22);
-}
-.titulo-banner .tb-pill-light { display: block; background: #F4F1EA; border-radius: 999px; padding: 3px; }
-.titulo-banner .tb-pill-dark {
-  display: block; background: #00003D;
-  border-radius: 999px; padding: 7px 28px 7px 36px;
-  color: #F4F1EA; font-size: 16px; font-weight: 700; letter-spacing: .05em; line-height: 1;
-  text-transform: uppercase;
-}
-/* círculo off-white com a logo POR CIMA (cobre a emenda círculo/pílula) */
-.titulo-banner .tb-circ {
-  position: absolute; left: 3px; top: 50%; transform: translateY(-50%);
-  width: 56px; height: 56px; border-radius: 50%; overflow: hidden; z-index: 3;
-  background: transparent url("../assets/atlas-circulo.png") center / contain no-repeat;
+.titulo-banner .tb-texto {
+  display: inline-block;
+  background: linear-gradient(90deg, #0b2340 0%, #143352 55%, #1d4470 100%);
+  color: #f6f4ef; border-radius: 999px; padding: 10px 24px;
+  font-size: 15px; font-weight: 800; letter-spacing: .08em; line-height: 1;
+  text-transform: uppercase; white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(20, 51, 82, .18);
 }
 /* hover discreto na peça toda */
 .titulo-banner { transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); }
-.titulo-banner:hover { transform: translateY(-3px); }
+.titulo-banner:hover { transform: translateY(-2px); }
 
 /* ─────────────────────────────────────────────────────────────────────
    Marca d'água global — rodapé fixo discreto, presente em todo o site.
@@ -1375,16 +1373,16 @@ h1.titulo-banner::before { content: none; }
 }
 .modal-comp-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 80, 115, 0.1);
+  box-shadow: 0 0 0 3px rgba(20, 51, 82, 0.1);
 }
 .modal-comp-aviso {
   margin-top: 6px;
-  background: #E1EFF6;
-  border-left: 3px solid #189AD3;   /* V974: era #9FE6C9 (aviso do modal de competência, usado pela Produção Médica) */
+  background: #e4ecf4;
+  border-left: 3px solid #2a5a8c;   /* V974: era #9FE6C9 (aviso do modal de competência, usado pela Produção Médica) */
   padding: 10px 14px;
   border-radius: 6px;
   font-size: 12px;
-  color: #003A54;
+  color: #102d4b;
   line-height: 1.5;
 }
 
@@ -1392,7 +1390,7 @@ h1.titulo-banner::before { content: none; }
 h1, h2, h3, h4, h5, h6,
 .page-header h2,
 .fic-titulo-wrap h2 {
-  color: #042222;
+  color: #071a30;
 }
 
 /* ── V145: títulos do conteúdo (lado direito) em caixa alta ── */
@@ -1402,11 +1400,11 @@ h1, h2, h3, h4, h5, h6,
   letter-spacing: 0.03em;
   font-family: 'Inter Tight', -apple-system, sans-serif;
   font-weight: 800;
-  color: #042222;
+  color: #071a30;
 }
 
 /* ── V149: padrão global de matriz — cabeçalho na cor do menu, fonte verde, títulos centralizados ── */
-/* V561: fundo do cabeçalho das tabelas #021A1C → #107dac (azul) */
+/* V561: fundo do cabeçalho das tabelas #071a30 → #1d4470 (azul) */
 /* V948: azul sólido → degradê único em TODAS as matrizes da ferramenta.
    V949: cada th sozinho reiniciaria o gradiente (e `background-attachment:
    fixed` falha dentro de contêineres com transform — LIO etc.). Por isso a
@@ -1416,35 +1414,35 @@ h1, h2, h3, h4, h5, h6,
    esquerda à direita da largura visível. */
 .main table thead th,
 table thead th {
-  background-image: linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%) !important;
-  background-color: #16456b !important;
+  background-image: linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%) !important;
+  background-color: #143352 !important;
   background-repeat: no-repeat !important;
   background-attachment: scroll !important;
   color: #FFFFFF !important;
   text-align: center !important;
-  border-bottom-color: #0C3A2F !important;
+  border-bottom-color: #0b2340 !important;
   border-left: none !important;
   border-right: none !important;
 }
 
 /* ── V150: LIO — sub-etiquetas e controles legíveis no cabeçalho escuro ── */
-.main .lio-tabela thead th .lio-th-origem { color: #CDEBDD; opacity: 1; }
+.main .lio-tabela thead th .lio-th-origem { color: #e4ecf4; opacity: 1; }
 .main .lio-tabela thead th .lio-th-origem-trocavel:hover {
   color: #9FE6C9;
-  background: rgba(30, 187, 215, 0.10);
-  border-color: rgba(24, 154, 211, 0.45);
+  background: rgba(79, 127, 176, 0.10);
+  border-color: rgba(42, 90, 140, 0.45);
 }
-.main .lio-tabela thead th .lio-th-filter-btn { color: #CDEBDD; }
+.main .lio-tabela thead th .lio-th-filter-btn { color: #e4ecf4; }
 .main .lio-tabela thead th .lio-th-filter-btn:hover { color: #FFFFFF; background: rgba(255, 255, 255, 0.10); }
-.main .lio-tabela thead th .lio-th-filter-btn-ativo { background: #1EBBD7; color: #003A54; }
+.main .lio-tabela thead th .lio-th-filter-btn-ativo { background: #4f7fb0; color: #102d4b; }
 
 /* ── V150: Fellow — matriz com o verde do card Repasse Total + letra branca ── */
 /* V561: acompanha o padrão global de cabeçalho (V948: degradê) */
 .main .fel-tabela thead th {
-  background-image: linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%) !important;
-  background-color: #16456b !important;
+  background-image: linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%) !important;
+  background-color: #143352 !important;
   color: #FFFFFF !important;
-  border-bottom-color: #0C3A2F !important;
+  border-bottom-color: #0b2340 !important;
 }
 
 /* ════ V157: COMPONENTE AIC — Atlas Info Card (moldura atrás + cartão na frente) ════ */
@@ -1463,8 +1461,8 @@ table thead th {
   /* V887: a moldura azul dos cards totalizadores deixa de ser chapada e passa
      a ter o mesmo degradê do fundo da marca (escuro → ciano). As variantes de
      ALERTA (âmbar) e GLOSA (vermelha) ficam de fora — elas não são azuis. */
-  background: linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%);
-  box-shadow: 0 0 10px rgba(30, 187, 215, 0.38);
+  background: linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%);
+  box-shadow: 0 0 10px rgba(79, 127, 176, 0.38);
 }
 .aic-branco {
   position: absolute;
@@ -1472,7 +1470,7 @@ table thead th {
   height: 80px;
   border-radius: 13px;
   background: var(--bg-elevated, #FFFFFF);
-  box-shadow: 0 8px 18px rgba(0, 58, 84, 0.13);
+  box-shadow: 0 8px 18px rgba(16, 45, 75, 0.13);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1482,18 +1480,18 @@ table thead th {
 .aic-lbl {
   font-size: 11px; font-weight: 700;
   letter-spacing: 0.06em; text-transform: uppercase;
-  color: #06283A; /* V849: título dos cards totalizadores (variantes coloridas como aic--glosa mantêm a cor própria) */
+  color: #0f1d2e; /* V849: título dos cards totalizadores (variantes coloridas como aic--glosa mantêm a cor própria) */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .aic-val {
   font-size: 22px; font-weight: 700;
-  color: var(--ink, #042222);
+  color: var(--ink, #071a30);
   line-height: 1.15; margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.aic-val small { font-size: 12px; font-weight: 500; color: var(--ink-faint, #56645E); }
+.aic-val small { font-size: 12px; font-weight: 500; color: var(--ink-faint, #5a6879); }
 .aic-meta {
-  font-size: 11px; color: var(--ink-faint, #56645E); margin-top: 3px;
+  font-size: 11px; color: var(--ink-faint, #5a6879); margin-top: 3px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .aic-meta strong { font-weight: 700; }
@@ -1511,23 +1509,23 @@ table thead th {
 /* ── V267: linha de cards = card RECEITA (1º, maior) + grid dos 5 menores ── */
 .pm-cards-row { display: flex; gap: 16px; align-items: center; margin: 14px 0 18px; flex-wrap: wrap; }
 .pm-receita-card { position: relative; flex: 0 0 266px; padding: 4px 5px 0 1px; box-sizing: border-box; }
-.prc-verde { position: absolute; inset: 4px 5px 0 1px; border-radius: 13px; background: linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%); box-shadow: 0 0 10px rgba(30, 187, 215, 0.38); }   /* V975: mesmo degradê dos demais cards (era #005073 chapado) */
-.prc-branco { position: relative; margin: 6px 0 0 4px; border-radius: 13px; background: var(--bg-elevated, #FFFFFF); box-shadow: 0 7px 16px rgba(0, 58, 84, 0.13); padding: 9px 14px 10px; box-sizing: border-box; }
-.prc-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--primary, #005073); }
-.prc-val { font-size: 19px; font-weight: 700; color: var(--ink, #042222); line-height: 1.1; margin: 1px 0 6px; white-space: nowrap; }
+.prc-verde { position: absolute; inset: 4px 5px 0 1px; border-radius: 13px; background: linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%); box-shadow: 0 0 10px rgba(79, 127, 176, 0.38); }   /* V975: mesmo degradê dos demais cards (era #143352 chapado) */
+.prc-branco { position: relative; margin: 6px 0 0 4px; border-radius: 13px; background: var(--bg-elevated, #FFFFFF); box-shadow: 0 7px 16px rgba(16, 45, 75, 0.13); padding: 9px 14px 10px; box-sizing: border-box; }
+.prc-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--primary, #143352); }
+.prc-val { font-size: 19px; font-weight: 700; color: var(--ink, #071a30); line-height: 1.1; margin: 1px 0 6px; white-space: nowrap; }
 .prc-rows { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid #EDF2F0; padding-top: 6px; }
-.prc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--ink-faint, #56645E); }
+.prc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--ink-faint, #5a6879); }
 .prc-k { display: inline-flex; align-items: center; gap: 4px; }
-.prc-imp-pct { color: var(--ink, #042222); }
-.prc-v { font-weight: 700; color: var(--ink, #042222); white-space: nowrap; }
-.prc-liq .prc-k, .prc-liq .prc-v { color: var(--primary, #005073); }
-.prc-prod { color: var(--accent, #189AD3) !important; }
+.prc-imp-pct { color: var(--ink, #071a30); }
+.prc-v { font-weight: 700; color: var(--ink, #071a30); white-space: nowrap; }
+.prc-liq .prc-k, .prc-liq .prc-v { color: var(--primary, #143352); }
+.prc-prod { color: var(--accent, #2a5a8c) !important; }
 /* V269: imposto inteiro em vermelho (nome + % + valor) */
 .prc-imp-row .prc-k, .prc-imp-row .prc-imp-pct, .prc-imp-row .prc-imp-val { color: #C0392B; }
 /* V269: % sobre PROD — stepper de casas decimais + vermelho fora da faixa 21–23% */
 .prc-prod-box { display: inline-flex; align-items: center; gap: 4px; }
-.prc-dec { width: 15px; height: 15px; line-height: 1; padding: 0; border: 1px solid var(--border, #DDE7E3); background: #fff; border-radius: 4px; font-size: 12px; color: var(--ink-faint, #56645E); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.prc-dec:hover { border-color: var(--accent, #189AD3); color: var(--primary, #005073); }
+.prc-dec { width: 15px; height: 15px; line-height: 1; padding: 0; border: 1px solid var(--border, #dfe4ea); background: #fff; border-radius: 4px; font-size: 12px; color: var(--ink-faint, #5a6879); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.prc-dec:hover { border-color: var(--accent, #2a5a8c); color: var(--primary, #143352); }
 .prc-prod-vermelho { color: #C0392B !important; }
 
 /* grid dos 5 cards: ocupa o resto da linha e fica mais compacto */
@@ -1542,9 +1540,9 @@ table thead th {
 
 /* clicável + estado ativo (filtro ligado) */
 .aic.calc-kpi-clicavel { cursor: pointer; }
-.aic.calc-kpi-clicavel:hover .aic-branco { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0, 58, 84, 0.18); }
+.aic.calc-kpi-clicavel:hover .aic-branco { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(16, 45, 75, 0.18); }
 .aic.calc-kpi-clicavel .aic-branco { transition: transform 0.14s, box-shadow 0.14s; }
-.aic--ativo .aic-verde { box-shadow: 0 0 0 3px rgba(30, 187, 215, 0.45), 0 0 10px rgba(30, 187, 215, 0.38); }
+.aic--ativo .aic-verde { box-shadow: 0 0 0 3px rgba(79, 127, 176, 0.45), 0 0 10px rgba(79, 127, 176, 0.38); }
 .aic--ativo.aic--glosa .aic-verde { box-shadow: 0 0 0 3px rgba(192, 86, 74, 0.40), 0 0 10px rgba(192, 86, 74, 0.30); }
 .aic--ativo.aic--alerta .aic-verde { box-shadow: 0 0 0 3px rgba(184, 134, 74, 0.40), 0 0 10px rgba(184, 134, 74, 0.34); }
 
@@ -1566,8 +1564,8 @@ table thead th {
    * (o .lc-card, por exemplo) recortava a camada, que é filha dele.
    */
   box-shadow:
-    -4px -3px 10px rgba(30, 187, 215, 0.30),
-    0 8px 18px rgba(0, 58, 84, 0.13) !important;
+    -4px -3px 10px rgba(79, 127, 176, 0.30),
+    0 8px 18px rgba(16, 45, 75, 0.13) !important;
   backdrop-filter: none;
   overflow: visible !important;
   margin-top: 5px;
@@ -1599,7 +1597,7 @@ table thead th {
           .frac-cards-grid > *, .cn-card):not(.opme-card-glosas) {
   background:
     linear-gradient(var(--bg-elevated, #FFFFFF) 0 0) padding-box,
-    linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%) border-box !important;
+    linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%) border-box !important;
   border-style: solid !important;
   border-color: transparent !important;
   border-width: 3px 0 0 4px !important;
@@ -1614,18 +1612,18 @@ table thead th {
           .fel-card, .per-card, .estr-card, .lc-card, .cl-card, .lp-card, .rl-card, .opme-card,
           .cargo-card, .dp-stat, .stat-card, .medico-stat-card, .impfrac-stat,
           .frac-cards-grid > *, .cn-card)
-  :is([class*="-label"], [class*="-titulo"], [class*="-lbl"], [class*="-card-l"], .label) { color: #06283A !important; opacity: 1 !important; } /* V849: títulos dos totalizadores em #06283A (pedido do usuário) */
+  :is([class*="-label"], [class*="-titulo"], [class*="-lbl"], [class*="-card-l"], .label) { color: #0f1d2e !important; opacity: 1 !important; } /* V849: títulos dos totalizadores em #0f1d2e (pedido do usuário) */
 .main :is(.aud-kpi, .lio-kpi, .laudos-kpi, .rel-kpi,
           .fel-card, .per-card, .estr-card, .lc-card, .cl-card, .lp-card, .rl-card, .opme-card,
           .cargo-card, .dp-stat, .stat-card, .medico-stat-card, .impfrac-stat,
           .frac-cards-grid > *, .cn-card)
-  :is([class*="-valor"], [class*="-val"], [class*="-qtd"], [class*="-total"], [class*="-card-v"], .value) { color: var(--ink, #042222) !important; }
+  :is([class*="-valor"], [class*="-val"], [class*="-qtd"], [class*="-total"], [class*="-card-v"], .value) { color: var(--ink, #071a30) !important; }
 .main :is(.aud-kpi, .lio-kpi, .laudos-kpi, .rel-kpi,
           .fel-card, .per-card, .estr-card, .lc-card, .cl-card, .lp-card, .rl-card, .opme-card,
           .cargo-card, .dp-stat, .stat-card, .medico-stat-card, .impfrac-stat,
           .frac-cards-grid > *, .cn-card)
   :is([class*="-sub"], [class*="-meta"], [class*="-comp"], [class*="-breakdown"],
-      [class*="-rep"], [class*="-card-p"], [class*="-unid"], .meta) { color: var(--ink-faint, #56645E) !important; }
+      [class*="-rep"], [class*="-card-p"], [class*="-unid"], .meta) { color: var(--ink-faint, #5a6879) !important; }
 
 /* V862: nos subtotais descritivos dos cards totalizadores, o RÓTULO fica no
    cinza da regra acima e o VALOR sai em azul — o padrão que o card "Total a
@@ -1641,7 +1639,7 @@ table thead th {
           .fel-card, .per-card, .estr-card, .lc-card, .cl-card, .lp-card, .rl-card, .opme-card,
           .cargo-card, .dp-stat, .stat-card, .medico-stat-card, .impfrac-stat,
           .frac-cards-grid > *, .cn-card):not([class*="-card-roxo"])
-  :is([class*="-card-sub"], [class*="-bd-item"]) :is(strong, b) { color: #107DAC; }
+  :is([class*="-card-sub"], [class*="-bd-item"]) :is(strong, b) { color: #1d4470; }
 
 /* ── V159: padronização dos cards (atenção aos detalhes) ── */
 /* 1) faixas decorativas antigas saem de TODOS os cards totalizadores */
@@ -1652,7 +1650,7 @@ table thead th {
 
 /* 2) traço divisor entre o valor e as informações de baixo (padrão da imagem aprovada) */
 .aic-meta {
-  border-top: 1px solid var(--border, #DEE3E1);
+  border-top: 1px solid var(--border, #dfe4ea);
   padding-top: 6px;
   margin-top: 6px;
 }
@@ -1660,7 +1658,7 @@ table thead th {
           .fel-card, .per-card, .estr-card, .lc-card, .cl-card, .lp-card, .rl-card, .opme-card,
           .cargo-card, .dp-stat, .stat-card, .medico-stat-card, .impfrac-stat,
           .frac-cards-grid > *, .cn-card) > :is([class*="-card-comp"], [class*="-comparativos"], [class*="-kpi-comp"]) {
-  border-top: 1px solid var(--border, #DEE3E1) !important;
+  border-top: 1px solid var(--border, #dfe4ea) !important;
   padding-top: 7px !important;
   margin-top: 7px !important;
 }
@@ -1670,7 +1668,7 @@ table thead th {
   position: relative;
   display: inline-block;
   margin: 6px 0 18px 10px;
-  filter: drop-shadow(0 7px 9px rgba(0, 58, 84, 0.28));
+  filter: drop-shadow(0 7px 9px rgba(16, 45, 75, 0.28));
 }
 /* rolinho enrolado à esquerda */
 .fita-titulo::before {
@@ -1679,7 +1677,7 @@ table thead th {
   left: -10px; top: -7px; bottom: -7px;
   width: 14px;
   border-radius: 7px;
-  background: linear-gradient(180deg, #1EBBD7, #107DAC);
+  background: linear-gradient(180deg, #4f7fb0, #1d4470);
   z-index: 0;
 }
 /* a fita em si, com ponta de seta à direita */
@@ -1688,13 +1686,13 @@ table thead th {
   z-index: 1;
   display: inline-block;
   padding: 11px 26px 11px 22px;
-  background: linear-gradient(180deg, #0D2B26 0%, #021A1C 70%);
+  background: linear-gradient(180deg, #0b2340 0%, #071a30 70%);
   border-radius: 0 16px 16px 0;
 }
 .fita-titulo-fita h1,
 .fita-titulo-fita h2 {
   margin: 0 !important;
-  color: #F1F7F7 !important;
+  color: #f6f4ef !important;
   font-size: 19px !important;
   letter-spacing: 0.05em;
   line-height: 1.2;
@@ -1725,8 +1723,8 @@ table thead th {
 .hub-btn {
   width: 38px; height: 38px; border: none; border-radius: 50%;
   background: #FFFFFF;
-  color: #003A54; cursor: pointer;
-  box-shadow: 0 0 12px rgba(30, 187, 215, 0.45), 0 8px 18px rgba(0, 58, 84, 0.30);
+  color: #102d4b; cursor: pointer;
+  box-shadow: 0 0 12px rgba(79, 127, 176, 0.45), 0 8px 18px rgba(16, 45, 75, 0.30);
   display: flex; align-items: center; justify-content: center;
   transition: transform 0.18s;
 }
@@ -1734,8 +1732,8 @@ table thead th {
 .hub-btn i { display: inline-block; }
 #atlas-hub.aberto .hub-btn { transform: scale(1.06); }
 .hub-clip { width: 22px; height: 22px; display: block; }
-.hub-clip .clip-body, .hub-clip .clip-tab { fill: #FFFFFF; stroke: #00003D; stroke-width: 1.6; stroke-linejoin: round; }
-.hub-clip .clip-mark { fill: #1EBBD7; }
+.hub-clip .clip-body, .hub-clip .clip-tab { fill: #FFFFFF; stroke: #0b2340; stroke-width: 1.6; stroke-linejoin: round; }
+.hub-clip .clip-mark { fill: #4f7fb0; }
 .hub-clip .clip-mark:nth-child(3) { animation: hubClipMark 2s ease-in-out infinite 0s; }
 .hub-clip .clip-mark:nth-child(4) { animation: hubClipMark 2s ease-in-out infinite 0.2s; }
 .hub-clip .clip-mark:nth-child(5) { animation: hubClipMark 2s ease-in-out infinite 0.4s; }
@@ -1767,24 +1765,24 @@ table thead th {
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s;
   transition-delay: calc(var(--i) * 45ms);
   pointer-events: none;
-  filter: drop-shadow(0 5px 8px rgba(0, 58, 84, 0.28));
+  filter: drop-shadow(0 5px 8px rgba(16, 45, 75, 0.28));
   white-space: nowrap;
 }
 #atlas-hub.aberto .hub-it { opacity: 1; pointer-events: auto; transform: translateX(0); }
 .hub-it-fita {
   position: relative;
   padding: 5px 12px;                      /* V564: era 7px 15px */
-  background: linear-gradient(180deg, #0D2B26 0%, #021A1C 70%);
-  color: #F1F7F7; font-size: 10.5px; font-weight: 700;
+  background: linear-gradient(180deg, #0b2340 0%, #071a30 70%);
+  color: #f6f4ef; font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.04em; text-transform: uppercase;
   border-radius: 11px;
   margin-right: -7px;
 }
 .hub-it-dot {
   width: 28px; height: 28px; border-radius: 50%;   /* V564: era 34px */
-  background: #FFFFFF; border: 2.5px solid #1EBBD7;
+  background: #FFFFFF; border: 2.5px solid #4f7fb0;
   display: flex; align-items: center; justify-content: center;
-  color: #107DAC; font-size: 14px; position: relative; z-index: 1;
+  color: #1d4470; font-size: 14px; position: relative; z-index: 1;
 }
 .hub-it:hover .hub-it-dot { background: #EAFBF3; }
 .hub-it:hover .hub-it-fita { background: linear-gradient(180deg, #123830, #042A26 70%); }
@@ -1799,21 +1797,21 @@ table thead th {
 }
 #atlas-hub.aberto .hub-ilhas { opacity: 1; pointer-events: auto; transform: translateY(0); }
 .hub-ilha {
-  background: linear-gradient(180deg, #0D2B26 0%, #021A1C 78%);
-  border: 1px solid rgba(30, 187, 215, 0.25); border-radius: 12px;
+  background: linear-gradient(180deg, #0b2340 0%, #071a30 78%);
+  border: 1px solid rgba(79, 127, 176, 0.25); border-radius: 12px;
   padding: 10px 12px;
   /* V264: sombra branca BEM LEVE (quase imperceptível) + a sombra escura de profundidade */
-  box-shadow: 0 8px 18px rgba(0, 58, 84, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 22px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 18px rgba(16, 45, 75, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 22px rgba(255, 255, 255, 0.05);
 }
-.hub-ilha-tit { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #DCE8E3; margin-bottom: 8px; }   /* V975: era #7FD9BE */
+.hub-ilha-tit { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #e9edf1; margin-bottom: 8px; }   /* V975: era #7FD9BE */
 .hub-ilha-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .hub-ilha-chip {
-  border: 1px solid rgba(255, 255, 255, 0.18); background: transparent; color: #DCE8E3;
+  border: 1px solid rgba(255, 255, 255, 0.18); background: transparent; color: #e9edf1;
   font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 999px; cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.hub-ilha-chip:hover { border-color: #1EBBD7; }
-.hub-ilha-chip.on { background: #1EBBD7; color: #003A54; border-color: #1EBBD7; }
+.hub-ilha-chip:hover { border-color: #4f7fb0; }
+.hub-ilha-chip.on { background: #4f7fb0; color: #102d4b; border-color: #4f7fb0; }
 
 /* ── V180: matrizes sem vãos entre células (o fundo vazava como linhas brancas) ── */
 .main table,
@@ -1824,13 +1822,13 @@ table {
 
 /* ── V181·2º: linhas de TOTAIS fixas — dark green com fonte branca, sem troca no hover ── */
 .main table tfoot td {
-  background: #021A1C !important;
+  background: #071a30 !important;
   color: #FFFFFF !important;
-  border-color: #021A1C !important;
+  border-color: #071a30 !important;
   box-shadow: none !important;
 }
 .main table tfoot td * { color: #FFFFFF !important; }
-.main table tfoot tr:hover td { background: #021A1C !important; color: #FFFFFF !important; }
+.main table tfoot tr:hover td { background: #071a30 !important; color: #FFFFFF !important; }
 
 /* ── V181·4º: comparativos LM/LY — positivo verde, negativo vermelho (vence as regras de card) ── */
 .main :is([class*="comp-up"], [class*="comp-pos"], [class*="var-up"]),
@@ -1858,16 +1856,16 @@ table {
   user-select: none;
 }
 .atlas-col-resize:hover,
-.atlas-col-resize.ativa { background: rgba(30, 187, 215, 0.35); border-radius: 3px; }
+.atlas-col-resize.ativa { background: rgba(79, 127, 176, 0.35); border-radius: 3px; }
 body.atlas-redimensionando { cursor: col-resize !important; user-select: none !important; }
 
 /* ── V182: linhas de TOTAL no corpo das tabelas — dark green fixo, fonte branca, imune a hover ── */
 .main table tr:is(.fel-total, .per-total, .pm-total,
                   .cl-linha-total, .estr-linha-total, .lp-linha-total, .rl-linha-total,
                   [class*="-linha-total"], [class*="-total-row"]) td {
-  background: #021A1C !important;
+  background: #071a30 !important;
   color: #FFFFFF !important;
-  border-color: #021A1C !important;
+  border-color: #071a30 !important;
   box-shadow: none !important;
 }
 .main table tr:is(.fel-total, .per-total, .pm-total,
@@ -1878,7 +1876,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 .main table tr:is(.fel-total, .per-total, .pm-total,
                   .cl-linha-total, .estr-linha-total, .lp-linha-total, .rl-linha-total,
                   [class*="-linha-total"], [class*="-total-row"]):hover td {
-  background: #021A1C !important;
+  background: #071a30 !important;
   color: #FFFFFF !important;
 }
 
@@ -1967,7 +1965,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 
 /* V224: Gerenciais — coluna TIPO agora é CATEGORIA editável e crescente (gerencial_tipo, semeada com "Ajustes" e "Qvis"); no form, select de tipos + campo "+ novo tipo" que insere na lista (criarTipo) e fica disponível pros próximos. Coluna ajuste_gerencial.tipo (ALTER defensivo). Removido o selo pontual/fixo da tabela — recorrência segue funcional pelo checkbox "fixar mensalmente", sem indicação visual. Colunas finais: TIPO | MÉDICO | ADMISSÃO | DESCRIÇÃO | VALOR | STATUS | AÇÕES */
 
-/* V225: Gerenciais — dois ajustes. (1) A coluna de CATEGORIA passa a se chamar STATUS e usa a MESMA paleta do Relatórios (statusInfo/rel-tag-*): QVIS #2C7A5B, GLOSA #9B3A3A, Ajustes/Produção #5B736C, Desempenho #189AD3, neutra #B4B2A9 (helper corStatus + classe .ger-stag). O controle pendente/aplicado/descartado virou coluna à parte 'TRATAMENTO' (mantida). Label do form Tipo→Status. (2) Recorrência com JANELA mês/ano: colunas recorre_de/recorre_ate (ALTER defensivo); no form, ao marcar "fixar mensalmente" aparecem dois inputs month (de → até, fim opcional=sem fim); ajustesDoMes filtra o fixo por comp>=COALESCE(recorre_de,competencia) AND (recorre_ate vazio OR comp<=recorre_ate). Validação de janela invertida no salvar */
+/* V225: Gerenciais — dois ajustes. (1) A coluna de CATEGORIA passa a se chamar STATUS e usa a MESMA paleta do Relatórios (statusInfo/rel-tag-*): QVIS #2C7A5B, GLOSA #9B3A3A, Ajustes/Produção #5a6879, Desempenho #2a5a8c, neutra #B4B2A9 (helper corStatus + classe .ger-stag). O controle pendente/aplicado/descartado virou coluna à parte 'TRATAMENTO' (mantida). Label do form Tipo→Status. (2) Recorrência com JANELA mês/ano: colunas recorre_de/recorre_ate (ALTER defensivo); no form, ao marcar "fixar mensalmente" aparecem dois inputs month (de → até, fim opcional=sem fim); ajustesDoMes filtra o fixo por comp>=COALESCE(recorre_de,competencia) AND (recorre_ate vazio OR comp<=recorre_ate). Validação de janela invertida no salvar */
 
 /* V226: Gerenciais — repaginação visual completa alinhada ao design system (tokens --primary/--accent/--success/--danger/--warning, --space/--radius/--shadow). Form reconstruído num grid de 12 colunas (.ger-grid/.ger-field/.gf-*) com inputs padronizados (.ger-in, foco com primary-soft, seta SVG nos selects); campo "novo status" com botão + (.ger-add-btn); seletor de sinal colore o campo (crédito verde / desconto vermelho). "Fixar mensalmente" virou toggle switch estilizado; janela de/até inline. Tabela: tags de status .ger-stag (paleta do Relatórios), chips de tratamento .ger-chip com bolinha (pendente warning / aplicado success / descartado cinza), botões de ação refinados (.ger-mini, aplicar=primary, remover=danger). Card de pendentes ganha realce âmbar quando >0. Responsivo <=880px. Confirmado ao usuário: data final na recorrência interrompe crédito/desconto após o mês final (inclusive) */
 
@@ -2047,7 +2045,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 
 /* V253: Produção Médica — duas visões (switch Contábil/Gerencial) na aba "Produção médica" + cards. CONTÁBIL (atual): produção × Base Tabela + Desempenho (fichários calculados). GERENCIAL: repasse REAL do Consolidado/snapshot por médico (gerencialPorMedico via AtlasRelatorios.linhasConsolidadoComp) — Conv/Part pela ORIGEM, Desempenho pelas linhas status='Desempenho'; respeita filtro de admissão. Tabela reorganizada: colunas PROD TOTAL/CONVÊNIO/PARTICULAR cada uma com Produção+Repasse+% (representatividade = repasse÷produção da mesma fonte) + coluna DESEMPENHO (repasse, sem %); coluna única de % antiga removida. Total = Conv+Part+Desemp; PROD TOTAL (produção) = Conv+Part+SUS. Cards trocam o repasse junto com o switch. switchHtml + evento em bindTopo. 7/7 smoke gerencial */
 
-/* V254: aba "Produção médica" estava com 12 colunas estourando .main (max 1400px) e o app-shell (overflow-x:hidden) cortava a coluna Desempenho. Correção: CSS compacto scoped em .pm-tabela.pm-tabela-pg (padding 6px 8px, font 12px, % 10.5px, Médico com max-width+ellipsis, cabeçalho de grupo centralizado e claro #CDEBDD, separadores de bloco). Conteúdo cai pra ~900px e cabe folgado; o overflow:auto do .pm-tabela-wrap segue como reserva pra telas estreitas. As regras embutidas no producao_medica.js têm especificidade .pm-tabela.pm-tabela-pg (vence a base) */
+/* V254: aba "Produção médica" estava com 12 colunas estourando .main (max 1400px) e o app-shell (overflow-x:hidden) cortava a coluna Desempenho. Correção: CSS compacto scoped em .pm-tabela.pm-tabela-pg (padding 6px 8px, font 12px, % 10.5px, Médico com max-width+ellipsis, cabeçalho de grupo centralizado e claro #e4ecf4, separadores de bloco). Conteúdo cai pra ~900px e cabe folgado; o overflow:auto do .pm-tabela-wrap segue como reserva pra telas estreitas. As regras embutidas no producao_medica.js têm especificidade .pm-tabela.pm-tabela-pg (vence a base) */
 
 /* V255: tabela de DETALHE do médico (drilldown, detalheHtml) tinha o mesmo problema — a coluna Procedimento com nowrap empurrava a largura e cortava Valor/Valor aplicado. Correção: tabela ganhou classe .pm-tabela-det; coluna Procedimento (.pm-proc) agora QUEBRA (white-space:normal, max-width 420px) e Convênio (.pm-conv-cell) limita com ellipsis; padding/fonte compactos. Cabe dentro do .main; overflow:auto do wrap segue como reserva */
 
@@ -2087,7 +2085,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 /* V271: selo Contábil congelado (mês consolidado) */
 /* V896: o cadeado do Contábil congelado mora no canto do card RECEITA PROD TOTAL */
 .pm-congelado-card { position: absolute; top: 7px; right: 9px; margin-left: 0; z-index: 2; }
-.pm-congelado { font-size: 11px; font-weight: 700; color: #0F6E56; background: #E1EFF6; border: 1px solid var(--border, #D3E0E9); /* V974: era #9FE6C9 */ border-radius: 999px; padding: 2px 9px; margin-left: 8px; vertical-align: middle; white-space: nowrap; }
+.pm-congelado { font-size: 11px; font-weight: 700; color: #0F6E56; background: #e4ecf4; border: 1px solid var(--border, #dfe4ea); /* V974: era #9FE6C9 */ border-radius: 999px; padding: 2px 9px; margin-left: 8px; vertical-align: middle; white-space: nowrap; }
 
 /* V271: (1) Ao Consolidar, snapshot do CONTÁBIL do mês (tabela pm_contabil_snap) — no mês consolidado a visão Contábil lê o congelado (produção+repasse imutáveis); Gerencial recalcula ao vivo. Reabrir descongela. Selo "🔒 Contábil congelado". Hooks em consolidacao.js (consolidar/acréscimos/reabrir) via window.AtlasProducaoMedica. (2) Importação PRODUÇÃO: botão "↻ Atualizar" por mês (sobrescreve a produção do mês) + invalida caches (AtlasProducaoMedica.invalidar + AtlasRelatorios.invalidarConsolidado) → Gerencial reflete; Contábil consolidado permanece congelado. Aviso se o arquivo for de outro mês. */
 
@@ -2166,13 +2164,13 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 }
 .br-lat-filtros input:focus, .br-lat-filtros select:focus {
   outline: none; border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(24, 154, 211, 0.15);
+  box-shadow: 0 0 0 3px rgba(42, 90, 140, 0.15);
 }
 .br-tab-scroll { overflow: auto; max-height: 62vh; border: 1px solid var(--border); border-radius: 10px; }
 .br-tab-lat { width: 100%; }
 .br-tab-lat thead th { position: sticky; top: 0; background: var(--bg-elevated); z-index: 1; }
 .br-lat-tag { font-weight: 700; white-space: nowrap; }
-.br-lat-ao { color: #107DAC; }
+.br-lat-ao { color: #1d4470; }
 
 .br-drop {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
@@ -2180,7 +2178,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
   background: var(--primary-soft); cursor: pointer; text-align: center;
   transition: border-color .15s, background-color .15s;
 }
-.br-drop:hover, .br-drop-ativo { border-color: var(--accent); background: rgba(24, 154, 211, 0.08); }
+.br-drop:hover, .br-drop-ativo { border-color: var(--accent); background: rgba(42, 90, 140, 0.08); }
 .br-drop i { font-size: 34px; color: var(--primary); }
 .br-drop-txt { font-size: 14px; color: var(--ink); }
 .br-drop-sub { font-size: 12px; color: var(--ink-faint); }
@@ -2242,9 +2240,9 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 /* ── Balanço Retroativo: repasse por médico (V296) ── */
 .br-acoes { gap: 10px; flex-wrap: wrap; }
 .br-btn-med { background: var(--ink); }
-.br-btn-med:hover { background: #0a3a32; }
+.br-btn-med:hover { background: #0b2340; }
 #br-medicos { margin-top: 4px; display: flex; flex-direction: column; gap: var(--space-4); }
-.br-hero-med { background: linear-gradient(135deg, var(--ink), #0a3a32); }
+.br-hero-med { background: linear-gradient(135deg, var(--ink), #0b2340); }
 .br-tab-med tbody tr.br-papeis td { font-size: 11.5px; color: var(--ink-faint); padding-top: 0; padding-bottom: 8px; border-top: none; }
 .br-tab-med tbody tr:not(.br-papeis) td { border-top: 1px solid var(--border); font-weight: 600; }
 .br-tag-alerta { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 600;
@@ -2261,7 +2259,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
    sem índice). Agora carrega linhas_producao uma vez num Map. */
 
 /* ── Balanço Retroativo: matriz padrão Auditoria + filtros + snapshot (V298) ── */
-.br-status-ok { background: rgba(24, 154, 211,0.12); color: #107DAC; }
+.br-status-ok { background: rgba(42, 90, 140,0.12); color: #1d4470; }
 .br-matriz-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding: 12px 14px;
   background: var(--bg); border: 1px solid var(--border); border-radius: 10px; }
 .br-filtro-grupo { display: flex; flex-direction: column; gap: 5px; }
@@ -2284,7 +2282,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 .br-row-fora { opacity: 0.5; }
 .br-vinc { font-size: 10px; color: var(--ink-faint); background: var(--primary-soft); padding: 0 6px; border-radius: 999px; }
 .br-st { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; }
-.br-st-ok { background: rgba(24, 154, 211,0.14); color: #107DAC; }
+.br-st-ok { background: rgba(42, 90, 140,0.14); color: #1d4470; }
 .br-st-warn { background: rgba(184,134,74,0.15); color: #9a6f37; }
 .br-st-erro { background: rgba(192,57,43,0.12); color: #C0392B; }
 .br-st-fora { background: var(--border); color: var(--ink-faint); }
@@ -2309,9 +2307,9 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 .br-cad-btn { padding: 6px 12px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600;
   cursor: pointer; font-family: inherit; transition: background-color .12s; }
 .br-cad-novo { background: var(--primary); color: #fff; }
-.br-cad-novo:hover { background: var(--primary-strong, #0a3a32); }
+.br-cad-novo:hover { background: var(--primary-strong, #0b2340); }
 .br-cad-vinc-btn { background: var(--ink-soft, #44514d); color: #fff; }
-.br-cad-vinc-btn:hover { background: var(--ink, #06283A); }
+.br-cad-vinc-btn:hover { background: var(--ink, #0f1d2e); }
 /* V300: Balanço Retroativo — (1) cadastrar médicos sem cadastro: painel lista os distintos sem_cadastro com 'Cadastrar novo' (escolhe vínculo Interno/Híbrido/Externo → INSERT medicos) e 'Vincular a existente' (De-Para → INSERT sinonimos_medico); ao cadastrar, as linhas viram 'casou' in-memory e o total se atualiza. (2) Filtro de Status em chips (OK / S.Cadastro / S.Produção / S.Regra), multi. (2.1) Inclui status 'sem_regra': produto que casa num procedimento conhecido mas SEM regra na tabela_repasse vira linha S/ REGRA. Invalida __atlasInvalidarAux e cache de pagos após cadastro. */
 
 /* V301: marcador de procedimento trazido da produção (fallback por admissão) */
@@ -2371,7 +2369,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 .br-aba.on { background: var(--primary); color: #fff; }
 .br-aba:not(.on):hover { color: var(--ink); }
 .br-tipo { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-.br-tipo-opme { background: #E1EFF6; color: var(--primary); }
+.br-tipo-opme { background: #e4ecf4; color: var(--primary); }
 .br-tipo-lio { background: #F3E9D7; color: #8A6A2F; }
 .br-naoeleg { font-size: 11px; color: var(--ink-faint); font-style: italic; }
 
@@ -2391,35 +2389,35 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 
 /* V318: removido o sufixo "×N" do nome do papel (ex.: "Indicante ×2" → "Indicante"). O valor segue multiplicado pela quantidade (bino/mono); só o rótulo ficou limpo. */
 
-/* V319: dois ajustes visuais. (1) ALINHAMENTO do header da sidebar — .sidebar-brand agora tem ALTURA FIXA (64px) com flex centralizado nos DOIS estados (aberto: ATLAS+subtítulo; colapsado: losango ◈), então a faixa do título não encolhe ao fechar o menu e os ícones permanecem no MESMO Y. Antes a altura era guiada pelo conteúdo (colapsado ficava mais baixo). (2) LOGO do login — título "ATLAS" (.login-title em tela_login.js) ganhou o gradiente verde vivo #03D07D→#098865 (via background-clip:text), no lugar do branco. */
+/* V319: dois ajustes visuais. (1) ALINHAMENTO do header da sidebar — .sidebar-brand agora tem ALTURA FIXA (64px) com flex centralizado nos DOIS estados (aberto: ATLAS+subtítulo; colapsado: losango ◈), então a faixa do título não encolhe ao fechar o menu e os ícones permanecem no MESMO Y. Antes a altura era guiada pelo conteúdo (colapsado ficava mais baixo). (2) LOGO do login — título "ATLAS" (.login-title em tela_login.js) ganhou o gradiente verde vivo #2a5a8c→#1d4470 (via background-clip:text), no lugar do branco. */
 
 /* V320: CORREÇÃO CRÍTICA — removida a multiplicação por quantidade no repasse-base (V316 estava dobrando). A BASE TABELA já traz o VALOR CHEIO de cada papel (a Auditoria não multiplica pela quantidade), então cada papel recebe o SEU próprio valor (ex.: MICROSCOPIA 22,85 por papel, não 45,70 = 22,85×2). Isso corrige tanto a duplicação do valor quanto o "somar o total dos papéis" (a linha mostrava a soma 2× em vez do valor unitário). O auxiliar exigido pago ao cirurgião (mesmo sem nome) foi mantido, agora ×1. Sufixo "×N" já não existe. */
 
 /* V321: pacote consulta — transparência na linha-filha (exames). A regra Retina-only foi mantida (confirmada). Quando a filha NÃO é paga, a linha-mãe (consulta) passa a carregar o MOTIVO: "executante não reconhecido no cadastro" (médico não casou) ou "executante não tem a especialidade Retina cadastrada". Assim dá pra distinguir o que é regra (médico não-Retina, correto) do que é cadastro faltando (médico que deveria ser Retina mas não está mapeado). Sem mudança de valores. */
 
-/* V322: tela de LOGIN toda no verde vivo do título. (1) LOGO-imagem recolorida exatamente no gradiente #03D07D→#098865 — usa o PNG como MÁSCARA (-webkit-mask/mask, o PNG tem alpha) preenchida pelo gradiente; e aumentada (150→188px). (2) Subtítulo, traços, labels (LOGIN/SENHA), link "Esqueceu a senha?" e o rótulo do rodapé no verde (#2FCB8C). (3) Foco dos inputs com anel/brilho verde; toggle de senha verde no hover. (4) Botão Entrar com gradiente verde (#03D07D→#07A86C, texto escuro) + glow verde. (5) Card com borda verde levíssima e brilho radial verde sutil no fundo. */
+/* V322: tela de LOGIN toda no verde vivo do título. (1) LOGO-imagem recolorida exatamente no gradiente #2a5a8c→#1d4470 — usa o PNG como MÁSCARA (-webkit-mask/mask, o PNG tem alpha) preenchida pelo gradiente; e aumentada (150→188px). (2) Subtítulo, traços, labels (LOGIN/SENHA), link "Esqueceu a senha?" e o rótulo do rodapé no verde (#2FCB8C). (3) Foco dos inputs com anel/brilho verde; toggle de senha verde no hover. (4) Botão Entrar com gradiente verde (#2a5a8c→#07A86C, texto escuro) + glow verde. (5) Card com borda verde levíssima e brilho radial verde sutil no fundo. */
 
 /* V323: fix da logo do login. A máscara não aparecia porque o atalho "mask: url() center / contain" não aplicava o mask-size no Chrome (usava o tamanho natural, gigante, caindo no centro transparente do logo). Trocado pelas propriedades SEPARADAS (-webkit-mask-image/-repeat/-position/-size + mask-*), agora a figura aparece preenchida pelo gradiente verde. Tamanho reduzido de 188px → 120px (estava grande demais). */
 
-/* V324: a máscara CSS não resolvia nesse contexto (URL no estilo inline), então a logo do login passou a ser um ARQUIVO já recolorido: assets/atlas-circulo.png (gerado a partir do PNG original, trocando a cor de cada pixel pelo gradiente verde do título #03D07D→#098865, preservando o alpha/bordas). O <img> aponta pra ele direto, sem filtro de recolor (só um leve glow verde). Tamanho 120px. */
+/* V324: a máscara CSS não resolvia nesse contexto (URL no estilo inline), então a logo do login passou a ser um ARQUIVO já recolorido: assets/atlas-circulo.png (gerado a partir do PNG original, trocando a cor de cada pixel pelo gradiente verde do título #2a5a8c→#1d4470, preservando o alpha/bordas). O <img> aponta pra ele direto, sem filtro de recolor (só um leve glow verde). Tamanho 120px. */
 
-/* V325: tela SELECIONE SUA FILIAL — (1) removidos os anéis redondos ao redor do mapa (.fil-anel, .fil-anel-out) e o sombreado esférico (.fil-esfera) via display:none; o mapa fica solto, sem a "bolha". (2) Mapa recolorido pro verde da tela de login: estados fill #0E3A2B / stroke #07A86C; hover #0FB877; selecionado #03D07D; brilho da região (#03D07D + glows verdes); sombra do mapa, brilho do título e radial de fundo no verde (rgba 3,208,125). */
+/* V325: tela SELECIONE SUA FILIAL — (1) removidos os anéis redondos ao redor do mapa (.fil-anel, .fil-anel-out) e o sombreado esférico (.fil-esfera) via display:none; o mapa fica solto, sem a "bolha". (2) Mapa recolorido pro verde da tela de login: estados fill #0E3A2B / stroke #07A86C; hover #0FB877; selecionado #2a5a8c; brilho da região (#2a5a8c + glows verdes); sombra do mapa, brilho do título e radial de fundo no verde (rgba 3,208,125). */
 
-/* V326: item ATIVO do menu — troca dos verdes. A pílula do item ativo passou a usar o DEGRADÊ verde (linear-gradient 145deg #0CE08A→#06AC71→#098865, igual ao login/título) no lugar do verde-escuro #0C3A2F; a barrinha de contraste passou de verde-vivo (#1EBBD7) pra verde-ESCURO (#0A3528); o brilho radial do ativo acompanhou o verde. A LETRA segue BRANCA (#F1F7F7) como antes, com um text-shadow sutil pra manter legível sobre o verde, + um glow verde leve na pílula. */
+/* V326: item ATIVO do menu — troca dos verdes. A pílula do item ativo passou a usar o DEGRADÊ verde (linear-gradient 145deg #0CE08A→#06AC71→#1d4470, igual ao login/título) no lugar do verde-escuro #0b2340; a barrinha de contraste passou de verde-vivo (#4f7fb0) pra verde-ESCURO (#0A3528); o brilho radial do ativo acompanhou o verde. A LETRA segue BRANCA (#f6f4ef) como antes, com um text-shadow sutil pra manter legível sobre o verde, + um glow verde leve na pílula. */
 
-/* V327: (1) barra do item ATIVO do menu trocada do verde-escuro pro BRANCO da paleta (#F5F2EC) — estava quase imperceptível na pílula verde. (2) TÍTULOS dos módulos (.page-header h2/h1 e cabeçalhos irmãos :not(.no-deco)) ganharam o mesmo tratamento: pílula com DEGRADÊ verde (#0CE08A→#06AC71→#098865), letra branca (#F1F7F7) e barra de contraste PRETA (#111312) à esquerda; hover agora levita + glow verde (substituiu o efeito de sombra 3D no texto). */
+/* V327: (1) barra do item ATIVO do menu trocada do verde-escuro pro BRANCO da paleta (#f6f4ef) — estava quase imperceptível na pílula verde. (2) TÍTULOS dos módulos (.page-header h2/h1 e cabeçalhos irmãos :not(.no-deco)) ganharam o mesmo tratamento: pílula com DEGRADÊ verde (#0CE08A→#06AC71→#1d4470), letra branca (#f6f4ef) e barra de contraste PRETA (#071a30) à esquerda; hover agora levita + glow verde (substituiu o efeito de sombra 3D no texto). */
 
-/* V328: simplificação — INVERSÃO PURA das cores (sem degradê/brilho/3D). Item ativo do menu e títulos (.page-header etc.) agora: fundo VERDE chapado (#1EBBD7, o verde que era a barrinha) + barra ESCURA (nav #0C3A2F / títulos #111312, o escuro que era o fundo) + letra branca. Removidos o degradê 145deg, o text-shadow, o box-shadow/glow e o efeito 3D que eu tinha colocado por engano. */
+/* V328: simplificação — INVERSÃO PURA das cores (sem degradê/brilho/3D). Item ativo do menu e títulos (.page-header etc.) agora: fundo VERDE chapado (#4f7fb0, o verde que era a barrinha) + barra ESCURA (nav #0b2340 / títulos #071a30, o escuro que era o fundo) + letra branca. Removidos o degradê 145deg, o text-shadow, o box-shadow/glow e o efeito 3D que eu tinha colocado por engano. */
 
-/* V329: (1) TÍTULO-BANNER implementado no app — o <h2> de cada page-header vira o banner aprovado: círculo off-white com a logo ATLAS (assets/atlas-circulo.png) sobrepondo uma pílula escura (#15201C→#06283A) com o título em caixa alta, e um CONTORNO VERDE ÚNICO (#03D07D) acompanhando toda a silhueta externa (verde atrás da peça; círculo+pílula por cima cobrem a emenda, sem dividir). Montado pelo decorador App._decorarTituloBanner() chamado no exec de navegarPara (sem editar o HTML das 22 telas). Substituiu a pílula chapada V328. (2) LOGIN mais slim: .login-card max-width 400px→360px. */
+/* V329: (1) TÍTULO-BANNER implementado no app — o <h2> de cada page-header vira o banner aprovado: círculo off-white com a logo ATLAS (assets/atlas-circulo.png) sobrepondo uma pílula escura (#15201C→#0f1d2e) com o título em caixa alta, e um CONTORNO VERDE ÚNICO (#2a5a8c) acompanhando toda a silhueta externa (verde atrás da peça; círculo+pílula por cima cobrem a emenda, sem dividir). Montado pelo decorador App._decorarTituloBanner() chamado no exec de navegarPara (sem editar o HTML das 22 telas). Substituiu a pílula chapada V328. (2) LOGIN mais slim: .login-card max-width 400px→360px. */
 
-/* V330: CORREÇÃO do banner — o título tinha DOIS decoradores rodando juntos: a antiga FITA-TITULO (box escuro #0D2B26→#021A1C + rolinho verde) montada pelo aplicar() via MutationObserver, MAIS o banner novo por cima ("sobressaindo"). Agora o aplicar() monta DIRETO o banner (logo + pílula + contorno verde único) no lugar da fita — a fita não é mais criada. Dock e botão ⓘ realinhados pro banner. Banner também REDUZIDO ~18% (círculo 102→86 / off-white 96→80 / logo 72→60px / fonte 27→22 / min-height 102→86). */
+/* V330: CORREÇÃO do banner — o título tinha DOIS decoradores rodando juntos: a antiga FITA-TITULO (box escuro #0b2340→#071a30 + rolinho verde) montada pelo aplicar() via MutationObserver, MAIS o banner novo por cima ("sobressaindo"). Agora o aplicar() monta DIRETO o banner (logo + pílula + contorno verde único) no lugar da fita — a fita não é mais criada. Dock e botão ⓘ realinhados pro banner. Banner também REDUZIDO ~18% (círculo 102→86 / off-white 96→80 / logo 72→60px / fonte 27→22 / min-height 102→86). */
 
 /* V331: BANNER em TODOS os títulos + correção de bug. (1) O CSS do banner estava escopado em `.page-header` — títulos de outros containers (.per-header h1, .fic-titulo-wrap h2, etc.) recebiam as camadas mas SEM estilo, então o círculo desancorava e cortava o texto ("RÍODOS") e sobrava uma barrinha verde. Agora as regras valem para qualquer `h1.titulo-banner`/`h2.titulo-banner` (global). (2) Banner reduzido mais: círculo 86→74 / off-white 80→68 / logo 60→52 / fonte 22→19 / min-height 86→74. */
 
 /* V332: banner faltava em OPME/FELLOW/FRACIONAMENTO/LAUDOS. Causa: no aplicar() o montarHub() rodava ANTES de decorar o título; nesses fichários de cabeçalho complexo o montarHub estourava (hub.querySelector('.hub-btn') nulo) e abortava o aplicar() antes de inserir o banner. Correção em js/app.js: decora o título PRIMEIRO; montarHub()/alinharDock() agora em try/catch (não bloqueiam mais o título). */
 
-/* V333: ajustes pós-banner. (1) Removidos os símbolos literais dos títulos: "∑ Calcular Repasse"→"Calcular Repasse", "⊙ Auditoria"→"Auditoria", "▦ Relatórios"→"Relatórios" (apareciam dentro da pílula do banner). (2) Barrinha do item ativo do menu (.nav-item/.nav-subitem.active::before) trocada de PRETA (#0C3A2F, glow preto) pra BRANCA (#F5F2EC) com glow branco luminoso. (3) O círculo da inicial do usuário (.su-avatar, o "A") agora é CLICÁVEL e abre Configurações/Sistema — mesmo gate do botão de engrenagem (só quem tem acesso), útil principalmente com o menu colapsado onde o botão fica oculto. (CSS dos itens 2 e 3 está inline em js/app.js.) */
+/* V333: ajustes pós-banner. (1) Removidos os símbolos literais dos títulos: "∑ Calcular Repasse"→"Calcular Repasse", "⊙ Auditoria"→"Auditoria", "▦ Relatórios"→"Relatórios" (apareciam dentro da pílula do banner). (2) Barrinha do item ativo do menu (.nav-item/.nav-subitem.active::before) trocada de PRETA (#0b2340, glow preto) pra BRANCA (#f6f4ef) com glow branco luminoso. (3) O círculo da inicial do usuário (.su-avatar, o "A") agora é CLICÁVEL e abre Configurações/Sistema — mesmo gate do botão de engrenagem (só quem tem acesso), útil principalmente com o menu colapsado onde o botão fica oculto. (CSS dos itens 2 e 3 está inline em js/app.js.) */
 
 /* V334: SIDEBAR no padrão cápsula flutuante (aprovado) + título menor. (1) Sidebar agora FLUTUANTE e REDONDA: position fixed com margem (left/top 12px, height calc(100vh-24px)), fundo gradiente escuro (#0E1614→#070C0B), sombra de flutuação e borda sutil. Colapsada = SLIM 54px com border-radius 999px (pontas 100% redondas, formato pílula/stadium); expandida = 220px com border-radius 26px. app-shell padding-left 64→80px (12+54+folga) e .main translateX no rail 105→83px ((220-54)/2) pra manter o conteúdo centralizado. Larguras do "MENU COMPACTO" alinhadas (54/220). [CSS da sidebar é inline em js/app.js.] (2) Título-banner reduzido mais: círculo 74→62 / off-white 68→56 / logo 52→44 / fonte 19→16 / min-height 74→62. */
 
@@ -2445,7 +2443,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 
 /* V345: ícone "prima" do topo da barra (◈) substituído pelo emoji do globo terrestre 🌎 virado pras Américas (Brasil em destaque), conforme pedido. HTML brand-mini agora é &#x1F30E; (EARTH GLOBE AMERICAS). CSS: removido color/text-shadow verde (emoji já é colorido) e adicionado um leve drop-shadow pra profundidade 3D no fundo escuro; font-size do menu compacto 20->24px pra ler bem. Aparece no menu colapsado (no aberto continua o wordmark ATLAS). */
 
-/* V345b: o emoji do globo não respeitava a paleta (cor fixa do sistema). Trocado por um SVG no MESMO estilo (globo das Américas, Brasil no centro) mas nas CORES ATLAS: oceano em degradê verde da marca (#3fe0a6->#1f9e74->#173A32) e continentes em off-white #F5F2EC, com brilho suave e aro verde-claro. brand-mini agora dimensiona o SVG por font-size (width/height 1em) — o knob de tamanho continua valendo — e o drop-shadow dá profundidade. */
+/* V345b: o emoji do globo não respeitava a paleta (cor fixa do sistema). Trocado por um SVG no MESMO estilo (globo das Américas, Brasil no centro) mas nas CORES ATLAS: oceano em degradê verde da marca (#3fe0a6->#1f9e74->#173A32) e continentes em off-white #f6f4ef, com brilho suave e aro verde-claro. brand-mini agora dimensiona o SVG por font-size (width/height 1em) — o knob de tamanho continua valendo — e o drop-shadow dá profundidade. */
 
 /* V346: o ícone do topo agora é um GLOBO TERRESTRE REAL (planeta inteiro, todos os continentes), não mais um desenho de 1 continente. Técnica: peguei um mapa-múndi equiretangular e PROJETEI numa esfera (projeção ortográfica, centrada no Brasil/Américas como na foto de referência), com iluminação 3D, especular, atmosfera no limbo e halo suave. Pintado nas cores ATLAS (oceano verde da marca + continentes off-white). Gerado via Python (PIL+numpy) e salvo em assets/atlas-circulo.png (256px). brand-mini virou <img> dimensionada por font-size (1.15em). Outras paletas prontas em assets/: globo_atlas_azul (realista), globo_atlas_ouro (terra dourada), globo_atlas_escuro (neon) — basta trocar o src. */
 
@@ -2453,11 +2451,11 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 
 /* V348: correção DEFINITIVA do corte do Desempenho no zoom 100%. O margin:auto não estava colapsando no overflow nesse caso (continuava cortando). Troquei pelo padrão à prova de bala: o conteúdo do menu foi envolvido num .nav-inner com min-height:100% + flex column + justify-content:center. Quando a lista CABE, o inner ocupa 100% da altura do menu e centraliza; quando a lista PASSA da altura (Desempenho aberto com todos os subitens), o inner cresce além de 100% e o .sidebar-nav (flex:1 + min-height:0 + overflow-y:auto) ROLA a partir do topo, sem nunca cortar e sem vazar do esquadro. O nav deixou de ser flex (virou container de scroll em bloco) pra o min-height:100% do inner casar certo. */
 
-/* V349: globo da marca (brand-mini) — (1) recolorido pro verde do módulo ATIVO #1EBBD7 (oceano nessa cor, continentes off-white) via novo asset assets/atlas-circulo.png; (2) agora é um SPRITE de rotação de 36 quadros (globo girando no eixo, lon0 de -60 varrendo 360°). No estado normal mostra o quadro 0 (Américas/Brasil). No HOVER do globo, anima background-position-x pelos 36 quadros (steps) → gira de verdade, mantendo o render 3D sombreado. CSS do brand-mini está inline em js/app.js. Gerador: /home/claude/work/globo_giro.py. */
+/* V349: globo da marca (brand-mini) — (1) recolorido pro verde do módulo ATIVO #4f7fb0 (oceano nessa cor, continentes off-white) via novo asset assets/atlas-circulo.png; (2) agora é um SPRITE de rotação de 36 quadros (globo girando no eixo, lon0 de -60 varrendo 360°). No estado normal mostra o quadro 0 (Américas/Brasil). No HOVER do globo, anima background-position-x pelos 36 quadros (steps) → gira de verdade, mantendo o render 3D sombreado. CSS do brand-mini está inline em js/app.js. Gerador: /home/claude/work/globo_giro.py. */
 
-/* V350: (1) avatar 'A' do rodapé recolorido pro verde do módulo ativo #1EBBD7 (era gradiente #189AD3→#005073); glow do hover idem rgba(30, 187, 215). (2) Globo e 'A' empurrados pros extremos da cápsula: no menu COLAPSADO o .sidebar-brand passa a justify-content:flex-start + padding-top:7px (globo encosta mais no topo, sem mexer no letreiro "ATLAS" do menu aberto); o .sidebar-usuario teve padding ajustado pra 8px/2px (avatar desce mais, ~2px da base, dentro da curva sem cortar). CSS inline em js/app.js. */
+/* V350: (1) avatar 'A' do rodapé recolorido pro verde do módulo ativo #4f7fb0 (era gradiente #2a5a8c→#143352); glow do hover idem rgba(79, 127, 176). (2) Globo e 'A' empurrados pros extremos da cápsula: no menu COLAPSADO o .sidebar-brand passa a justify-content:flex-start + padding-top:7px (globo encosta mais no topo, sem mexer no letreiro "ATLAS" do menu aberto); o .sidebar-usuario teve padding ajustado pra 8px/2px (avatar desce mais, ~2px da base, dentro da curva sem cortar). CSS inline em js/app.js. */
 
-/* V351: o botão do hub radial (.hub-btn) — que era um círculo verde (gradiente #1EBBD7→#107DAC) com ícone wireframe ti-world — agora mostra o MESMO globo realista da sidebar (assets/atlas-circulo.png, sprite de 36 quadros, oceano #1EBBD7). Removido o <i> do HTML; o globo virou o background do botão (background-size calc(48px*36) → quadro 0 das Américas). O glow verde (box-shadow) foi mantido. O giro ao abrir o hub (#atlas-hub.aberto) deixou de rotacionar o ícone (transform) e passou a percorrer os 36 quadros do sprite (hubGloboGiraSprite, steps(36)) — globo girando no eixo de verdade. */
+/* V351: o botão do hub radial (.hub-btn) — que era um círculo verde (gradiente #4f7fb0→#1d4470) com ícone wireframe ti-world — agora mostra o MESMO globo realista da sidebar (assets/atlas-circulo.png, sprite de 36 quadros, oceano #4f7fb0). Removido o <i> do HTML; o globo virou o background do botão (background-size calc(48px*36) → quadro 0 das Américas). O glow verde (box-shadow) foi mantido. O giro ao abrir o hub (#atlas-hub.aberto) deixou de rotacionar o ícone (transform) e passou a percorrer os 36 quadros do sprite (hubGloboGiraSprite, steps(36)) — globo girando no eixo de verdade. */
 
 /* V352: globo do hub (.hub-btn) reduzido de 48px → 38px (width/height, background-size do sprite e o keyframe hubGloboGiraSprite ajustados juntos). */
 
@@ -2492,7 +2490,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 
 /* V367: OPME valor fixo — GATILHO reformulado. Antes só substituía quando subfaturado (produzido < fixo); agora, SEMPRE que o padrão (multi-termo) casar e houver valor fixado (>0) pro convênio, aplica o valor fixado — independente de o relatório ter vindo maior ou menor. Sem cadastro pro convênio → fluxo normal. Particular continua fora. baseComValorFixo: removida a condição m.valor>prod → passou a m.valor>0. EV escala o repasse gravado pela razão fixo/produzido (funciona p/ cima e p/ baixo). Textos/tooltips do "ajustado" atualizados (não fala mais "subfaturado"). js/telas/desempenho_opme.js. Smoke 7/7 (relatório menor/maior/igual, sem cadastro, particular, escala EV nos 2 sentidos). */
 
-/* V368: OPME valor fixo — editor de padrão vira CHIPS DE TERMOS (igual ao módulo LIO). Cada termo é uma tag com ✕ pra remover; clique no texto edita inline; "+ Adicionar termo" abre input (Enter/blur grava, Esc cancela). Termos gravados em opme_valor_fixo.padrao separados por '|' (termosDoPadrao lê pipe OU espaço p/ legado). LIMPEZA: removido bloco duplicado de adicionarTermoVF/removerTermoVF (versão antiga por espaço) e o state vfAddTermo sem uso; inicializados vfEditandoTermo/vfAdicionandoTermo no state. ADICIONADO o CSS dos chips que faltava (.opme-vf-chips/.opme-vf-chip/.opme-vf-chip-txt/.opme-vf-chip-x/.opme-vf-chip-add/.opme-vf-termo-edit/.opme-vf-termo-novo) no padrão visual do LIO, usando o verde ativo do OPME #1EBBD7. js/telas/desempenho_opme.js. Smoke 8/8 (storage↔display↔match consistentes por pipe, add/remove chip, legado por espaço). */
+/* V368: OPME valor fixo — editor de padrão vira CHIPS DE TERMOS (igual ao módulo LIO). Cada termo é uma tag com ✕ pra remover; clique no texto edita inline; "+ Adicionar termo" abre input (Enter/blur grava, Esc cancela). Termos gravados em opme_valor_fixo.padrao separados por '|' (termosDoPadrao lê pipe OU espaço p/ legado). LIMPEZA: removido bloco duplicado de adicionarTermoVF/removerTermoVF (versão antiga por espaço) e o state vfAddTermo sem uso; inicializados vfEditandoTermo/vfAdicionandoTermo no state. ADICIONADO o CSS dos chips que faltava (.opme-vf-chips/.opme-vf-chip/.opme-vf-chip-txt/.opme-vf-chip-x/.opme-vf-chip-add/.opme-vf-termo-edit/.opme-vf-termo-novo) no padrão visual do LIO, usando o verde ativo do OPME #4f7fb0. js/telas/desempenho_opme.js. Smoke 8/8 (storage↔display↔match consistentes por pipe, add/remove chip, legado por espaço). */
 
 /* V369: OPME valor fixo — seção reformatada no LAYOUT DE TABELA igual ao módulo LIO (conforme imagem pedida pelo usuário). Antes a lista era um <ul> flat e os chips só apareciam em entradas já cadastradas (com a lista vazia, via-se só o form de adicionar com campo de texto "Termos" — parecia o formato antigo). Agora: cada grupo de convênio vira uma <table class="opme-vf-tabela"> com cabeçalho escuro (var(--primary)) e colunas VALOR PRODUZIDO | PADRÃO DE BUSCA (chips com ✕ + "+ Adicionar termo") | ✕. Texto de ajuda atualizado (sem "separados por espaço"); placeholder do form vira "1º termo (ex: ISTENT)". Handlers e funções inalterados (mesmas classes). js/telas/desempenho_opme.js. */
 
@@ -2511,11 +2509,11 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 /* V380: OPME — (1) FIX visual já em V379. (2) % DE REPASSE POR OPME (por termo/macro). Schema (banco.js): coluna pct REAL em opme_termos_elegiveis (NULL = usa regra geral) + migração idempotente; config_opme ganha RESPEITAR_REGRA_MEDICO default '1'. lerConfig lê termos.pct e cfg.respeitarMedico. Novo helper central decidirPct(nome,produto,cfg)→{pct,origem} com precedência: recebido≤0 zera (fora); senão médico-rule × %-do-OPME × PCT_GERAL, e o EMPATE médico×OPME é resolvido por um SWITCH (cfg.respeitarMedico: ON=médico vence, OFF=OPME vence). pctDoTermo(produto,cfg) acha o termo ativo com pct que casa (empate→mais longo). calcularRepasse e pctParaMedico passam a receber `produto` e roteiam por decidirPct; 6 callers atualizados pra passar l.procedimento/linhaProducao.produto. UI: campo % no cabeçalho de cada macro (.opme-macro-pct) + switch "respeitar regra do médico" (.opme-switch) na seção OPMEs Elegíveis; setters salvarPctTermo/salvarRespeitarMedico; handlers no bindEventos. Teste mostra origem 'opme'. Smoke test de 8 cenários de precedência OK. js/banco.js + js/telas/desempenho_opme.js. */
 /* V381: OPME — desmarcar admissão paga no QVIS agora EXIGE senha do administrador, num modal ESTILIZADO (reusa .opme-modal-overlay/.opme-modal do módulo, montado no document.body — NÃO é o prompt/confirm preto do navegador). Novo Auth.verificarSenha(senha) (compara hash SHA-256 sem mexer na sessão) em js/auth.js. Novo helper pedirSenhaAdm(motivo)→Promise<bool> (input password, Confirmar/Cancelar, Enter confirma, Esc/overlay/✕ cancela, erro inline em .opme-senha-erro). Gateados AMBOS os caminhos de desmarcar: o checkbox .opme-chk-pago-input e o botão .opme-dup-remover do modal de duplicidade (antes usavam confirm() nativo). Marcar como pago segue sem senha. CSS .opme-modal-senha/.opme-senha-erro. js/auth.js + js/telas/desempenho_opme.js. */
 /* V382: OPME — painel PRODUÇÃO (direita) passa a mostrar o VALOR CRU da Base Produção (l.valor), SEM o ajuste de valor fixo e sem o badge "ajustado". Antes renderLinhaProd computava fixP=baseComValorFixo(...) e exibia fixP.base (ajustado) — agora removido (fixP/ehPartProd deletados). Motivo: a direita é só uma extração crua pra fiscalizar o quanto foi o erro/subfaturamento; o ajuste da regra cadastrada continua valendo no QVIS (esquerda) e na cópia EV (que já escala pelo valor fixo na exibição). QVIS intacto. Sem CSS novo; só js/telas/desempenho_opme.js. */
-/* V383: VISÃO GERAL — painel de LEMBRETES/ALERTAS. Novo ícone de alerta (triângulo c/ exclamação, SVG) no canto superior esquerdo do header (.vg-header-left, à esquerda do título "Visão Geral"). Estado: COM lembretes → preenchido VERDE #1EBBD7 (mesma do módulo ativo) + badge de contagem; SEM lembretes → só contorno cinza, sem cor. Ao clicar abre MODAL estilizado (montado no document.body) tipo kanban "por categoria" seguindo a 2ª imagem: 4 colunas fixas Importante(vermelho)/Urgente(laranja)/Pessoal(azul)/Trabalho(roxo), cards com título + descrição opcional + data, "+ Novo item" por coluna; CRUD inline (criar/editar/remover) com persistência. Novos: tabela `lembretes` (id,categoria,titulo,descricao,data,criado_em) em js/banco.js; módulo js/telas/lembretes.js (window.AtlasLembretes — estilos próprios injetados, não mexe no style.css); <script> no index.html; injeção do botão + montar() no js/telas/visao_geral_ui.js. QVIS/OPME/demais telas intactos. */
+/* V383: VISÃO GERAL — painel de LEMBRETES/ALERTAS. Novo ícone de alerta (triângulo c/ exclamação, SVG) no canto superior esquerdo do header (.vg-header-left, à esquerda do título "Visão Geral"). Estado: COM lembretes → preenchido VERDE #4f7fb0 (mesma do módulo ativo) + badge de contagem; SEM lembretes → só contorno cinza, sem cor. Ao clicar abre MODAL estilizado (montado no document.body) tipo kanban "por categoria" seguindo a 2ª imagem: 4 colunas fixas Importante(vermelho)/Urgente(laranja)/Pessoal(azul)/Trabalho(roxo), cards com título + descrição opcional + data, "+ Novo item" por coluna; CRUD inline (criar/editar/remover) com persistência. Novos: tabela `lembretes` (id,categoria,titulo,descricao,data,criado_em) em js/banco.js; módulo js/telas/lembretes.js (window.AtlasLembretes — estilos próprios injetados, não mexe no style.css); <script> no index.html; injeção do botão + montar() no js/telas/visao_geral_ui.js. QVIS/OPME/demais telas intactos. */
 /* V384: OPME — FILTRO SEPARADO. A busca única global (opme-busca-global, que casava admissão/paciente/procedimento/convênio/médico/unidade num campo só) foi substituída por 4 CAMPOS separados: Admissão, Médico, Convênio, Paciente (espelha o módulo LC). Cada campo filtra os DOIS lados (QVIS usa admissao/nome_profissional/convenio/paciente; Produção usa cod_admissao/cirurgiao||medico/convenio/paciente), combinando por AND, acento-insensível, substring. Estado: state.busca → state.{filtroAdmissao,filtroMedico,filtroConvenio,filtroPaciente}. filtrarPorBusca→filtrarPorCampos; novo helper campoFiltro(); temFiltro e eventos atualizados (debounce 200ms + restauração de foco/caret pós-render); cada campo tem × para limpar. CSS .opme-filtros-campos/.opme-filtro-campo/.opme-filtro-input/.opme-filtro-x (o CSS antigo .opme-busca-* permanece, inofensivo). Só js/telas/desempenho_opme.js. */
 /* V385: OPME — 3 CARDS TOTALIZADORES no topo (após o header), espelhando o card do LC. (1) "Produzido Total" = soma do PRODUZIDO no lado Produção (l.valor cru), TUDO. (2) "Repasse Total (pagos)" = soma do repasse no lado QVIS, só linhas marcadas como PAGAS (opme_pagamentos/ehPago), usando o repasse calculado idêntico ao exibido. (3) "Quantidade (admissões)" com dois números: Repassada = admissões distintas PAGAS; Produzida = admissões distintas produzidas. Cada métrica traz 3 comparativos: vs LM (mês anterior), vs LY (mesmo mês, ano-1) e YTD (acumulado jan→mês selecionado vs o mesmo acumulado do ano anterior, em %). Respeitam os 4 filtros de texto e o mês/ano (comparativos só aparecem com mês+ano definidos). INFRA: extraí analisarLinhaQvis (derivação+cálculo do repasse por linha do QVIS) como FONTE ÚNICA usada pelo render (renderLinhaQvis agora destrutura dela) E por calcularTotaisOpme, garantindo que a soma do card bate com a soma das linhas. Novas funções calcularTotaisOpme/renderCardsOpme; CSS .opme-cards/.opme-card*. Só js/telas/desempenho_opme.js. */
-/* V386: OPME — os 3 cards totalizadores (v385) agora seguem o MESMO LAYOUT dos cards do módulo LC (que era o exemplo). Reescrito o CSS e a markup pra espelhar .lc-card: cantos 14px, padding 18px, min-height 130px, faixa de 5px à direita, título 10px MAIÚSCULO (letter-spacing .06em, peso 700), valor 26px peso 800, comparativos no rodapé (margin-top auto) com badge de fundo branco e cores up #0A7A5A / down #9B3A3A, e FUNDOS PASTEL por tema idênticos ao LC. Temas: Produzido Total = azul (#2C5C8A), Repasse Total = destaque (verde escuro #005073→#0C3A2F, valor branco), Quantidade = roxo (#6B4587, dois blocos Repassada/Produzida na mesma linguagem visual). Removido o estilo próprio anterior (.opme-card-badge pílula, faixa à esquerda etc.). Lógica/numeração inalterada — só visual. Só js/telas/desempenho_opme.js. */
-/* V387: OPME — cards totalizadores agora seguem o PADRÃO VISUAL REAL do app (módulo LIO/Imagem aprovada): card BRANCO, moldura verde (sombra sólida deslocada #1EBBD7 + glow), título VERDE maiúsculo, valor PRETO, sub/comparativos cinza, sem faixa. Correção da causa-raiz: .opme-card NÃO estava na lista global de uniformização `.main :is(.aud-kpi,.lio-kpi,.lc-card,...)` — adicionado .opme-card a TODOS os blocos dessa lista (9 ocorrências). Removidos do módulo os estilos pastel/temas (azul/destaque/roxo), as faixas e as cores próprias de badge — agora o módulo só define o LAYOUT (grid 3 col, padding/altura no padrão .lio-kpi, tamanhos de título/valor, blocos da Quantidade) e o override global pinta cores/fundo/moldura, garantindo uniformidade com os demais cards. Lógica/numeração intactas. css/style.css (lista global) + js/telas/desempenho_opme.js. */
+/* V386: OPME — os 3 cards totalizadores (v385) agora seguem o MESMO LAYOUT dos cards do módulo LC (que era o exemplo). Reescrito o CSS e a markup pra espelhar .lc-card: cantos 14px, padding 18px, min-height 130px, faixa de 5px à direita, título 10px MAIÚSCULO (letter-spacing .06em, peso 700), valor 26px peso 800, comparativos no rodapé (margin-top auto) com badge de fundo branco e cores up #0A7A5A / down #9B3A3A, e FUNDOS PASTEL por tema idênticos ao LC. Temas: Produzido Total = azul (#2C5C8A), Repasse Total = destaque (verde escuro #143352→#0b2340, valor branco), Quantidade = roxo (#6B4587, dois blocos Repassada/Produzida na mesma linguagem visual). Removido o estilo próprio anterior (.opme-card-badge pílula, faixa à esquerda etc.). Lógica/numeração inalterada — só visual. Só js/telas/desempenho_opme.js. */
+/* V387: OPME — cards totalizadores agora seguem o PADRÃO VISUAL REAL do app (módulo LIO/Imagem aprovada): card BRANCO, moldura verde (sombra sólida deslocada #4f7fb0 + glow), título VERDE maiúsculo, valor PRETO, sub/comparativos cinza, sem faixa. Correção da causa-raiz: .opme-card NÃO estava na lista global de uniformização `.main :is(.aud-kpi,.lio-kpi,.lc-card,...)` — adicionado .opme-card a TODOS os blocos dessa lista (9 ocorrências). Removidos do módulo os estilos pastel/temas (azul/destaque/roxo), as faixas e as cores próprias de badge — agora o módulo só define o LAYOUT (grid 3 col, padding/altura no padrão .lio-kpi, tamanhos de título/valor, blocos da Quantidade) e o override global pinta cores/fundo/moldura, garantindo uniformidade com os demais cards. Lógica/numeração intactas. css/style.css (lista global) + js/telas/desempenho_opme.js. */
 /* V388: OPME — os 4 filtros (Admissão/Médico/Convênio/Paciente) viraram COMBOBOXES: além de digitar (filtragem ao vivo), agora têm LISTA SUSPENSA estilizada com as opções e SCROLL. Reusa o componente .opme-combo já existente do módulo (dropdown position:absolute — imune ao transform do .main, max-height 240px + overflow-y:auto + scrollbar estilizada, animação pop-in). campoFiltro() passou a renderizar a estrutura .opme-combo (input + ✕ limpar + ▾ abrir + dropdown). Novo montarComboFiltro(id,chave,opcoes): abre no foco/seta, digitar filtra a lista e aplica (debounce 300ms) reabrindo o dropdown após o re-render (state._comboReabrir) p/ digitação contínua, selecionar/Enter aplica, Esc/blur fecha. Opções = valores DISTINTOS (ordenados, dedup acento/caixa) do que está carregado, via novo distinctOrd() + state._opcoesFiltro calculado no render. CSS .opme-filtro-combo (sizing no row, input 34px). Removido o CSS antigo .opme-filtro-campo/input/x (não usado). Só js/telas/desempenho_opme.js. */
 /* V389: OPME — 4º card GLOSAS (tudo com recebido = 0). Mostra os DOIS (A+B): Valor (R$) = soma do PRODUZIDO das linhas QVIS com recebido <= 0, e Quantidade = admissões DISTINTAS com recebido <= 0; cada um com LM/LY/YTD, no mesmo layout de dois blocos do card de Quantidade. Regras (alinhadas ao conceito de glosa da Visão Geral): recebido null/'' tratado como 0 (COALESCE), EXCLUI linhas EV (antecipadas) e Particular (glosa é de convênio), e o Valor conta 1× por admissão+procedimento (evita duplicar pelo PAPEL). calcularTotaisOpme: somar() agrega glosaValor/admGlosa; pack()/acumular() propagam glosaValor/glosaQtd. Grid dos cards passou de 3 p/ 4 colunas (responsivo 4→2→1); valor-mini ganhou nowrap/ellipsis e a glosa usa 17px p/ caber o R$. Lógica dos outros cards intacta. Só js/telas/desempenho_opme.js. */
 /* V390: OPME — ajustes visuais dos 4 cards. (1) Cards COMPACTOS p/ caber os 4 na MESMA linha (grid repeat(4,1fr), quebra só em <=900px→2col e <=520px→1col; padding 10x13, min-height 86, valor 20px, valor-mini 17/15px, fontes e gaps menores) — homogêneos por align stretch, não brigam mais com a barra de filtros. (2) Removido o descritivo ao lado dos títulos: (pagos)/(admissões)/(recebido = 0) — só o título. (3) Valores da GLOSA em VERMELHO #C0392B (algo NÃO recebido; .main .opme-card.opme-card-glosas .opme-card-valor-mini com !important vence o override global preto; rótulos da glosa também avermelhados). (4) Descrição do módulo saiu do subtítulo (só sobra aviso compacto quando não há termo ativo) e foi para o popup do botão ⓘ, agora com "Termos elegíveis (ativos)" ao vivo no lugar dos termos default hardcoded. Só js/telas/desempenho_opme.js. */
@@ -2524,24 +2522,24 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 /* V393: três ajustes de centralização/layout. (1) Botão CADASTROS (.idock-btn, dock superior) — conteúdo (ícone folder + texto + caret) não ficava centralizado verticalmente no estado pressionado/.active: faltava line-height:1 (o line-height normal do texto deixava o glifo alto). Adicionado line-height:1 ao .idock-btn e inline-flex+align-items:center+line-height:1 ao .idock-ico e ao .idock-caret — agora alinham pelo centro. css/style.css. (1.1) Badge de contagem de lembretes (.vg-lb-badge) — o número (ex.: "1") não centralizava porque usava line-height:17px + text-align:center dentro de uma caixa de 17px com borda 2px (box border-box → conteúdo 13px, texto de 17px desalinhava). Trocado por display:inline-flex; align-items:center; justify-content:center; line-height:1; box-sizing:border-box — número centrado nos dois eixos. js/telas/lembretes.js. (2) Filtros do OPME quebravam em 2 linhas bagunçadas: os 4 combos eram flex 1 1 160px com min-width 140px e flex-wrap. Agora .opme-filtros-campos é GRID de 4 colunas iguais (repeat(4,minmax(0,1fr))) que ENCOLHE junto (igual aos cards), com flex 1 1 380px (vira bloco e cai pra própria linha quando aperta) e breakpoints 4→2 (<=820px) e →1 (<=460px); combo com min-width:0. Padding do input do combo mantido em 46px (o botão "limpar" vai até ~50px da direita; reduzir causaria sobreposição). js/telas/desempenho_opme.js. */
 /* V394: BOTÃO INFORMATIVO ANALÍTICO — arquitetura + piloto OPME. Reintroduzido o botão ⓘ ao lado do título, agora redesenhado pra ORNAR com o layout (variação "dourado discreto" #B8965A escolhida) e com conteúdo EXTREMAMENTE ANALÍTICO em 6 seções (Objetivo · Fontes de dados · Como é calculado · Filtros · Regras especiais/exceções · Glossário). Arquitetura reaproveitável e com FONTE ÚNICA de verdade: (a) js/docs_modulos.js = window.AtlasDocs, registro central do conteúdo de cada módulo em DADOS estruturados (seções tipadas: paragrafo/lista/lista-ordenada/glossario; ênfase via **negrito**); (b) js/telas/atlas_info.js = window.AtlasInfo.montar(tituloWrapEl, moduloId), injeta o botão dourado no .fic-titulo-wrap e abre o popover na paleta do ATLAS (moldura verde dos cards + cabeçalho verde escuro + rótulos dourados). Popover montado no document.body (porque .main tem transform) e posicionado pelo getBoundingClientRect do botão; fecha por ✕, clique fora, Esc, e se o botão âncora sumir; reposiciona em scroll/resize. Classe atlas-btn-info contém "btn-info" → o decorator do globo a IGNORA (não vira globo). PILOTO: OPME — removido o popover inline antigo (fic-popover-info) e os handlers infoAberto; bindEventos agora chama AtlasInfo.montar. <script> de docs_modulos.js e atlas_info.js no index.html após app.js. Demais módulos entram nos próximos lotes. */
 /* V395: fix do botão informativo NOVO sumindo no OPME. Causa: o decorator do banner de título (js/app.js, função aplicar) transforma o <h2> na pílula com globo e, em seguida, procurava QUALQUER botão [class*="btn-info"] ao lado do título para ESCONDÊ-LO (display:none) e rotear o clique pro próprio banner — comportamento antigo, quando o ⓘ era oculto. Como o botão novo é .atlas-btn-info (contém "btn-info"), caía nessa regra e sumia. Correção: o banner agora esconde só o ANTIGO (.fic-btn-info) e MANTÉM VISÍVEL o novo (.atlas-btn-info); o clique no banner abre qualquer um dos dois (bônus de descoberta). Módulos legados (que ainda usam fic-btn-info) seguem idênticos. Só js/app.js. */
-/* V396: popover do botão informativo — removida a MOLDURA VERDE (box-shadow -5px -4px #1EBBD7) e a borda creme (1px #E2DCC9); ficou só uma sombra suave de elevação. Com a borda fora, o CABEÇALHO ESCURO (#06283A) encosta nas bordas do popover (cantos superiores arredondados via overflow:hidden + radius 14px), sem o vão branco que sobrava ao redor. Só js/telas/atlas_info.js (estilos injetados do componente). */
+/* V396: popover do botão informativo — removida a MOLDURA VERDE (box-shadow -5px -4px #4f7fb0) e a borda creme (1px #E2DCC9); ficou só uma sombra suave de elevação. Com a borda fora, o CABEÇALHO ESCURO (#0f1d2e) encosta nas bordas do popover (cantos superiores arredondados via overflow:hidden + radius 14px), sem o vão branco que sobrava ao redor. Só js/telas/atlas_info.js (estilos injetados do componente). */
 /* V397: rollout do botão informativo — MECANISMO CENTRAL + 1º lote de fichários. (1) Auto-montagem central: o decorator do banner (js/app.js) agora, ao decorar o título, chama AtlasInfo.montar(h, App.telaAtual) sempre que existir window.AtlasDocs[telaAtual] — o botão dourado é inserido logo após o título. Adicionar um módulo passou a ser só ACRESCENTAR um registro de dados (sem mexer no interior da tela). (2) AtlasInfo.montar agora insere o botão como irmão logo após o elemento de título (idempotente), em vez de anexar num wrap específico. (3) Esconde QUALQUER botão de info ANTIGO no cabeçalho ([class*="btn-info"]:not(.atlas-btn-info)) — os fichários usam classes próprias (lio-btn-info, estr-btn-info, lc-btn-info…), todas com "btn-info"; assim não ficam dois botões. O clique no banner abre o novo (prioridade) ou o antigo (módulos ainda não migrados mantêm o comportamento legado). (4) OPME deixou de montar o botão explicitamente (agora é central). (5) CONTEÚDO novo em js/docs_modulos.js: desempenho-lio (cruza Produção OPME tipo LIO; repasse executante% + indicante% quando ≠), desempenho-estrabismo (linhas Produto LIKE ESTRABISMO; cirurgião=Cirurgião ou Médico; repasse por VALOR FIXO por faixa de qtd e convênio), desempenho-lentes-contato (matriz LC; produção só de linhas executante; 18% exec / 9% indic só Internos-Híbridos; Externos R$ 0). Demais fichários (Luz Pulsada, Crosslink, Refractive, Fellow, Fracionamento, Cargos, Laudos, Períodos) entram nos próximos como simples registros. js/app.js + js/telas/atlas_info.js + js/docs_modulos.js + js/telas/desempenho_opme.js. */
 /* V398: conteúdo informativo dos 8 fichários de desempenho restantes (registros em js/docs_modulos.js; mecanismo central já estava pronto na V397). Lido do código de cada um: desempenho-luz-pulsada (taxa do aparelho sobre a produção LUZ PULSADA; só executantes MEDICO/CIRURGIAO Internos/Híbridos; Particular=produzido, Convênio=recebido), desempenho-crosslink (taxa fixa por procedimento CROSSLINK, independe de quem executou), desempenho-refractive-laser (taxa do aparelho; procedimentos canônicos ORBSCAN/FOTOABLAÇÃO/etc.; exames com valor fixo por linha ignorando QTD), desempenho-fellow (plantões: total = complemento de meta com sinal + refeição R$50 noturno/fim de semana; snapshot mensal; complemento negativo preservado), desempenho-fracionamento (repasse = bruto por posição no frasco 450/550/700/900 menos R$418,52 retido; rateio igual em frasco compartilhado), desempenho-cargos (valor mensal por cargo administrativo; hoje Coordenador de LC), desempenho-laudos (apresentação dos laudos importados por categoria pacote/impresso/externo), desempenho-periodos (apresentação da planilha Repasse Médico - Períodos: valor/período e totais por unidade). Com isso o lote de fichários de desempenho está completo (12 módulos com botão informativo). Só js/docs_modulos.js. */
 /* V399: botão informativo no NÚCLEO ANALÍTICO — registros de Calcular, Relatórios e Visão Geral em js/docs_modulos.js (mecanismo central já pronto; .titulo-banner é inline-flex, então o botão entra na mesma linha do título mesmo nesses headers com descrição em bloco abaixo). Conteúdo lido do código: calcular (cruza QVIS × BASE TABELA; match em camadas exato→sinônimos→Levenshtein; valor fixo Convênio/SUS vs percentual Particular; regras de exceção e de perfil sobrepõem), relatorios (Relatório Repasse = matriz consolidada da Auditoria + 12 fichários de Desempenho; seletor de mês global; export consolidado/por médico; linhas avulsas), dashboard=Visão Geral (Produção por data de admissão, Repasse pelo consolidado por data de pagamento, Glosa de Convênio/SUS recebido<=0 só executante; comparativos LM/LY; escopo na filial vinculada). Total: 15 módulos com botão informativo. Só js/docs_modulos.js. */
 /* V400: botão informativo nos UTILITÁRIOS — registros de Auditoria, Gerenciais, Consolidação e Sistema em js/docs_modulos.js. auditoria (audita papéis faltantes via BASE TABELA; Cálculo de Repasse read-only; gera a matriz de 9 colunas usada por Relatórios/Visão Geral), gerenciais (ajustes manuais crédito+/desconto−; campos admissão·médico·descrição·valor·fixar mensal; status pendente/aplicado/descartado; só aplicados entram no Consolidado), consolidacao (Saída; informa CÓDIGO único e congela a lista de admissões do mês; não remonta a matriz do Relatórios), sistema (tela com abas Backup [exporta/importa .db] e Administração [permissões, senha admin, filiais/vínculo]). Sistema cobre Backup+Administração porque elas são abas internas que renderizam com telaAtual='sistema'. Balanço Retroativo pulado (temporário). Total: 19 módulos com botão informativo. Só js/docs_modulos.js. */
 /* V401: botão informativo na PRODUÇÃO MÉDICA — registro 'producao-medica' em js/docs_modulos.js. Balanço por médico (produção + repasse + desempenho); fontes Produção QVIS + Base Tabela + Desempenho consolidado (12 fichários); regra colapsada no executante (1 dono/linha, Cirurgião ou Médico), Convênio=valor fixo / Particular=% × Valor R$, produção conta mesmo sem Base Tabela (recebido 0), SUS produz mas não repassa; cards PROD. TOTAL/CONV/PART/SUS/DESEMPENHO, abas consolidado/produção médica/desempenho, filtro de Classificação Produto; contábil congelado (🔒) imutável. Título é <h1 class="pm-titulo"> — banner trata h1 igual a h2. Total: 20 módulos com botão informativo. Só js/docs_modulos.js. */
 /* V402: FIX visual do ⓘ na Produção Médica — o botão informativo aparecia longe do título (no meio/direita). Causa: .pm-head é flex com justify-content:space-between e flex-wrap:wrap; o mecanismo central insere o botão como nextSibling do <h1>, virando um 3º item flex ([h1][botão][.pm-controles]) que o space-between espalhava. Correção: o <h1> foi envolvido num <div class="pm-title-group"> (inline-flex) nos DOIS caminhos de render (estado vazio linha 493 + render real linha 528), então o botão cai DENTRO do grupo, colado ao título (respiro pelo margin-left:2px do próprio .atlas-btn-info, igual aos outros módulos). Novo .pm-title-group{display:inline-flex;align-items:center} na injeção do próprio módulo. Mecanismo central e demais telas intactos. Só js/telas/producao_medica.js. */
-/* V403: estado ATIVO do dock superior (.idock-btn.active) suavizado. Antes: background #1EBBD7 sólido (cobria o fundo preto do dock) + box-shadow glow 0 8px 22px + transform translateY(-1px) (botão "pulava" e saía do alinhamento dos vizinhos). Agora: background rgba(30, 187, 215,.13) (translúcido — o preto aparece por baixo), color #1BE08E (texto/ícone em verde vivo, legível no escuro), box-shadow inset 0 0 0 1px rgba(30, 187, 215,.42) (contorno fino que define o "selecionado") e transform:none (fica alinhado/centralizado com os outros botões). Ícone do ativo a opacidade cheia (.idock-btn.active .idock-ico{opacity:1}). Só css/style.css. */
+/* V403: estado ATIVO do dock superior (.idock-btn.active) suavizado. Antes: background #4f7fb0 sólido (cobria o fundo preto do dock) + box-shadow glow 0 8px 22px + transform translateY(-1px) (botão "pulava" e saía do alinhamento dos vizinhos). Agora: background rgba(79, 127, 176,.13) (translúcido — o preto aparece por baixo), color #1BE08E (texto/ícone em verde vivo, legível no escuro), box-shadow inset 0 0 0 1px rgba(79, 127, 176,.42) (contorno fino que define o "selecionado") e transform:none (fica alinhado/centralizado com os outros botões). Ícone do ativo a opacidade cheia (.idock-btn.active .idock-ico{opacity:1}). Só css/style.css. */
 /* V404: ícones do dock superior trocados pelos Tabler (Opção 1 — "importar arquivo"), substituindo os unicodes arcaicos. js/app.js: QVIS e PRODUÇÃO ↧ → <i class="ti ti-file-import">; CADASTROS já usava ti-folder (mantido); caret ▾ → <i class="ti ti-chevron-down">. css/style.css: .idock-ico font-size 10px→13px e .idock-caret 9px→12px (os 10/9px eram pequenos demais p/ glifos Tabler). Conjunto coerente: tudo Tabler outline, mesmo respiro. */
 /* V405: OPME — botão "Exportar" no globo (header do módulo, coletado pelo atlas-hub; ICONES já mapeia /exportar/→ti-file-spreadsheet). Abre um SELETOR (modal montado em document.body, classes opme-modal*) com 4 opções: Glosas, Repasse, Produção e "Os três". Gera 3 arquivos Excel SEPARADOS (XLSX 0.18.5 global), cada um com aba Detalhe (linha a linha) + aba Resumo (por médico, ordenado por valor, com linha TOTAL). Respeita a competência (state.mes/ano) e os mesmos filtros de texto dos cards (filtrarPorCampos). Números batem com os cards: glosa = recebido<=0 excl. EV/Particular, 1× por admissão+procedimento, valor=produzido; repasse = analisarLinhaQvis das linhas pagas (calc.repasse, nome do médico efetivo p/ substituições); produção = soma de valor da Produção. Nome do arquivo OPME_<Tipo>_<ano>-<mes>.xlsx. Só js/telas/desempenho_opme.js (header, bindEventos, funções de export + modal, e estilos .opme-export-* no getStyles). */
 /* V406: OTIMIZAÇÃO OPME (1/n) — getStyles() (~86 KB de CSS, 100% estático) deixou de ser reinjetado no innerHTML a cada render. Agora garantirEstilosOpme() injeta o bloco UMA vez num <style id="opme-estilos"> no <head> (com guarda anti-duplicata), chamado no topo do _renderOpme. Removido o ${getStyles()} do template do render. Ganho: cada render (digitar em filtro, trocar aba, toggle) para de reconstruir e reparsear 86 KB de CSS. Comportamento e números idênticos. Só js/telas/desempenho_opme.js. */
 /* V407: OTIMIZAÇÃO OPME (2/n) — cache do calcularTotaisOpme (cards Produzido/Repasse/Glosa + LM/LY/YTD), o maior custo de CPU (recarregava QVIS/Produção de vários meses e rodava analisarLinhaQvis linha a linha A CADA render). Agora o resultado é memoizado por assinatura = mês|ano|filtroAdmissao|filtroMedico|filtroConvenio|filtroPaciente|Banco._versao. Banco.salvar() incrementa Banco._versao (carimbo) — como TODA alteração relevante do OPME (pct, ativo, termo, regra, valor fixo, pago, EV, substituição, importação) passa por Banco.salvar(), o cache invalida corretamente em qualquer mudança; filtros entram na própria chave. Renders que não mexem nos totais (abrir painel, resize, toggles, troca de produtos) param de recalcular tudo. Números idênticos (validado por smoke test de hit/miss). Arquivos: js/banco.js (bump em salvar) + js/telas/desempenho_opme.js (wrapper de cache, corpo renomeado p/ _calcTotaisOpme). */
 /* V408: FIX do bug da v407 — OPME travava no loading. Causa: 'let _totaisCache = null;' ficava em Temporal Dead Zone, pois renderizar() (linha ~1153) chama calcularTotaisOpme ANTES da linha do let (~1270) executar → ReferenceError no _renderOpme → tela presa no loading. Correção: trocado por 'var _totaisCache;' (hoisted, sem TDZ e sem reset). Cache da v407 intacto e funcionando (validado por simulação de hoisting). Só js/telas/desempenho_opme.js. */
 /* V409: OTIMIZAÇÃO OPME (3/n) — caches de De-Para e Valor-Fixo agora são version-aware (reconstroem só quando Banco._versao muda) e as invalidações foram REMOVIDAS do caminho quente do render. Antes, _renderOpme chamava invalidarDePara()+invalidarValoresFixos() A CADA render, forçando releitura do banco (medicos/sinonimos + opme_valor_fixo) toda vez. Agora: prepararDePara() e valoresFixosAtivos() guardam a versão do banco no build e só refazem se a versão mudou. Como médicos (11×) e de-para (7×) chamam Banco.salvar() (→ versão++), edições em outras telas invalidam corretamente ao voltar pro OPME. Pontos de edição de valor fixo mantêm invalidarValoresFixos() (redundante e inofensivo). Números idênticos (validado por simulação version-aware). Só js/telas/desempenho_opme.js. */
-/* V410: VISUAL — novo estilo dos dropdowns de filtro (estilo da imagem de referência), PILOTO nos 4 filtros do OPME (Admissão/Médico/Convênio/Paciente). Decisões do usuário: destaque VERDE ATLAS, LABEL FLUTUANTE na borda, escopo = filtros de todo o app (rollout em etapas; este é o piloto). Mudanças: campoFiltro ganhou <span class="opme-dd-label"> (label flutuante) e o ▾ virou <i class="ti ti-chevron-down">; CSS .opme-filtro-combo: container 12px de raio + borda 1.5px, input 38px, ring verde no foco, label flutuante recortando a borda (bg var(--bg-elevated)), chevron 16px, lista 12px de raio com opções arredondadas (9px) e hover/sel em verde (rgba(30, 187, 215,.14) + --primary). Selects nativos e combos de outras telas NÃO foram tocados (próximas etapas). Só js/telas/desempenho_opme.js. */
+/* V410: VISUAL — novo estilo dos dropdowns de filtro (estilo da imagem de referência), PILOTO nos 4 filtros do OPME (Admissão/Médico/Convênio/Paciente). Decisões do usuário: destaque VERDE ATLAS, LABEL FLUTUANTE na borda, escopo = filtros de todo o app (rollout em etapas; este é o piloto). Mudanças: campoFiltro ganhou <span class="opme-dd-label"> (label flutuante) e o ▾ virou <i class="ti ti-chevron-down">; CSS .opme-filtro-combo: container 12px de raio + borda 1.5px, input 38px, ring verde no foco, label flutuante recortando a borda (bg var(--bg-elevated)), chevron 16px, lista 12px de raio com opções arredondadas (9px) e hover/sel em verde (rgba(79, 127, 176,.14) + --primary). Selects nativos e combos de outras telas NÃO foram tocados (próximas etapas). Só js/telas/desempenho_opme.js. */
 /* V411: FIX dos 2 bugs do piloto v410 (filtros OPME). BUG 1 (dropdown atrás dos cards): header e cards são irmãos em .page-content, header primeiro, nenhum criava contexto de empilhamento → cards (DOM posterior) cobriam o dropdown que transborda. Fix: <header> ganhou classe opme-header com position:relative; z-index:5, subindo toda a subárvore do header (incl. o dropdown absoluto) acima dos cards/painéis/grade. BUG 2 (caixa branca no label "flutuante"): o label usava background var(--bg-elevated) (#FFFFFF) enquanto o fundo atrás da barra é var(--bg) (#FBFCFC) → recorte branco destoava. Fix: label background trocado p/ var(--bg) (.page-header é transparente, então o fundo real é o --bg da página). Só js/telas/desempenho_opme.js. */
 /* V412: VISUAL — rótulo dos filtros do OPME mudou de "flutuante na borda" (v410/v411) para PREFIXO INLINE (escolha do usuário, opção D). Agora o container .opme-filtro-combo É o campo (borda 1.5px, raio 12px, fundo, foco verde via :focus-within) e é flex: [nome do campo em cinza] [divisor 1px] [input transparente flex:1] [✕] [chevron]. campoFiltro: removido <span.opme-dd-label>, adicionados <span.opme-dd-pre> (prefixo) + <span.opme-dd-divr> (divisor); input com placeholder "Todos" e estilo transparente/sem borda; clear e arrow viraram estáticos (flex) em vez de absolutos; chevron 16px gira no .aberto. Mantidos o fix de z-index do header (.opme-header) e o realce verde da lista. Só js/telas/desempenho_opme.js. */
-/* V413: FIX (Fracionamento) — "| branco" no cabeçalho da tabela de aplicações. Não era borda de coluna (th tem border-left/right:none !important pelo padrão global V149); era uma COSTURA branca: o fundo claro do container vazando numa junção sub-pixel entre células sticky do thead (mesmo sintoma do comentário da V180). Fix: backdrop escuro atrás do header — .frac-tabela-aplicacoes thead, thead tr { background:#021A1C } — assim qualquer costura mostra o verde escuro em vez do branco. Só js/telas/desempenho_fracionamento.js. */
+/* V413: FIX (Fracionamento) — "| branco" no cabeçalho da tabela de aplicações. Não era borda de coluna (th tem border-left/right:none !important pelo padrão global V149); era uma COSTURA branca: o fundo claro do container vazando numa junção sub-pixel entre células sticky do thead (mesmo sintoma do comentário da V180). Fix: backdrop escuro atrás do header — .frac-tabela-aplicacoes thead, thead tr { background:#071a30 } — assim qualquer costura mostra o verde escuro em vez do branco. Só js/telas/desempenho_fracionamento.js. */
 /* V414: Fracionamento — painel de Ajustes (regra de pagamento) deixou de abrir INLINE sobre a matriz e virou MODAL pop-up, igual ao OPME/LIO. renderPainelConfig agora envolve o card numa estrutura overlay (.frac-cfg-overlay) + diálogo (.frac-cfg-modal) + botão ✕ (#btn-cfg-fechar). No bindEventos, espelhando o OPME: remove cópias fantasmas em body > .frac-cfg-* e, se aberto, move overlay+modal pro document.body (escapa o transform do .main que prende position:fixed). Fechamento por clique no overlay, no ✕ e por ESC. Handlers de edição/sincronizar/restaurar já usavam document.* (getElementById/querySelector), então seguem funcionando com o modal no body. CSS do modal (fixed, centralizado, max-height + scroll, fade/scale-in) adicionado no getStyles do frac. Só js/telas/desempenho_fracionamento.js. */
 /* V415: Fracionamento — modal de Ajustes (v414) estava apertado: as duas tabelas de preview lado a lado em 700px cortavam o valor do input ("868," em vez de "868,00") e quebravam os cabeçalhos ("FRACIONAMENTO BRUTO", "= REPASSE") e os valores ("R$ 450,00"). Fix: largura do .frac-cfg-modal de min(700px) para min(940px, calc(100vw-40px)); white-space:nowrap nos th e nas células .num da .frac-preview-table. O grid das duas tabelas já colapsa p/ 1 coluna em viewport <900px. Só js/telas/desempenho_fracionamento.js. */
 /* V416: OPME — uniformização dos filtros do header. Os controles MÊS/ANO (<select>, 32px, label verde-bold "MÊS:", valor "TODOS" em verde uppercase, seta CSS) destoavam dos 4 combos novos (38px, prefixo cinza + divisor + chevron). Agora MÊS/ANO usam o MESMO padrão: container .opme-mes-wrap igual ao .opme-filtro-combo (38px, borda 1.5px, raio 12px, foco verde via :focus-within); label virou <span class="opme-dd-pre"> (prefixo cinza) + <span class="opme-dd-divr"> (divisor); o <select> ganhou estilo do valor dos combos (12.5px, peso 500, var(--ink), esquerda, appearance:none) e um <i class="ti ti-chevron-down opme-mes-chevron"> idêntico ao chevron dos combos. Classes .opme-dd-pre/.opme-dd-divr desescopadas (valem nos dois). Só js/telas/desempenho_opme.js. */
@@ -2581,7 +2579,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 }
 .main select:not([multiple]):not(.opme-mes-select):not(.atlas-ff-sel):focus {
   border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(30, 187, 215, 0.16) !important;
+  box-shadow: 0 0 0 3px rgba(79, 127, 176, 0.16) !important;
 }
 /* ════ V421: COMPONENTE GLOBAL DE FILTRO (visual idêntico ao OPME) — .atlas-ff-* ════
    Caixa de filtro reutilizável: rótulo embutido + divisor + chevron + foco verde.
@@ -2598,7 +2596,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
   transition: border-color 150ms, box-shadow 150ms !important;
 }
 .atlas-ff-wrap:focus-within, .atlas-ff-combo:focus-within {
-  border-color: var(--primary) !important; box-shadow: 0 0 0 3px rgba(30, 187, 215, 0.16) !important;
+  border-color: var(--primary) !important; box-shadow: 0 0 0 3px rgba(79, 127, 176, 0.16) !important;
 }
 .atlas-ff-pre { flex: none; font-size: 11.5px; color: var(--ink-faint); white-space: nowrap; }
 .atlas-ff-divr { flex: none; width: 1px; height: 18px; background: var(--border); margin: 0 9px; }
@@ -2769,7 +2767,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 }
 .vg-cod-switch:hover { background: #fff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.08); color: var(--ink-soft); }
 .vg-cod-switch i { font-size: 20px; line-height: 1; }
-.vg-cod-switch.on { color: #003A54; border-color: rgba(30, 187, 215,0.5); background: rgba(30, 187, 215,0.10); }
+.vg-cod-switch.on { color: #102d4b; border-color: rgba(79, 127, 176,0.5); background: rgba(79, 127, 176,0.10); }
 
 /* V443: VISÃO GERAL — o switch de ocultar nomes estava sendo absorvido pelo leque do globo (o
    coletarAlvos do hub pega [class*="header"] button). Correções: (1) js/app.js exclui .vg-cod-switch
@@ -2825,7 +2823,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
   text-align: left; font-family: inherit; color: var(--ink); width: 100%;
 }
 .atlas-vis-item:hover { background: var(--bg-sunken); }
-.atlas-vis-item.ativo { background: #DBF0F9; }
+.atlas-vis-item.ativo { background: #e4ecf4; }
 .atlas-vis-ico { font-size: 14px; line-height: 1.2; min-width: 16px; }
 .atlas-vis-txt { display: flex; flex-direction: column; gap: 2px; }
 .atlas-vis-txt strong { font-size: 12px; font-weight: 700; color: var(--ink); }
@@ -2877,8 +2875,8 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 .aud-cp-secao { font-weight: 700; font-size: 12px; letter-spacing: .04em; color: var(--ink-soft); margin: 12px 0 6px; }
 .aud-cp-proc { display: flex; gap: 8px; align-items: flex-start; padding: 8px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; }
 .aud-cp-tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; background: var(--bg); min-height: 30px; }
-.aud-cp-tag { display: inline-flex; align-items: center; gap: 4px; background: #DBF0F9; color: #005073; border-radius: 12px; padding: 2px 4px 2px 8px; font-size: 12px; font-weight: 600; }
-.aud-cp-tag button { border: none; background: none; cursor: pointer; color: #005073; font-weight: 700; line-height: 1; font-size: 13px; padding: 0 2px; }
+.aud-cp-tag { display: inline-flex; align-items: center; gap: 4px; background: #e4ecf4; color: #143352; border-radius: 12px; padding: 2px 4px 2px 8px; font-size: 12px; font-weight: 600; }
+.aud-cp-tag button { border: none; background: none; cursor: pointer; color: #143352; font-weight: 700; line-height: 1; font-size: 13px; padding: 0 2px; }
 .aud-cp-tag button:hover { color: #C0392B; }
 .aud-cp-tag-add { border: none; outline: none; min-width: 110px; flex: 1; padding: 2px 4px; font-size: 12px; background: transparent; color: var(--ink); }
 .aud-cp-proc-hint { font-size: 10px; color: var(--ink-faint); margin-top: 4px; }
@@ -2921,7 +2919,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
    montarLinhasConvenio), que é o que o módulo Relatórios usa, continuava filtrando por lp.competencia
    (data da admissão). Admissão conciliada em outro mês aparecia na tela mas sumia do relatório. Agora o
    core também filtra/exibe por mes_pagamento — relatório e tela consistentes. */
-/* V464: MUDANÇA GRANDE — (1) PALETA verde → AZUL (paleta do usuário: #005073/#107dac/#189ad3/#1ebbd7/
+/* V464: MUDANÇA GRANDE — (1) PALETA verde → AZUL (paleta do usuário: #143352/#1d4470/#2a5a8c/#4f7fb0/
    #71c7ec), neutros com leve tom azul (fundo branco-azulado, texto azul-marinho, bordas azul-acinzentado),
    light + dark mode; verde/amarelo/vermelho mantidos só como status semânticos. 673 verdes hardcoded
    trocados em CSS+JS. (2) NOME ATLAS → S.A.R (Serviço de Automação de Repasse): header, <title>, subtítulo,
@@ -2934,10 +2932,10 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
    Watermark (.atlas-marca-global) e demais refs de logo agora apontam pro círculo ATLAS. Glows/sombras em
    rgba() verdes trocados por azuis (22 arquivos). CÓDIGO DO MÉDICO: prefixo MDATLAS → MDSAR, com migração
    automática dos códigos já gravados (MDATLAS#### → MDSAR####). */
-/* V466: banner de título — (1) o anel (contorno) verde #03D07D virou AZUL #0000B2 (.tb-greencirc e
-   .tb-pill-green); (2) a "barra de fundo" do título (pílula escura .tb-pill-dark) virou #00003D (navy
+/* V466: banner de título — (1) o anel (contorno) verde #2a5a8c virou AZUL #143352 (.tb-greencirc e
+   .tb-pill-green); (2) a "barra de fundo" do título (pílula escura .tb-pill-dark) virou #0b2340 (navy
    profundo), no lugar do gradiente escuro anterior. */
-/* V467: barra do menu (sidebar) — fundo → #00003D (mesmo navy da barra do título), no lugar do
+/* V467: barra do menu (sidebar) — fundo → #0b2340 (mesmo navy da barra do título), no lugar do
    gradiente quase-preto. Fallback CSS (.sidebar) e a cápsula flutuante inline (app.js) ajustados. */
 /* V468: NOVA TELA DE LOGIN (S.A.R/ATLAS) + fluxo. (1) tela_login.js redesenhada no layout do mockup: card
    de 2 painéis (logo ATLAS completa à esquerda em assets/atlas-logo-full.png; à direita S.A.R + subtítulo +
@@ -2955,16 +2953,16 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
    título S.A.R mais acima. */
 /* V472: tela de login — o título S.A.R fica no TOPO (flex-start) e o formulário login/senha recebe
    margin-top/bottom auto → desce e centraliza verticalmente no espaço restante (antes colava no título). */
-/* V473: (1) tela de loading inicial — fundo escuro (#1A1C1B→#111312, "preto") trocado pelo AZUL DO ATLAS
-   #0173AC; texto e anel do loader clareados só nessa tela (não na variante transparente in-app) pra ler
+/* V473: (1) tela de loading inicial — fundo escuro (#0b2340→#071a30, "preto") trocado pelo AZUL DO ATLAS
+   #143352; texto e anel do loader clareados só nessa tela (não na variante transparente in-app) pra ler
    bem. (2) tela de login: rótulo "login" → "Login". */
 /* V474: (1) subtítulo da marca (sidebar) — os "——" (caracteres) que quebravam feio viraram uma LINHA fina
    via CSS (.traco agora é um bloco 18x1px), visual mais limpo. (2) dock do topo (QVIS/PRODUÇÃO/CADASTROS):
-   fundo do pill .import-dock #021A1C → #00003D (mesma cor da sidebar); estado ATIVO trocou o verde neon
+   fundo do pill .import-dock #071a30 → #0b2340 (mesma cor da sidebar); estado ATIVO trocou o verde neon
    #1BE08E por AZUL CLARO NEON #5FDDF7 (texto + contorno + leve glow). */
 /* V474: (1) subtítulo da sidebar — traço agora é UM em-dash "—" por lado (era bloco de linha + "——" que
    renderizava como "- -" quebrado); .traco virou estilo de texto. (2) dock do topo (QVIS/PRODUÇÃO/
-   CADASTROS): fundo da barra (.import-dock) já é #00003D (cor da sidebar); estado ATIVO do .idock-btn
+   CADASTROS): fundo da barra (.import-dock) já é #0b2340 (cor da sidebar); estado ATIVO do .idock-btn
    reforçado como AZUL CLARO NEON (#72E4FF + glow mais forte), no lugar do verde. */
 /* V475: PERFORMANCE/FPS. (1) Sidebar deixou de EMPURRAR o conteúdo: .app-shell padding-left agora é
    ESTÁTICO (68px), sem animar. Como a sidebar é position:fixed, ela SOBREPÕE ao expandir e abrir/fechar o
@@ -2973,7 +2971,7 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
    escurecimento translúcido (rgba). Keyframes seguem só em transform/opacity; marca d'água já isolada em
    camada GPU. */
 /* V476: botão do hub (FAB flutuante) — no lugar da logo do ATLAS, agora um ÍCONE DE CLIPBOARD (SVG inline):
-   corpo+presilha com contorno navy (#00003D) sobre botão branco, e 3 marcas ciano (#1EBBD7) que pulsam em
+   corpo+presilha com contorno navy (#0b2340) sobre botão branco, e 3 marcas ciano (#4f7fb0) que pulsam em
    sequência (animação só de opacity, barata p/ FPS), simulando um checklist. A logo do ATLAS segue no topo,
    no círculo do título e na marca d'água (só o FAB mudou). */
 /* V477: revertido o comportamento da sidebar da v475 — ela volta a EMPURRAR o conteúdo (padding-left
@@ -3016,13 +3014,13 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 }
 .pm-prod-edit:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
 #pm-prodfiltro-overlay {
-  position: fixed; inset: 0; z-index: 10000; background: rgba(0, 0, 40, 0.45);
+  position: fixed; inset: 0; z-index: 10000; background: rgba(7, 26, 48, 0.45);
   display: flex; align-items: center; justify-content: center; padding: 24px;
 }
 .pmpf-modal {
   background: var(--bg-elevated); border-radius: 14px; width: 100%; max-width: 560px;
   max-height: 82vh; display: flex; flex-direction: column; overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 40, 0.35); border: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgba(7, 26, 48, 0.35); border: 1px solid var(--border);
 }
 .pmpf-head { padding: 16px 18px 10px; border-bottom: 1px solid var(--border); }
 .pmpf-tit { font-size: 15px; font-weight: 700; color: var(--ink); }
@@ -3044,8 +3042,8 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 .pmpf-vazio { color: var(--ink-faint); text-align: center; padding: 24px; }
 .pmpf-acoes { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--border); }
 .pmpf-cancel { border: 1px solid var(--border); background: var(--bg); color: var(--ink-soft); border-radius: 8px; padding: 8px 18px; font-size: 13px; cursor: pointer; }
-.pmpf-salvar { border: none; background: linear-gradient(180deg, #189ad3, #107dac); color: #fff; border-radius: 8px; padding: 8px 22px; font-size: 13px; font-weight: 700; cursor: pointer; }
-.pmpf-salvar:hover { box-shadow: 0 6px 16px rgba(16, 125, 172, 0.4); }
+.pmpf-salvar { border: none; background: linear-gradient(180deg, #2a5a8c, #1d4470); color: #fff; border-radius: 8px; padding: 8px 22px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.pmpf-salvar:hover { box-shadow: 0 6px 16px rgba(29, 68, 112, 0.4); }
 /* V485 (fim): filtro por produto — CONV/PART filtram por produto (default = classe padrão); SUS mantém o filtro
    de Classificação. Estado inicial das checkboxes = o que entra hoje (Consulta/Exame/Procedimento marcados).
    Guarda só os OVERRIDES em config_prod_filtro. OBS: a visão CONTÁBIL congelada não muda até recongelar. */
@@ -3075,9 +3073,9 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
   width: 38px; height: 38px; border: none; border-radius: 50%;
   background: #FFFFFF; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 12px rgba(30, 187, 215, 0.45), 0 8px 18px rgba(0, 58, 84, 0.30);
+  box-shadow: 0 0 12px rgba(79, 127, 176, 0.45), 0 8px 18px rgba(16, 45, 75, 0.30);
   transition: transform 0.18s, color 0.18s, box-shadow 0.18s;
-  color: #00003D; font-size: 19px; line-height: 1;
+  color: #0b2340; font-size: 19px; line-height: 1;
 }
 .bt-fab:hover { transform: scale(1.06); }
 .bt-fab i { display: inline-block; }
@@ -3086,11 +3084,11 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 #bt-fab-versoes  { top: 154px; }   /* V565: ícone de versões — 108 + 38 + 8 */
 #bt-fab-cadeado.travado {
   color: #9B3A3A;
-  box-shadow: 0 0 12px rgba(155, 58, 58, 0.40), 0 8px 18px rgba(0, 58, 84, 0.30);
+  box-shadow: 0 0 12px rgba(155, 58, 58, 0.40), 0 8px 18px rgba(16, 45, 75, 0.30);
 }
 #bt-fab-cadeado.destravado {
   color: #0A7A5A;
-  box-shadow: 0 0 12px rgba(10, 122, 90, 0.45), 0 8px 18px rgba(0, 58, 84, 0.30);
+  box-shadow: 0 0 12px rgba(10, 122, 90, 0.45), 0 8px 18px rgba(16, 45, 75, 0.30);
 }
 /* Somem junto com o hub quando há modal aberto (mesma regra da V275) */
 .main:has([aria-modal="true"]) .bt-fab,
@@ -3107,13 +3105,13 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
    ══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --sb-bg:            #0b1d33;
+  --sb-bg:            #0b2340;   /* ATLAS v1.1: azul-900 da paleta da logo */
   --sb-painel-bg:     linear-gradient(165deg, #123354, #0e2540);
   --sb-painel-borda:  #1c3c5c;
-  --sb-tile:          linear-gradient(150deg, #1c6fa8, #29c0e0);
+  --sb-tile:          linear-gradient(150deg, #1d4470, #29c0e0);
   --sb-sub:           #8fabc4;
   --sb-trilho:        #0a1c30;
-  --sb-seg-ativo:     #1c6fa8;
+  --sb-seg-ativo:     #1d4470;
   --sb-seg-inativo:   #8fabc4;
   --sb-acento:        #29c0e0;
   --sb-item-ativo-bg: #13304d;
@@ -3124,14 +3122,14 @@ body.atlas-redimensionando { cursor: col-resize !important; user-select: none !i
 }
 body.modo-externo {
   --sb-bg:            #131c26;
-  --sb-painel-bg:     linear-gradient(165deg, #1c2a36, #16212c);
+  --sb-painel-bg:     linear-gradient(165deg, #1c2a36, #0b2340);
   --sb-painel-borda:  #2a3a49;
-  --sb-tile:          linear-gradient(150deg, #3d6580, #5590a5);
+  --sb-tile:          linear-gradient(150deg, #4f7fb0, #4f7fb0);
   --sb-sub:           #8b9caa;
   --sb-trilho:        #0f1720;
-  --sb-seg-ativo:     #3d6580;
+  --sb-seg-ativo:     #4f7fb0;
   --sb-seg-inativo:   #8b9caa;
-  --sb-acento:        #5590a5;
+  --sb-acento:        #4f7fb0;
   --sb-item-ativo-bg: #1f2f3d;
   --sb-item-hover-bg: #1a2732;
   --sb-item-hover-tx: #c2ccd5;
@@ -3242,24 +3240,21 @@ body.rail-aberto .sidebar { contain: layout paint; }
 body.modo-externo {
   --bg:            #F6F8FA;
   --bg-sunken:     #E9EEF2;
-  --primary:       #3d6580;
-  --primary-hover: #5590a5;
+  --primary:       #4f7fb0;
+  --primary-hover: #4f7fb0;
   --primary-soft:  #E3ECF1;
-  --accent:        #5590a5;
+  --accent:        #4f7fb0;
   --accent-soft:   #DEE9EF;
   --accent-vivid:  #6ba6bb;
   --border:        #D5DEE5;
   --border-strong: #B6C5CF;
 }
 /* V948: o cabeçalho das matrizes segue o MESMO degradê global também no
-   modo Externo (antes era #3d6580 sólido) — só a linha de base muda. */
+   modo Externo (antes era #4f7fb0 sólido) — só a linha de base muda. */
 body.modo-externo .main table thead th,
 body.modo-externo table thead th {
-  border-bottom-color: #16212c !important;
+  border-bottom-color: #0b2340 !important;
 }
-body.modo-externo .titulo-banner .tb-greencirc,
-body.modo-externo .titulo-banner .tb-pill-green { background: #5590a5; }
-body.modo-externo .titulo-banner .tb-pill-dark { background: #16212c; }
 
 /* ═══════════════════════════════════════════════════════════════════════
    V716: MENU DE EXPORTAÇÃO PADRÃO (Utilidades.abrirMenuExportar) — modelo
@@ -3277,9 +3272,9 @@ body.modo-externo .titulo-banner .tb-pill-dark { background: #16212c; }
   min-width: 300px;
   max-width: 360px;
   background: var(--bg-elevated, #FFF);
-  border: 1px solid var(--border, #DDE7E3);
+  border: 1px solid var(--border, #dfe4ea);
   border-radius: 12px;
-  box-shadow: 0 14px 36px rgba(0, 58, 84, 0.22), 0 3px 8px rgba(0, 58, 84, 0.10);
+  box-shadow: 0 14px 36px rgba(16, 45, 75, 0.22), 0 3px 8px rgba(16, 45, 75, 0.10);
   padding: 6px;
   animation: atlasMenuExpPop 180ms ease-out;
 }
@@ -3310,7 +3305,7 @@ body.modo-externo .titulo-banner .tb-pill-dark { background: #16212c; }
 .atlas-menu-item-ico {
   width: 30px; height: 30px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(24, 154, 211, 0.10);
+  background: rgba(42, 90, 140, 0.10);
   color: var(--accent);
   border-radius: 6px;
   font-size: 14px;
@@ -3333,10 +3328,10 @@ body.modo-externo .titulo-banner .tb-pill-dark { background: #16212c; }
 }
 .atlas-menu-item-aviso strong { color: var(--ink-faint); }
 .atlas-menu-item-aviso small { color: #C24A1F; font-weight: 700; }
-.atlas-menu-item-verde .atlas-menu-item-ico { background: rgba(0, 80, 115, 0.12); color: #005073; }
+.atlas-menu-item-verde .atlas-menu-item-ico { background: rgba(20, 51, 82, 0.12); color: #143352; }
 .atlas-menu-item-vermelho .atlas-menu-item-ico { background: rgba(194, 74, 31, 0.10); color: #C24A1F; }
-.atlas-menu-item-conv .atlas-menu-item-ico { background: rgba(0, 80, 115, 0.12); color: #005073; }
-.atlas-menu-item-part .atlas-menu-item-ico { background: rgba(24, 154, 211, 0.14); color: #005073; }
+.atlas-menu-item-conv .atlas-menu-item-ico { background: rgba(20, 51, 82, 0.12); color: #143352; }
+.atlas-menu-item-part .atlas-menu-item-ico { background: rgba(42, 90, 140, 0.14); color: #143352; }
 .atlas-menu-item-adic .atlas-menu-item-ico { color: #B8965A; }
 .atlas-menu-sep { height: 1px; background: var(--border); margin: 6px 8px; }
 
@@ -3423,9 +3418,9 @@ body:not(.rail-aberto) .sidebar-versao.atrasada::before {
 input, textarea, select, [contenteditable], [contenteditable] * { caret-color: auto; }
 
 /* ── V946: TAG DE FONTE PAGADORA — padrão único (Utilidades.badgeFonte) ──
-   Convênio azul #189AD3 · Particular âmbar #F8E3A1/#D9B66B · SUS verde #0E7A57 */
+   Convênio azul #2a5a8c · Particular âmbar #F8E3A1/#D9B66B · SUS verde #0E7A57 */
 .atlas-fonte { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; white-space: nowrap; border: 1px solid transparent; line-height: 1.2; vertical-align: middle; }
-.atlas-fonte-conv  { background: rgba(24, 154, 211, 0.12); color: #189AD3; border-color: rgba(24, 154, 211, 0.45); }
+.atlas-fonte-conv  { background: rgba(42, 90, 140, 0.12); color: #2a5a8c; border-color: rgba(42, 90, 140, 0.45); }
 .atlas-fonte-part  { background: #F8E3A1; color: #6B4E12; border-color: #D9B66B; }
 .atlas-fonte-sus   { background: rgba(14, 122, 87, 0.12); color: #0E7A57; border-color: rgba(14, 122, 87, 0.45); }
 .atlas-fonte-outra { background: var(--bg-sunken); color: var(--ink-soft); border-color: var(--border); }
@@ -3434,11 +3429,11 @@ input, textarea, select, [contenteditable], [contenteditable] * { caret-color: a
    mesmo formato da tag de fonte pagadora e só cores da paleta do sistema.
    Gerada por Utilidades.badgeVinculo(); Excel via Utilidades.pintarCelulaVinculo(). */
 .atlas-vinc { display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.03em; padding: 1px 8px; border-radius: 100px; white-space: nowrap; border: 1px solid transparent; line-height: 1.6; vertical-align: middle; }
-.atlas-vinc-int { background: var(--primary-soft); color: var(--primary); border-color: rgba(0, 80, 115, 0.35); }
+.atlas-vinc-int { background: var(--primary-soft); color: var(--primary); border-color: rgba(20, 51, 82, 0.35); }
 .atlas-vinc-hib { background: var(--warning-soft); color: #8A6420; border-color: var(--warning); }
 .atlas-vinc-ext { background: var(--bg-sunken); color: var(--ink-soft); border-color: var(--border-strong); }
 
-/* V962/V964: VALOR DE REPASSE — cor única #189AD3 em toda a ferramenta (células das
+/* V962/V964: VALOR DE REPASSE — cor única #2a5a8c em toda a ferramenta (células das
    matrizes, drilldowns, subtotais e totais). `.atlas-rep` marca a célula; as
    demais classes são as que cada módulo já usava para o seu valor de repasse.
    !important: as regras dos módulos vivem em <style> injetados depois deste
@@ -3450,7 +3445,7 @@ input, textarea, select, [contenteditable], [contenteditable] * { caret-color: a
 .ext-resumo .repasse-final, .pm-rep, .pm-des, .lc-drilldown-valor, .lio-drill-valor, .mm-total .mm-val,
 .main .vg-esp-tab tfoot td.vg-esp-rep, .main .vg-esp-tab tfoot td.vg-esp-rep *,
 .vg-esp-rep, .vg-esp-sub td.num.vg-esp-rep, .vg-il-val-rep, .vg-il-c-rep, .vg-dr-val-rep {
-  color: #189AD3 !important;   /* V964: era #107DAC */
+  color: #2a5a8c !important;   /* V964: era #1d4470 */
 }
 .atlas-rep { font-weight: 700; }
 
@@ -3468,3 +3463,102 @@ input, textarea, select, [contenteditable], [contenteditable] * { caret-color: a
 .atlas-fonte { padding: 4px 9px; }
 .atlas-vinc { padding: 3px 8px; }
 .badge-fellow, .badge-vinculo { padding: 3px 8px; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ATLAS v1.1: CABEÇALHO DA MARCA + FLOATING DOCK
+   O menu lateral (rail) e a barra de importação do topo saíram. A marca fica
+   num cabeçalho leve no alto; a navegação é o dock flutuante embaixo —
+   réplica em CSS/JS puro do componente "Floating Dock" (ícones que crescem
+   com a proximidade do mouse, rótulo em cima, coluna recolhível no celular).
+   ═══════════════════════════════════════════════════════════════════════ */
+.atlas-topo {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 48px 0; position: relative; z-index: 2;
+}
+.atlas-topo-marca {
+  width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto;
+  box-shadow: 0 6px 16px rgba(20, 51, 82, .22);
+}
+.atlas-topo-texto { line-height: 1; }
+.atlas-topo .brand-nome {
+  margin: 0; font-size: 18px; font-weight: 800; letter-spacing: .22em; color: var(--ink);
+  font-family: var(--font-display);
+}
+.atlas-topo .brand-sub {
+  margin: 3px 0 0; font-size: 8.5px; font-weight: 700; letter-spacing: .22em; color: var(--azul-500);
+}
+.atlas-versao { margin-top: 3px; font-size: 9.5px; color: var(--ink-faint); font-family: var(--font-mono); letter-spacing: .04em; }
+.atlas-versao.atrasada { color: var(--danger); font-weight: 700; }
+
+.atlas-dock {
+  position: fixed; left: 0; right: 0; bottom: 18px; z-index: 60;
+  display: flex; justify-content: center; pointer-events: none;
+}
+.dock-desktop {
+  pointer-events: auto;
+  display: flex; align-items: flex-end; gap: 14px;
+  height: 64px; padding: 0 16px 10px; border-radius: 18px;
+  background: rgba(255, 255, 255, .92); border: 1px solid var(--azul-200);
+  box-shadow: 0 18px 44px rgba(7, 26, 48, .22);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.dock-item {
+  --dock-tam: 40px;
+  position: relative; flex: 0 0 auto;
+  width: var(--dock-tam); height: var(--dock-tam); border-radius: 50%;
+  border: none; padding: 0; margin: 0;
+  background: var(--azul-100); color: var(--marinho); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: width .16s cubic-bezier(.2, .9, .3, 1.15), height .16s cubic-bezier(.2, .9, .3, 1.15),
+              background-color .15s, color .15s, box-shadow .15s;
+}
+.dock-item .dock-ico {
+  display: flex; line-height: 1;
+  font-size: calc(var(--dock-tam) / 2);
+  transition: font-size .16s cubic-bezier(.2, .9, .3, 1.15);
+}
+.dock-item:hover { background: var(--azul-200); }
+.dock-item:focus-visible { outline: 2px solid var(--azul-500); outline-offset: 2px; }
+.dock-item.active { background: var(--marinho); color: #f6f4ef; box-shadow: 0 8px 18px rgba(20, 51, 82, .35); }
+.dock-tip {
+  position: absolute; bottom: calc(100% + 10px); left: 50%;
+  transform: translate(-50%, 6px); opacity: 0; pointer-events: none;
+  white-space: nowrap; font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  color: var(--ink); background: #fff; border: 1px solid var(--azul-200);
+  border-radius: 7px; padding: 3px 9px; box-shadow: 0 6px 16px rgba(7, 26, 48, .14);
+  transition: opacity .15s, transform .15s;
+}
+.dock-item:hover .dock-tip,
+.dock-item:focus-visible .dock-tip { opacity: 1; transform: translate(-50%, 0); }
+.dock-sep { width: 1px; height: 30px; margin: 0 2px 5px; background: var(--azul-200); align-self: flex-end; }
+
+.dock-mobile { display: none; }
+@media (max-width: 767px) {
+  .dock-desktop { display: none; }
+  .atlas-dock { justify-content: flex-start; padding-left: 16px; bottom: 16px; }
+  .atlas-topo { padding: 14px 16px 0; }
+  .dock-mobile { pointer-events: auto; display: block; position: relative; }
+  .dock-mobile-toggle {
+    width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--azul-200);
+    background: #fff; color: var(--marinho); font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 24px rgba(7, 26, 48, .22);
+  }
+  .dock-mobile-toggle.aberto { background: var(--marinho); color: #f6f4ef; }
+  .dock-mobile-itens {
+    position: absolute; left: 2px; bottom: calc(100% + 8px);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .dock-mobile-itens[hidden] { display: none; }
+  .dock-mitem {
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: #fff; color: var(--marinho); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(7, 26, 48, .18);
+    animation: dock-sobe .22s cubic-bezier(.2, .9, .3, 1) both;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+  .dock-mitem.active { background: var(--marinho); color: #f6f4ef; }
+  @keyframes dock-sobe { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+}

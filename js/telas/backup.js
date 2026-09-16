@@ -61,8 +61,8 @@ App.telas['backup'] = function () {
         </div>
       </div>
 
-      <div class="card" style="margin-bottom: 16px; border-color: #1c6fa8">
-        <h3 class="card-title">Arquivo automático <span style="font-size: 10px; font-weight: 800; letter-spacing: .06em; color: #fff; background: #1c6fa8; border-radius: 999px; padding: 3px 8px; vertical-align: middle">RECOMENDADO</span></h3>
+      <div class="card" style="margin-bottom: 16px; border-color: #1d4470">
+        <h3 class="card-title">Arquivo automático <span style="font-size: 10px; font-weight: 800; letter-spacing: .06em; color: #fff; background: #1d4470; border-radius: 999px; padding: 3px 8px; vertical-align: middle">RECOMENDADO</span></h3>
         <!-- V593: sem subtítulo — só o título, a pedido do usuário -->
         <div id="bk-arq-status">${arqStatusHtml()}</div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px">

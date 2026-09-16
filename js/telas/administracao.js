@@ -23,7 +23,7 @@ App.telas['administracao'] = function () {
         </header>
 
         <!-- V596: Manual da ferramenta -->
-        <div class="card" style="margin-bottom: 16px; border-color: #107DAC">
+        <div class="card" style="margin-bottom: 16px; border-color: #1d4470">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap">
             <div>
               <h3 class="card-title">📖 Manual da ferramenta</h3>
@@ -59,7 +59,7 @@ App.telas['administracao'] = function () {
             return `
               <div style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 9px">
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px">
-                  <thead><tr style="background: var(--bg-elevated, #f7fafc)">
+                  <thead><tr style="background: var(--bg-elevated, #f6f4ef)">
                     <th style="text-align: left; padding: 7px 10px">Quando</th>
                     <th style="text-align: left; padding: 7px 10px">Tela</th>
                     <th style="text-align: left; padding: 7px 10px">Erro</th>
@@ -243,48 +243,48 @@ App.telas['administracao'] = function () {
       background: #fff; border: 1px solid #e0c4bb; color: #8f3d2b; cursor: pointer; white-space: nowrap; }
     .admsd-btn-sec:hover { background: #faeae6; }
     .admsd-grupos { display: grid; grid-template-columns: 1.15fr 1fr 1fr; }
-    .admsd-grupo { padding: 18px 22px 20px; border-right: 1px solid #eef3f7; min-width: 0; }
+    .admsd-grupo { padding: 18px 22px 20px; border-right: 1px solid #f0f4f8; min-width: 0; }
     .admsd-grupo:last-child { border-right: none; }
     .admsd-gr-tit { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700;
-      letter-spacing: .11em; text-transform: uppercase; color: #5b6c7c; margin-bottom: 13px; }
+      letter-spacing: .11em; text-transform: uppercase; color: #5a6879; margin-bottom: 13px; }
     .admsd-linha { display: flex; align-items: baseline; gap: 12px; }
     .admsd-linha + .admsd-linha { margin-top: 11px; }
-    .admsd-rot { flex: 1; min-width: 0; font-size: 13px; color: #4f6274; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .admsd-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: #14384f; }
-    .admsd-val.bom { color: #1d8f5f; } .admsd-val.ruim { color: #c0563f; } .admsd-val.fraco { color: #4f6274; font-weight: 600; } .admsd-val.aten { color: #c08a1e; }
-    .admsd-nota { width: 106px; flex: none; font-size: 11.5px; color: #5b6c7c; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .admsd-funcs { border-top: 1px solid #e2ebf2; padding: 16px 22px 6px; }
+    .admsd-rot { flex: 1; min-width: 0; font-size: 13px; color: #5a6879; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .admsd-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: #12304f; }
+    .admsd-val.bom { color: #1d8f5f; } .admsd-val.ruim { color: #c0563f; } .admsd-val.fraco { color: #5a6879; font-weight: 600; } .admsd-val.aten { color: #c08a1e; }
+    .admsd-nota { width: 106px; flex: none; font-size: 11.5px; color: #5a6879; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .admsd-funcs { border-top: 1px solid #e4ecf4; padding: 16px 22px 6px; }
     .admsd-fn-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-    .admsd-fn-tit { font-size: 13.5px; font-weight: 700; color: #14384f; }
-    .admsd-fn-sub { font-size: 12px; color: #5b6c7c; flex: 1; }
-    .admsd-fn-quando { font-size: 11.5px; color: #5b6c7c; white-space: nowrap; }
-    .admsd-btn-rec { height: 34px; padding: 0 13px; border: 1px solid #dfe8f0; border-radius: 9px; background: #fff;
-      font: 700 12px/1 inherit; font-family: inherit; color: #14384f; cursor: pointer; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
-    .admsd-btn-rec:hover { background: #f4fafd; }
+    .admsd-fn-tit { font-size: 13.5px; font-weight: 700; color: #12304f; }
+    .admsd-fn-sub { font-size: 12px; color: #5a6879; flex: 1; }
+    .admsd-fn-quando { font-size: 11.5px; color: #5a6879; white-space: nowrap; }
+    .admsd-btn-rec { height: 34px; padding: 0 13px; border: 1px solid #dfe4ea; border-radius: 9px; background: #fff;
+      font: 700 12px/1 inherit; font-family: inherit; color: #12304f; cursor: pointer; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+    .admsd-btn-rec:hover { background: #f6f4ef; }
     .admsd-tab { min-width: 640px; }
     .admsd-tab-wrap { overflow-x: auto; margin: 0 -22px; padding: 0 22px; }
     .admsd-tr { display: grid; grid-template-columns: 1.9fr 100px 120px 120px 1fr; align-items: center; }
     .admsd-th { background: #1f7fb5; }
     .admsd-th > div { padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #fff; }
-    .admsd-td { padding: 11px 12px; border-bottom: 1px solid #eef3f7; font-variant-numeric: tabular-nums; }
+    .admsd-td { padding: 11px 12px; border-bottom: 1px solid #f0f4f8; font-variant-numeric: tabular-nums; }
     .admsd-tr:nth-child(odd):not(.admsd-th) .admsd-td { background: #fbfdfe; }
-    .admsd-fn-nome { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #14384f;
+    .admsd-fn-nome { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #12304f;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .admsd-num { text-align: right; font-size: 12.5px; color: #4f6274; }
-    .admsd-tot { text-align: right; font-size: 12.5px; font-weight: 600; color: #14384f; }
+    .admsd-num { text-align: right; font-size: 12.5px; color: #5a6879; }
+    .admsd-tot { text-align: right; font-size: 12.5px; font-weight: 600; color: #12304f; }
     .admsd-pico { text-align: right; font-size: 12.5px; font-weight: 700; }
-    .admsd-barra { height: 5px; background: #eef3f7; border-radius: 3px; overflow: hidden; }
+    .admsd-barra { height: 5px; background: #f0f4f8; border-radius: 3px; overflow: hidden; }
     .admsd-barra > div { height: 100%; border-radius: 3px; }
-    .admsd-vazio { font-size: 13px; color: #5b6c7c; padding: 22px 0; }
+    .admsd-vazio { font-size: 13px; color: #5a6879; padding: 22px 0; }
     @media (max-width: 1200px) {
       .admsd-grupos { grid-template-columns: 1fr 1fr; }
-      .admsd-grupo:nth-child(3) { grid-column: 1 / -1; border-right: none; border-top: 1px solid #eef3f7; }
+      .admsd-grupo:nth-child(3) { grid-column: 1 / -1; border-right: none; border-top: 1px solid #f0f4f8; }
       .admsd-grupo:nth-child(2) { border-right: none; }
     }
     @media (max-width: 900px) {
       .admsd-grupos { grid-template-columns: 1fr; }
       .admsd-grupo { border-right: none; }
-      .admsd-grupo + .admsd-grupo { border-top: 1px solid #eef3f7; }
+      .admsd-grupo + .admsd-grupo { border-top: 1px solid #f0f4f8; }
       .admsd-faixa { flex-wrap: wrap; }
       .admsd-fx-acoes { width: 100%; justify-content: flex-end; }
     }`;
@@ -442,7 +442,7 @@ App.telas['administracao'] = function () {
           <span class="admsd-fn-tit">Funções mais pesadas nesta sessão</span>
           <span class="admsd-fn-sub">só cronômetros — nenhum dado de paciente</span>
           <span class="admsd-fn-quando">medições atualizadas ${agora.toLocaleTimeString('pt-BR')}</span>
-          <button type="button" class="admsd-btn-rec" id="adm-diag-atualizar"><span style="color:#1c6fa8; display:flex">${_sdSvg(SD_IC.refresh, 14, 2.2)}</span> Recalcular medições</button>
+          <button type="button" class="admsd-btn-rec" id="adm-diag-atualizar"><span style="color:#1d4470; display:flex">${_sdSvg(SD_IC.refresh, 14, 2.2)}</span> Recalcular medições</button>
         </div>
         ${tabHtml}
       </div>`;

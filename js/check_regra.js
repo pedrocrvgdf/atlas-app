@@ -13,18 +13,18 @@
   const CSS = `
     .ckr-overlay {
       position: fixed; inset: 0; z-index: 9999;
-      background: rgba(0, 80, 115, 0.35);
+      background: rgba(20, 51, 82, 0.35);
       display: flex; align-items: center; justify-content: center;
     }
     .ckr-modal {
       background: var(--bg-elevated, #FFF);
-      border: 1px solid var(--border, #DDE7E3);
+      border: 1px solid var(--border, #dfe4ea);
       border-radius: var(--radius-md, 10px);
       box-shadow: 0 12px 40px rgba(0,0,0,0.18);
       padding: 22px; width: min(1240px, 96vw); max-height: 92vh; overflow: auto;
     }
     .ckr-modal .btn {
-      padding: 8px 16px; border: 1px solid var(--border, #DDE7E3); border-radius: 8px;
+      padding: 8px 16px; border: 1px solid var(--border, #dfe4ea); border-radius: 8px;
       background: var(--bg-sunken, #F5F5F5); color: var(--ink, #222);
       font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
     }
@@ -60,7 +60,7 @@
     const optsPapel = ['<option value="">—</option>']
       .concat(papeis.map(p => `<option value="${p.id}">${escapeHTML(p.nome)}</option>`)).join('');
     const datalist = procs.map(p => `<option value="${escapeHTML(p)}"></option>`).join('');
-    const th = 'padding:6px 8px;background:#16456B;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap';
+    const th = 'padding:6px 8px;background:#143352;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap';
     const td = 'padding:6px 6px;border-bottom:1px solid #E5E5E5;vertical-align:middle';
     const inp = 'width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #D8D8D8;border-radius:6px;font-size:12.5px;background:#fff;color:#222';
     const ov = document.createElement('div');
@@ -142,7 +142,7 @@
       catch (e) { resEl.innerHTML = '⚠ Erro ao simular: ' + escapeHTML(e.message || String(e)); return; }
       const linhas = [];
       if (r.versao != null) {
-        badge(vtEl, 'v' + r.versao, '#0000B2', '#FFFFFF');
+        badge(vtEl, 'v' + r.versao, '#143352', '#FFFFFF');
         linhas.push(`📌 <strong>Versão aplicada: v${escapeHTML(String(r.versao))}</strong> — vigente para a data ${data ? escapeHTML(data.split('-').reverse().join('/')) : '(sem data → última publicada)'}.`);
       } else {
         badge(vtEl, 'viva', '#6B7280', '#FFFFFF');

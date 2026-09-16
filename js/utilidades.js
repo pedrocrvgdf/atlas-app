@@ -337,16 +337,16 @@ const Utilidades = {
    * V960: PADRÃO ÚNICO da tag de vínculo em toda a ferramenta (como a fonte
    * pagadora, V946/V947) — pílula clara com texto escuro, só cores da paleta
    * do sistema (tokens do :root):
-   *   Interno = --primary #005073 sobre --primary-soft #E1EFF6
+   *   Interno = --primary #143352 sobre --primary-soft #e4ecf4
    *   Híbrido = --warning #B8864A (borda) · texto #8A6420 sobre --warning-soft #F4E8D2
-   *   Externo = --ink-soft #3A5464 sobre --bg-sunken #E4EEF4 · borda --border-strong
+   *   Externo = --ink-soft #5a6879 sobre --bg-sunken #e4ecf4 · borda --border-strong
    * CSS em css/style.css (.atlas-vinc). `bg/fg/bd` ficam como referência das
    * cores (os módulos não devem mais pintar inline).
    */
   TIPOS_VINCULO: {
-    INTERNO: { label: 'Interno', cls: 'int', bg: '#E1EFF6', fg: '#005073', bd: 'rgba(0,80,115,.35)' },
+    INTERNO: { label: 'Interno', cls: 'int', bg: '#e4ecf4', fg: '#143352', bd: 'rgba(20, 51, 82,.35)' },
     HIBRIDO: { label: 'Híbrido', cls: 'hib', bg: '#F4E8D2', fg: '#8A6420', bd: '#B8864A' },
-    EXTERNO: { label: 'Externo', cls: 'ext', bg: '#E4EEF4', fg: '#3A5464', bd: '#B4C8D5' },
+    EXTERNO: { label: 'Externo', cls: 'ext', bg: '#e4ecf4', fg: '#5a6879', bd: '#c5d5e5' },
   },
   /** V960: normaliza qualquer grafia ('Interno', 'HIB', 'HÍB', 'ext', 'EXTERNO'…) → chave ou null */
   chaveVinculo(v) {
@@ -395,7 +395,7 @@ const Utilidades = {
    */
   /**
    * V946: TAG DE FONTE PAGADORA — padrão único da ferramenta (pílula clara,
-   * borda fina, texto colorido, caixa alta): Convênio azul #189AD3 ·
+   * borda fina, texto colorido, caixa alta): Convênio azul #2a5a8c ·
    * Particular âmbar (#F8E3A1 / #D9B66B) · SUS verde #0E7A57. Qualquer outra
    * origem sai neutra com o texto que veio. CSS em css/style.css (.atlas-fonte).
    */
@@ -485,7 +485,7 @@ const Utilidades = {
       sigla: 'RT',
       label: 'Responsável Técnico',
       bgGradient: 'linear-gradient(135deg, #D4955E 0%, #8B5A2B 100%)',
-      fg: '#F1F7F7',
+      fg: '#f6f4ef',
       bd: '#5A3A1A',
       shadow: 'rgba(139, 90, 43, 0.4)',
       ehSocio: false,
@@ -526,7 +526,7 @@ const Utilidades = {
       ? `${c.label} · Exceção: ${nomeExcecao}`
       : c.label;
     const sup = nomeExcecao
-      ? '<sup style="color:#189AD3;font-size:7px;margin-left:1px;font-weight:800">*</sup>'
+      ? '<sup style="color:#2a5a8c;font-size:7px;margin-left:1px;font-weight:800">*</sup>'
       : '';
     return `<span class="badge-cargo" title="${tooltip}"
       style="background:${c.bgGradient};color:${c.fg};border-color:${c.bd};box-shadow:0 1px 2px ${c.shadow}">${c.sigla}${sup}</span>`;

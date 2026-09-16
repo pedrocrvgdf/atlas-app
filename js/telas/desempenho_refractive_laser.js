@@ -971,9 +971,9 @@ App.telas['desempenho-refractive-laser'] = function () {
           <div class="rl-card-titulo">Procedimentos elegíveis</div>
           <div class="rl-card-valor mono" data-ocultavel>${k.linhas}</div>
           <div class="rl-card-breakdown">
-            <div class="rl-bd-item"><span class="rl-bd-dot" style="background: #003A54"></span> Convênio: <strong data-ocultavel>${k.linhasConv}</strong></div>
+            <div class="rl-bd-item"><span class="rl-bd-dot" style="background: #102d4b"></span> Convênio: <strong data-ocultavel>${k.linhasConv}</strong></div>
             <div class="rl-bd-item"><span class="rl-bd-dot" style="background: #6B4587"></span> Particular: <strong data-ocultavel>${k.linhasPart}</strong></div>
-            <div class="rl-bd-item"><span class="rl-bd-dot" style="background: #005073"></span> Exames: <strong data-ocultavel>${k.linhasExame}</strong> · Cirúrgicos: <strong data-ocultavel>${k.linhasCirur}</strong></div>
+            <div class="rl-bd-item"><span class="rl-bd-dot" style="background: #143352"></span> Exames: <strong data-ocultavel>${k.linhasExame}</strong> · Cirúrgicos: <strong data-ocultavel>${k.linhasCirur}</strong></div>
           </div>
           ${linhaComp(k.linhas, kLM?.linhas, kLY?.linhas)}
         </div>
@@ -1091,8 +1091,8 @@ App.telas['desempenho-refractive-laser'] = function () {
     const vinculoBadge = Utilidades.badgeTipoVinculo(l.tipo_vinculo) || '';
 
     // Badge de categoria
-    const catCor = l.categoria_tipo === 'EXAME' ? '#005073' : '#005073';
-    const catBg  = l.categoria_tipo === 'EXAME' ? '#DBF0F9' : '#DBF0F9';
+    const catCor = l.categoria_tipo === 'EXAME' ? '#143352' : '#143352';
+    const catBg  = l.categoria_tipo === 'EXAME' ? '#e4ecf4' : '#e4ecf4';
 
     // QTD: mostrar real + indicador se foi inferida por nome
     const qtdLabel = l.binocular_no_nome
@@ -1259,7 +1259,7 @@ App.telas['desempenho-refractive-laser'] = function () {
                   <tr>
                     <td class="mono">${c}</td>
                     <td>${escapeHTML(info.label)}</td>
-                    <td><span class="rl-tipo-mini" style="background:${info.tipo === 'EXAME' ? '#DBF0F9' : '#DBF0F9'};color:${info.tipo === 'EXAME' ? '#005073' : '#005073'}">${info.tipo}</span></td>
+                    <td><span class="rl-tipo-mini" style="background:${info.tipo === 'EXAME' ? '#e4ecf4' : '#e4ecf4'};color:${info.tipo === 'EXAME' ? '#143352' : '#143352'}">${info.tipo}</span></td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1809,11 +1809,11 @@ App.telas['desempenho-refractive-laser'] = function () {
         .rl-btn-info {
           width: 28px; height: 28px; border-radius: 50%;
           background: var(--bg-elevated); border: 1px solid var(--border);
-          color: #189AD3; font-size: 15px; font-weight: 700;
+          color: #2a5a8c; font-size: 15px; font-weight: 700;
           cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
           transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
         }
-        .rl-btn-info:hover { background: #189AD3; color: white; transform: scale(1.08); }
+        .rl-btn-info:hover { background: #2a5a8c; color: white; transform: scale(1.08); }
         /* V740: o menu "👁 Visualização" abria ATRÁS dos cards — a animação
            global (.page-content > *) transforma CADA filho direto em stacking
            context, então o z-index do .atlas-vis-wrap não valia contra os
@@ -1825,16 +1825,16 @@ App.telas['desempenho-refractive-laser'] = function () {
         .rl-snapshot-bar {
           display: flex; align-items: center; gap: 10px;
           margin: 14px 0 8px; padding: 8px 14px;
-          background: linear-gradient(135deg, #E8F1F7, #DBF0F9);
+          background: linear-gradient(135deg, #e9edf1, #e4ecf4);
           border: 1px solid #9FE6C9;
-          border-left: 4px solid #189AD3;
+          border-left: 4px solid #2a5a8c;
           border-radius: 8px;
         }
         .rl-snapshot-icone { font-size: 14px; }
         .rl-snapshot-label {
           font-size: 11px; font-weight: 700;
           letter-spacing: 0.05em; text-transform: uppercase;
-          color: #003A54;
+          color: #102d4b;
         }
         .rl-snapshot-select {
           padding: 5px 10px; font-size: 13px; font-weight: 700;
@@ -1843,7 +1843,7 @@ App.telas['desempenho-refractive-laser'] = function () {
           border-radius: 5px;
         }
         .rl-snapshot-hint {
-          font-size: 10px; color: #005073; font-style: italic;
+          font-size: 10px; color: #143352; font-style: italic;
           margin-left: auto;
         }
         /* V732: contêiner da peça 20C (.rl-sb) + botão "✕ Limpar" — a peça é
@@ -1872,13 +1872,13 @@ App.telas['desempenho-refractive-laser'] = function () {
           display: flex; align-items: stretch;
           padding: 6px;
           background: #fff;
-          border: 1px solid #e2ebf2;
+          border: 1px solid #e4ecf4;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20,50,80,.04), 0 10px 26px -20px rgba(20,50,80,.26);
+          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
           flex-wrap: wrap;
         }
         .rl-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-        .rl-sb-celwrap:not(:last-child) .rl-sb-cel { border-right: 1px solid #eef3f7; }
+        .rl-sb-celwrap:not(:last-child) .rl-sb-cel { border-right: 1px solid #f0f4f8; }
         .rl-sb-cel {
           flex: 1; min-width: 0;
           display: flex; align-items: center; gap: 9px;
@@ -1887,64 +1887,64 @@ App.telas['desempenho-refractive-laser'] = function () {
           font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .rl-sb-cel:hover, .rl-sb-cel.ativo, .rl-sb-cel.aberta { background: #f4fafd; }
-        .rl-sb-cel:focus-visible { outline: 2px solid #2f8fc4; outline-offset: 2px; }
+        .rl-sb-cel:hover, .rl-sb-cel.ativo, .rl-sb-cel.aberta { background: #f6f4ef; }
+        .rl-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
         .rl-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f5f9; color: #5b6c7c;
+          background: #f0f5f9; color: #5a6879;
         }
-        .rl-sb-cel.ativo .rl-sb-tile, .rl-sb-cel.aberta .rl-sb-tile { background: #dbeef8; color: #1c6fa8; }
+        .rl-sb-cel.ativo .rl-sb-tile, .rl-sb-cel.aberta .rl-sb-tile { background: #e4ecf4; color: #1d4470; }
         .rl-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
         .rl-sb-rot {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .09em; color: #5b6c7c; white-space: nowrap;
+          letter-spacing: .09em; color: #5a6879; white-space: nowrap;
         }
         .rl-sb-val {
-          font-size: 13px; font-weight: 500; color: #4f6274;
+          font-size: 13px; font-weight: 500; color: #5a6879;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .rl-sb-cel.ativo .rl-sb-val { font-weight: 700; color: #14384f; }
-        .rl-sb-chev { color: #7d8fa0; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .rl-sb-cel.ativo .rl-sb-val { font-weight: 700; color: #12304f; }
+        .rl-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .rl-sb-cel.aberta .rl-sb-chev { transform: rotate(180deg); }
 
         /* painel ancorado na célula, por cima dos cards */
         .rl-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 340px;
-          background: #fff; border: 1px solid #dfe8f0; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(15,37,68,.42);
+          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
           overflow: hidden;
         }
         .rl-sb-buscabox {
           display: flex; align-items: center; gap: 8px;
-          padding: 11px 12px 10px; border-bottom: 1px solid #edf2f6;
+          padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
         }
         .rl-sb-buscabox .rl-sb-busca-ic { color: #6b7d8e; display: flex; }
         .rl-sb-busca {
-          flex: 1; height: 30px; border: 1px solid #dfe8f0; border-radius: 8px;
-          background: #f7fafc; padding: 0 10px; font-size: 13px;
-          font-family: inherit; color: #14384f; outline: none;
+          flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
+          background: #f6f4ef; padding: 0 10px; font-size: 13px;
+          font-family: inherit; color: #12304f; outline: none;
         }
-        .rl-sb-busca::placeholder { color: #9aabb8; }
-        .rl-sb-busca:focus { border-color: #2f8fc4; }
+        .rl-sb-busca::placeholder { color: #96a2b1; }
+        .rl-sb-busca:focus { border-color: #2a5a8c; }
         .rl-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
         .rl-sb-lista::-webkit-scrollbar { width: 8px; }
-        .rl-sb-lista::-webkit-scrollbar-track { background: #f2f6f9; }
-        .rl-sb-lista::-webkit-scrollbar-thumb { background: #c3d5e2; border-radius: 4px; }
+        .rl-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
+        .rl-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
         .rl-sb-it {
           display: flex; align-items: center; gap: 10px;
           height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-          font-size: 13px; color: #14384f;
+          font-size: 13px; color: #12304f;
         }
-        .rl-sb-it:hover, .rl-sb-it.foco { background: #f2f7fb; }
-        .rl-sb-it.sel { background: #eaf4fb; font-weight: 700; }
+        .rl-sb-it:hover, .rl-sb-it.foco { background: #f0f4f8; }
+        .rl-sb-it.sel { background: #f0f4f8; font-weight: 700; }
         .rl-sb-it-todos { font-weight: 700; }
         .rl-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .rl-sb-ck { color: #1c6fa8; display: flex; }
+        .rl-sb-ck { color: #1d4470; display: flex; }
         .rl-sb-rodape {
-          padding: 7px 12px; border-top: 1px solid #edf2f6;
-          font-size: 10.5px; font-weight: 600; color: #7d8fa0;
+          padding: 7px 12px; border-top: 1px solid #f0f4f8;
+          font-size: 10.5px; font-weight: 600; color: #96a2b1;
         }
         @media (max-width: 1280px) { .rl-sb-celwrap { flex-basis: 32%; } }
         @media (max-width: 900px)  { .rl-sb-celwrap { flex-basis: 48%; } }
@@ -1965,23 +1965,23 @@ App.telas['desempenho-refractive-laser'] = function () {
         }
         .rl-card-valor { font-size: 20px; font-weight: 800; line-height: 1.1; }
         .rl-card-sub { padding-top: 6px; font-size: 10px; color: var(--ink-soft); line-height: 1.4; }
-        /* V739: títulos dos cards totalizadores em #06283A — a regra global
+        /* V739: títulos dos cards totalizadores em #0f1d2e — a regra global
            V181 ([class*="-titulo"]) pinta #0F6E56 com !important; o override
            vence por vir DEPOIS no cascade (mesmo padrão do V718/V732). */
-        .main .rl-card .rl-card-titulo { color: #06283A !important; }
+        .main .rl-card .rl-card-titulo { color: #0f1d2e !important; }
         .rl-card-verde   { background: linear-gradient(135deg, #E8F1EE, #D4E4DF); border-color: #A8C8C0; }
-        .rl-card-verde .rl-card-faixa { background: #005073; }
-        .rl-card-verde .rl-card-valor { color: #005073; }
+        .rl-card-verde .rl-card-faixa { background: #143352; }
+        .rl-card-verde .rl-card-valor { color: #143352; }
         .rl-card-roxo    { background: linear-gradient(135deg, #ECE5F2, #DAC8E4); border-color: #C0A8D0; }
         .rl-card-roxo .rl-card-faixa { background: #6B4587; }
         .rl-card-roxo .rl-card-valor { color: #6B4587; }
-        .rl-card-bege    { background: linear-gradient(135deg, #E8F1F7, #CDEBDD); border-color: #9FE6C9; }
-        .rl-card-bege .rl-card-faixa { background: #005073; }
-        .rl-card-bege .rl-card-valor { color: #005073; }
-        .rl-card-destaque { background: linear-gradient(135deg, #005073, #0C3A2F); border-color: #005073; box-shadow: 0 4px 12px rgba(0, 80, 115,.2); }
-        .rl-card-destaque .rl-card-titulo { color: #56645E; }
-        .rl-card-destaque .rl-card-valor { color: #005073; }
-        .rl-card-destaque .rl-card-sub { color: #B9D4CB; }
+        .rl-card-bege    { background: linear-gradient(135deg, #e9edf1, #e4ecf4); border-color: #9FE6C9; }
+        .rl-card-bege .rl-card-faixa { background: #143352; }
+        .rl-card-bege .rl-card-valor { color: #143352; }
+        .rl-card-destaque { background: linear-gradient(135deg, #143352, #0b2340); border-color: #143352; box-shadow: 0 4px 12px rgba(20, 51, 82,.2); }
+        .rl-card-destaque .rl-card-titulo { color: #5a6879; }
+        .rl-card-destaque .rl-card-valor { color: #143352; }
+        .rl-card-destaque .rl-card-sub { color: #c5d5e5; }
         .rl-card-breakdown { padding-top: 6px; display: flex; flex-direction: column; gap: 1px; font-size: 10px; }
         .rl-bd-item { display: flex; align-items: center; gap: 5px; color: var(--ink-soft); }
         .rl-bd-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
@@ -1997,18 +1997,18 @@ App.telas['desempenho-refractive-laser'] = function () {
         .rl-comp-down  { color: #9B3A3A; font-weight: 700; }
         .rl-comp-igual { color: var(--ink-soft); font-weight: 600; }
         .rl-comp-vazio { color: var(--ink-faint); }
-        .rl-card-destaque .rl-card-comp { border-top-color: #56645E; }
-        .rl-card-destaque .rl-card-comp-lbl { color: #B9D4CB; }
+        .rl-card-destaque .rl-card-comp { border-top-color: #5a6879; }
+        .rl-card-destaque .rl-card-comp-lbl { color: #c5d5e5; }
         .rl-card-destaque .rl-comp-up    { color: #C8F5C0; }
         .rl-card-destaque .rl-comp-down  { color: #F5B5B5; }
         .rl-card-destaque .rl-comp-igual,
-        .rl-card-destaque .rl-comp-vazio { color: #B9D4CB; }
+        .rl-card-destaque .rl-comp-vazio { color: #c5d5e5; }
 
-        /* Card destacado da Taxa — V739: moldura #9FE6C9 → #107DAC */
+        /* Card destacado da Taxa — V739: moldura #9FE6C9 → #1d4470 */
         .rl-card-taxa {
-          background: linear-gradient(135deg, #E8F1F7 0%, #DBF0F9 100%);
-          border: 1px solid #107DAC;
-          border-left: 5px solid #189AD3;
+          background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%);
+          border: 1px solid #1d4470;
+          border-left: 5px solid #2a5a8c;
           border-radius: 12px;
           padding: 18px 22px;
           margin-bottom: 18px;
@@ -2016,7 +2016,7 @@ App.telas['desempenho-refractive-laser'] = function () {
         .rl-card-taxa-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
         .rl-card-taxa-icone { font-size: 20px; }
         .rl-card-taxa-titulo {
-          font-size: 12px; font-weight: 700; color: #003A54;
+          font-size: 12px; font-weight: 700; color: #102d4b;
           text-transform: uppercase; letter-spacing: 0.06em;
         }
         .rl-card-taxa-info {
@@ -2027,16 +2027,16 @@ App.telas['desempenho-refractive-laser'] = function () {
         }
         @media (max-width: 800px) { .rl-card-taxa-info { grid-template-columns: 1fr; } }
         .rl-info-label {
-          font-size: 9px; color: #005073; font-weight: 700;
+          font-size: 9px; color: #143352; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
         }
         .rl-info-valor { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3; }
         .rl-card-taxa-calc {
-          background: #005073; color: #F1F7F7;
+          background: #143352; color: #f6f4ef;
           padding: 12px 18px; border-radius: 8px;
         }
         .rl-calc-label {
-          font-size: 10px; font-weight: 700; color: #189AD3;
+          font-size: 10px; font-weight: 700; color: #2a5a8c;
           text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
         }
         .rl-calc-formula { font-size: 14px; font-weight: 600; color: #C8D6D2; }
@@ -2058,7 +2058,7 @@ App.telas['desempenho-refractive-laser'] = function () {
           font-size: 10px; font-weight: 700; border-radius: 4px;
           letter-spacing: 0.04em; color: white;
         }
-        .rl-tipo-conv { background: #003A54; }
+        .rl-tipo-conv { background: #102d4b; }
         .rl-tipo-part { background: #6B4587; }
         .rl-cat-badge {
           display: inline-block; padding: 3px 8px;
@@ -2188,7 +2188,7 @@ App.telas['desempenho-refractive-laser'] = function () {
           top: 30%;
           bottom: 30%;
           width: 2px;
-          background: rgba(24, 154, 211, 0.35);
+          background: rgba(42, 90, 140, 0.35);
           border-radius: 2px;
           transition: background-color 150ms, top 150ms, bottom 150ms;
         }
@@ -2228,7 +2228,7 @@ App.telas['desempenho-refractive-laser'] = function () {
           border: 1px solid var(--border); border-radius: 6px;
           font-family: inherit; color: var(--ink);
         }
-        .rl-ajm-inp:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30, 187, 215, .16); outline: none; }
+        .rl-ajm-inp:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 127, 176, .16); outline: none; }
         .rl-ajm-acoes { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
 
         /* Regras */

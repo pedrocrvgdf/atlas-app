@@ -176,13 +176,13 @@
              style="margin-top:8px;padding:9px 11px;border:1px solid #E8C670;border-radius:9px;
                     background:#FFF8E6;cursor:pointer">
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
-            <strong style="font-size:12.5px;color:#06283A">${escQ(rotulo)} (${nomes.length})</strong>
-            <span style="font-size:11.5px;font-weight:700;color:#107DAC;white-space:nowrap">abrir ${escQ(destino)} →</span>
+            <strong style="font-size:12.5px;color:#0f1d2e">${escQ(rotulo)} (${nomes.length})</strong>
+            <span style="font-size:11.5px;font-weight:700;color:#1d4470;white-space:nowrap">abrir ${escQ(destino)} →</span>
           </div>
           <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px">
             ${amostra.map(n => `<span style="background:#fff;border:1px solid #E8C670;border-radius:6px;
               padding:1px 7px;font-size:11px">${escQ(n)}</span>`).join('')}
-            ${nomes.length > amostra.length ? `<span style="font-size:11px;color:#56645E;padding:1px 3px">+ ${nomes.length - amostra.length}</span>` : ''}
+            ${nomes.length > amostra.length ? `<span style="font-size:11px;color:#5a6879;padding:1px 3px">+ ${nomes.length - amostra.length}</span>` : ''}
           </div>
         </div>`;
     };
@@ -191,14 +191,14 @@
     const r = ancora.getBoundingClientRect();
     div.style.cssText = `position:fixed;top:${Math.round(r.bottom + 8)}px;`
       + `left:${Math.max(10, Math.round(r.right - 340))}px;width:340px;z-index:9999;`
-      + 'background:#fff;border:1px solid #DEE3E1;border-radius:12px;'
-      + 'box-shadow:0 12px 32px rgba(0,58,84,.18);padding:12px 14px;font-size:12px;color:#06283A;';
+      + 'background:#fff;border:1px solid #dfe4ea;border-radius:12px;'
+      + 'box-shadow:0 12px 32px rgba(16, 45, 75,.18);padding:12px 14px;font-size:12px;color:#0f1d2e;';
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
         <strong style="font-size:13px">⚠️ Pendências de cadastro</strong>
-        <button id="cadpend-painel-x" style="border:none;background:none;cursor:pointer;font-size:15px;color:#56645E">✕</button>
+        <button id="cadpend-painel-x" style="border:none;background:none;cursor:pointer;font-size:15px;color:#5a6879">✕</button>
       </div>
-      <div style="margin-top:5px;color:#56645E;line-height:1.45">
+      <div style="margin-top:5px;color:#5a6879;line-height:1.45">
         As importações trouxeram nomes que ainda não existem nos cadastros.
         Clique num grupo para ir ao módulo certo — ele abre já listando o que falta;
         o alerta some sozinho quando tudo estiver cadastrado.
@@ -236,17 +236,17 @@
       const div = document.createElement('div');
       div.id = 'cadpend-banner';
       div.style.cssText = 'margin:10px 14px 0;padding:10px 14px;border:1px solid #E8C670;'
-        + 'background:#FFF8E6;border-radius:10px;font-size:12.5px;color:#06283A;';
+        + 'background:#FFF8E6;border-radius:10px;font-size:12.5px;color:#0f1d2e;';
       div.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
           <strong>⚠️ ${rot} (${nomes.length})</strong>
-          <button id="cadpend-banner-x" style="border:none;background:none;cursor:pointer;font-size:15px;color:#56645E">✕</button>
+          <button id="cadpend-banner-x" style="border:none;background:none;cursor:pointer;font-size:15px;color:#5a6879">✕</button>
         </div>
         <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
           ${nomes.map(n => `<span style="background:#fff;border:1px solid #E8C670;border-radius:6px;padding:2px 8px">${n
             .replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`).join('')}
         </div>
-        <div style="margin-top:6px;color:#56645E">Cadastre estes itens — o alerta some sozinho quando o cadastro estiver completo.</div>`;
+        <div style="margin-top:6px;color:#5a6879">Cadastre estes itens — o alerta some sozinho quando o cadastro estiver completo.</div>`;
       cont.prepend(div);
       div.querySelector('#cadpend-banner-x').addEventListener('click', () => div.remove());
     };

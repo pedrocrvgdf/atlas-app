@@ -578,7 +578,7 @@ App.telas['desempenho-crosslink'] = function () {
           <div class="cl-card-titulo">Admissões de Crosslink</div>
           <div class="cl-card-valor mono" data-ocultavel>${k.admissoes}</div>
           <div class="cl-card-breakdown">
-            <div class="cl-bd-item"><span class="cl-bd-dot" style="background: #003A54"></span> Convênio: <strong data-ocultavel>${k.admConvenio}</strong></div>
+            <div class="cl-bd-item"><span class="cl-bd-dot" style="background: #102d4b"></span> Convênio: <strong data-ocultavel>${k.admConvenio}</strong></div>
             <div class="cl-bd-item"><span class="cl-bd-dot" style="background: #6B4587"></span> Particular: <strong data-ocultavel>${k.admParticular}</strong></div>
           </div>
           ${linhaComp(k.admissoes, kLM?.admissoes, kLY?.admissoes)}
@@ -1395,27 +1395,27 @@ App.telas['desempenho-crosslink'] = function () {
         .cl-btn-info {
           width: 28px; height: 28px; border-radius: 50%;
           background: var(--bg-elevated); border: 1px solid var(--border);
-          color: #189AD3; font-size: 15px; font-weight: 700;
+          color: #2a5a8c; font-size: 15px; font-weight: 700;
           cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
           transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
         }
-        .cl-btn-info:hover { background: #189AD3; color: white; transform: scale(1.08); }
+        .cl-btn-info:hover { background: #2a5a8c; color: white; transform: scale(1.08); }
         .cl-header-acoes { display: flex; gap: 8px; }
 
         /* Filtros */
         .cl-snapshot-bar {
           display: flex; align-items: center; gap: 10px;
           margin: 14px 0 8px; padding: 8px 14px;
-          background: linear-gradient(135deg, #E8F1F7, #DBF0F9);
+          background: linear-gradient(135deg, #e9edf1, #e4ecf4);
           border: 1px solid var(--border);   /* V970: era #9FE6C9 */
-          border-left: 4px solid #189AD3;
+          border-left: 4px solid #2a5a8c;
           border-radius: 8px;
         }
         .cl-snapshot-icone { font-size: 14px; }
         .cl-snapshot-label {
           font-size: 11px; font-weight: 700;
           letter-spacing: 0.05em; text-transform: uppercase;
-          color: #003A54;
+          color: #102d4b;
         }
         .cl-snapshot-select {
           padding: 5px 10px; font-size: 13px; font-weight: 700;
@@ -1424,7 +1424,7 @@ App.telas['desempenho-crosslink'] = function () {
           border-radius: 5px;
         }
         .cl-snapshot-hint {
-          font-size: 10px; color: #189AD3; font-style: italic;
+          font-size: 10px; color: #2a5a8c; font-style: italic;
           margin-left: auto;
         }
         /* Contêiner da peça 20C (.cl-sb) + botão "✕ Limpar filtros" —
@@ -1451,13 +1451,13 @@ App.telas['desempenho-crosslink'] = function () {
           display: flex; align-items: stretch;
           padding: 6px;
           background: #fff;
-          border: 1px solid #e2ebf2;
+          border: 1px solid #e4ecf4;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20,50,80,.04), 0 10px 26px -20px rgba(20,50,80,.26);
+          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
           flex-wrap: wrap;
         }
         .cl-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-        .cl-sb-celwrap:not(:last-child) .cl-sb-cel { border-right: 1px solid #eef3f7; }
+        .cl-sb-celwrap:not(:last-child) .cl-sb-cel { border-right: 1px solid #f0f4f8; }
         .cl-sb-cel {
           flex: 1; min-width: 0;
           display: flex; align-items: center; gap: 9px;
@@ -1466,64 +1466,64 @@ App.telas['desempenho-crosslink'] = function () {
           font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .cl-sb-cel:hover, .cl-sb-cel.ativo, .cl-sb-cel.aberta { background: #f4fafd; }
-        .cl-sb-cel:focus-visible { outline: 2px solid #2f8fc4; outline-offset: 2px; }
+        .cl-sb-cel:hover, .cl-sb-cel.ativo, .cl-sb-cel.aberta { background: #f6f4ef; }
+        .cl-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
         .cl-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f5f9; color: #5b6c7c;
+          background: #f0f5f9; color: #5a6879;
         }
-        .cl-sb-cel.ativo .cl-sb-tile, .cl-sb-cel.aberta .cl-sb-tile { background: #dbeef8; color: #1c6fa8; }
+        .cl-sb-cel.ativo .cl-sb-tile, .cl-sb-cel.aberta .cl-sb-tile { background: #e4ecf4; color: #1d4470; }
         .cl-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
         .cl-sb-rot {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .09em; color: #5b6c7c; white-space: nowrap;
+          letter-spacing: .09em; color: #5a6879; white-space: nowrap;
         }
         .cl-sb-val {
-          font-size: 13px; font-weight: 500; color: #4f6274;
+          font-size: 13px; font-weight: 500; color: #5a6879;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .cl-sb-cel.ativo .cl-sb-val { font-weight: 700; color: #14384f; }
-        .cl-sb-chev { color: #7d8fa0; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .cl-sb-cel.ativo .cl-sb-val { font-weight: 700; color: #12304f; }
+        .cl-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .cl-sb-cel.aberta .cl-sb-chev { transform: rotate(180deg); }
 
         /* painel ancorado na célula, por cima dos cards */
         .cl-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 340px;
-          background: #fff; border: 1px solid #dfe8f0; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(15,37,68,.42);
+          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
           overflow: hidden;
         }
         .cl-sb-buscabox {
           display: flex; align-items: center; gap: 8px;
-          padding: 11px 12px 10px; border-bottom: 1px solid #edf2f6;
+          padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
         }
         .cl-sb-buscabox .cl-sb-busca-ic { color: #6b7d8e; display: flex; }
         .cl-sb-busca {
-          flex: 1; height: 30px; border: 1px solid #dfe8f0; border-radius: 8px;
-          background: #f7fafc; padding: 0 10px; font-size: 13px;
-          font-family: inherit; color: #14384f; outline: none;
+          flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
+          background: #f6f4ef; padding: 0 10px; font-size: 13px;
+          font-family: inherit; color: #12304f; outline: none;
         }
-        .cl-sb-busca::placeholder { color: #9aabb8; }
-        .cl-sb-busca:focus { border-color: #2f8fc4; }
+        .cl-sb-busca::placeholder { color: #96a2b1; }
+        .cl-sb-busca:focus { border-color: #2a5a8c; }
         .cl-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
         .cl-sb-lista::-webkit-scrollbar { width: 8px; }
-        .cl-sb-lista::-webkit-scrollbar-track { background: #f2f6f9; }
-        .cl-sb-lista::-webkit-scrollbar-thumb { background: #c3d5e2; border-radius: 4px; }
+        .cl-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
+        .cl-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
         .cl-sb-it {
           display: flex; align-items: center; gap: 10px;
           height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-          font-size: 13px; color: #14384f;
+          font-size: 13px; color: #12304f;
         }
-        .cl-sb-it:hover, .cl-sb-it.foco { background: #f2f7fb; }
-        .cl-sb-it.sel { background: #eaf4fb; font-weight: 700; }
+        .cl-sb-it:hover, .cl-sb-it.foco { background: #f0f4f8; }
+        .cl-sb-it.sel { background: #f0f4f8; font-weight: 700; }
         .cl-sb-it-todos { font-weight: 700; }
         .cl-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .cl-sb-ck { color: #1c6fa8; display: flex; }
+        .cl-sb-ck { color: #1d4470; display: flex; }
         .cl-sb-rodape {
-          padding: 7px 12px; border-top: 1px solid #edf2f6;
-          font-size: 10.5px; font-weight: 600; color: #7d8fa0;
+          padding: 7px 12px; border-top: 1px solid #f0f4f8;
+          font-size: 10.5px; font-weight: 600; color: #96a2b1;
         }
         @media (max-width: 1280px) { .cl-sb-celwrap { flex-basis: 32%; } }
         @media (max-width: 900px)  { .cl-sb-celwrap { flex-basis: 48%; } }
@@ -1542,23 +1542,23 @@ App.telas['desempenho-crosslink'] = function () {
         .cl-card-titulo {
           font-size: 9px; font-weight: 700; text-transform: uppercase;
           letter-spacing: 0.06em; margin-bottom: 6px;
-          color: #06283A; /* V849: título dos cards totalizadores (variantes coloridas mantêm a própria) */
+          color: #0f1d2e; /* V849: título dos cards totalizadores (variantes coloridas mantêm a própria) */
         }
         .cl-card-valor { font-size: 20px; font-weight: 800; line-height: 1.1; }
         .cl-card-sub { padding-top: 6px; font-size: 10px; color: var(--ink-soft); line-height: 1.4; }
         .cl-card-verde   { background: linear-gradient(135deg, #E8F1EE, #D4E4DF); border-color: #A8C8C0; }
-        .cl-card-verde .cl-card-faixa { background: #189AD3; }
-        .cl-card-verde .cl-card-titulo, .cl-card-verde .cl-card-valor { color: #189AD3; }
+        .cl-card-verde .cl-card-faixa { background: #2a5a8c; }
+        .cl-card-verde .cl-card-titulo, .cl-card-verde .cl-card-valor { color: #2a5a8c; }
         .cl-card-roxo    { background: linear-gradient(135deg, #ECE5F2, #DAC8E4); border-color: #C0A8D0; }
         .cl-card-roxo .cl-card-faixa { background: #6B4587; }
         .cl-card-roxo .cl-card-titulo, .cl-card-roxo .cl-card-valor { color: #6B4587; }
-        .cl-card-bege    { background: linear-gradient(135deg, #E8F1F7, #CDEBDD); border-color: var(--border); }   /* V970: era #9FE6C9 */
-        .cl-card-bege .cl-card-faixa { background: #189AD3; }
-        .cl-card-bege .cl-card-titulo, .cl-card-bege .cl-card-valor { color: #189AD3; }
-        .cl-card-destaque { background: linear-gradient(135deg, #189AD3, #0C3A2F); border-color: #189AD3; box-shadow: 0 4px 12px rgba(24, 154, 211,.2); }
-        .cl-card-destaque .cl-card-titulo { color: #56645E; }
-        .cl-card-destaque .cl-card-valor { color: #189AD3; }
-        .cl-card-destaque .cl-card-sub { color: #B9D4CB; }
+        .cl-card-bege    { background: linear-gradient(135deg, #e9edf1, #e4ecf4); border-color: var(--border); }   /* V970: era #9FE6C9 */
+        .cl-card-bege .cl-card-faixa { background: #2a5a8c; }
+        .cl-card-bege .cl-card-titulo, .cl-card-bege .cl-card-valor { color: #2a5a8c; }
+        .cl-card-destaque { background: linear-gradient(135deg, #2a5a8c, #0b2340); border-color: #2a5a8c; box-shadow: 0 4px 12px rgba(42, 90, 140,.2); }
+        .cl-card-destaque .cl-card-titulo { color: #5a6879; }
+        .cl-card-destaque .cl-card-valor { color: #2a5a8c; }
+        .cl-card-destaque .cl-card-sub { color: #c5d5e5; }
 
         .cl-card-breakdown {
           padding-top: 6px;
@@ -1580,18 +1580,18 @@ App.telas['desempenho-crosslink'] = function () {
         .cl-comp-down  { color: #9B3A3A; font-weight: 700; }
         .cl-comp-igual { color: var(--ink-soft); font-weight: 600; }
         .cl-comp-vazio { color: var(--ink-faint); }
-        .cl-card-destaque .cl-card-comp { border-top-color: #56645E; }
-        .cl-card-destaque .cl-card-comp-lbl { color: #B9D4CB; }
+        .cl-card-destaque .cl-card-comp { border-top-color: #5a6879; }
+        .cl-card-destaque .cl-card-comp-lbl { color: #c5d5e5; }
         .cl-card-destaque .cl-comp-up    { color: #C8F5C0; }
         .cl-card-destaque .cl-comp-down  { color: #F5B5B5; }
         .cl-card-destaque .cl-comp-igual,
-        .cl-card-destaque .cl-comp-vazio { color: #B9D4CB; }
+        .cl-card-destaque .cl-comp-vazio { color: #c5d5e5; }
 
         /* Card destacado da Taxa */
         .cl-card-taxa {
-          background: linear-gradient(135deg, #E8F1F7 0%, #DBF0F9 100%);
+          background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%);
           border: 1px solid var(--border);   /* V970: era #9FE6C9 */
-          border-left: 5px solid #189AD3;
+          border-left: 5px solid #2a5a8c;
           border-radius: 12px;
           padding: 18px 22px;
           margin-bottom: 18px;
@@ -1601,7 +1601,7 @@ App.telas['desempenho-crosslink'] = function () {
         }
         .cl-card-taxa-icone { font-size: 20px; }
         .cl-card-taxa-titulo {
-          font-size: 12px; font-weight: 700; color: #003A54;
+          font-size: 12px; font-weight: 700; color: #102d4b;
           text-transform: uppercase; letter-spacing: 0.06em;
         }
         .cl-card-taxa-info {
@@ -1612,20 +1612,20 @@ App.telas['desempenho-crosslink'] = function () {
         }
         @media (max-width: 800px) { .cl-card-taxa-info { grid-template-columns: 1fr; } }
         .cl-info-label {
-          font-size: 9px; color: #189AD3; font-weight: 700;
+          font-size: 9px; color: #2a5a8c; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
         }
         .cl-info-valor {
           font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3;
         }
         .cl-card-taxa-calc {
-          background: #005073;   /* V971: volta ao escuro (a V970 tinha posto #189AD3 — pedido de reverter) */
-          color: #F1F7F7;
+          background: #143352;   /* V971: volta ao escuro (a V970 tinha posto #2a5a8c — pedido de reverter) */
+          color: #f6f4ef;
           padding: 12px 18px;
           border-radius: 8px;
         }
         .cl-calc-label {
-          font-size: 10px; font-weight: 700; color: #189AD3;   /* V971: de volta ao #189AD3 sobre o fundo escuro */
+          font-size: 10px; font-weight: 700; color: #2a5a8c;   /* V971: de volta ao #2a5a8c sobre o fundo escuro */
           text-transform: uppercase; letter-spacing: 0.06em;
           margin-bottom: 6px;
         }
@@ -1651,7 +1651,7 @@ App.telas['desempenho-crosslink'] = function () {
           font-size: 10px; font-weight: 700; border-radius: 4px;
           letter-spacing: 0.04em; color: white;
         }
-        .cl-tipo-conv { background: #003A54; }
+        .cl-tipo-conv { background: #102d4b; }
         .cl-tipo-part { background: #6B4587; }
         /* V970: a linha Total (.cl-tbody-total) saiu da matriz */
 
@@ -1737,8 +1737,8 @@ App.telas['desempenho-crosslink'] = function () {
           border: 1px solid var(--border);
         }
         .cl-ocultar-fixa {
-          background: rgba(0, 80, 115, 0.04);
-          border-color: rgba(0, 80, 115, 0.15);
+          background: rgba(20, 51, 82, 0.04);
+          border-color: rgba(20, 51, 82, 0.15);
         }
         .cl-ocultar-chk { display: flex; align-items: center; cursor: pointer; }
         .cl-ocultar-chk input { cursor: pointer; }
@@ -1755,7 +1755,7 @@ App.telas['desempenho-crosslink'] = function () {
           font-size: 9px; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.05em;
           color: var(--ink-faint);
-          background: rgba(0, 80, 115, 0.08);
+          background: rgba(20, 51, 82, 0.08);
           padding: 2px 7px; border-radius: 4px;
         }
         .cl-ocultar-acoes { margin-top: 12px; display: flex; align-items: center; gap: 12px; }

@@ -11,7 +11,7 @@
 (function () {
   'use strict';
 
-  const VERDE_VIVO = '#1EBBD7';
+  const VERDE_VIVO = '#4f7fb0';
   let _estiloInjetado = false;
   let _pop = null;        // elemento do popover aberto (no body)
   let _btnAtual = null;   // botão que abriu o popover
@@ -64,13 +64,13 @@
       .atlas-info-pop::-webkit-scrollbar-thumb { background: #C4D8E2; border-radius: 999px; border: 2px solid #fff; }
 
       /* V998: o popover ⓘ passou a usar o MESMO esquema do cartão de memória
-         de cálculo — degradê padrão do ATLAS no título, acentos em #189AD3 e
-         #107DAC no lugar do dourado. Os dois explicam a mesma coisa; não fazia
+         de cálculo — degradê padrão do ATLAS no título, acentos em #2a5a8c e
+         #1d4470 no lugar do dourado. Os dois explicam a mesma coisa; não fazia
          sentido serem duas paletas. */
       .atlas-info-head {
         position: sticky; top: 0; display: flex; align-items: center; gap: 9px;
         padding: 13px 16px; color: #FFFFFF;
-        background-image: linear-gradient(90deg, #16456b 0%, #1d6d92 34%, #2a9fc4 68%, #4fd3ec 100%);
+        background-image: linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%);
       }
       .atlas-info-head .ti-info-circle { font-size: 18px; color: #FFFFFF; }
       .atlas-info-head strong { font-size: 13.5px; letter-spacing: .02em; font-weight: 700; }
@@ -83,10 +83,10 @@
       .atlas-info-close i { font-size: 13px; line-height: 1; }
       .atlas-info-close:hover { background: rgba(255,255,255,.20); }
 
-      .atlas-info-body { padding: 14px 16px 16px; font-size: 12.5px; line-height: 1.55; color: #06283A; }
+      .atlas-info-body { padding: 14px 16px 16px; font-size: 12.5px; line-height: 1.55; color: #0f1d2e; }
       .atlas-info-sec-tit {
         font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-        color: #107DAC; margin: 0 0 4px;
+        color: #1d4470; margin: 0 0 4px;
       }
       .atlas-info-body p { margin: 0 0 13px; }
       .atlas-info-body ul, .atlas-info-body ol { margin: 0 0 13px; padding-left: 17px; }
@@ -97,55 +97,55 @@
       /* V782: anotações do módulo (editáveis) */
       .atlas-info-notas { border-top: 1px dashed #C4D8E2; padding-top: 10px; margin-top: 12px; }
       .atlas-info-nota-edit {
-        border: none; background: transparent; color: #189AD3; cursor: pointer;
+        border: none; background: transparent; color: #2a5a8c; cursor: pointer;
         padding: 1px 4px; border-radius: 6px; margin-left: 4px; vertical-align: middle;
       }
-      .atlas-info-nota-edit:hover { background: rgba(24,154,211,.14); color: #107DAC; }
-      .atlas-info-nota-view { font-size: 12.5px; line-height: 1.55; color: #06283A; }
+      .atlas-info-nota-edit:hover { background: rgba(42, 90, 140,.14); color: #1d4470; }
+      .atlas-info-nota-view { font-size: 12.5px; line-height: 1.55; color: #0f1d2e; }
       .atlas-info-nota-vazia { color: #8A98A3; font-style: italic; }
       .atlas-info-nota-txt {
         width: 100%; box-sizing: border-box; resize: vertical; min-height: 90px;
         border: 1px solid #C4D8E2; border-radius: 10px; padding: 8px 10px;
         font: inherit; font-size: 12.5px; line-height: 1.5; outline: none;
       }
-      .atlas-info-nota-txt:focus { border-color: #189AD3; }
+      .atlas-info-nota-txt:focus { border-color: #2a5a8c; }
       .atlas-info-nota-acoes { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
       .atlas-info-nota-acoes button {
         border: 1px solid #C4D8E2; background: #fff; border-radius: 8px;
         padding: 5px 14px; font-size: 12px; cursor: pointer;
       }
-      .atlas-info-nota-salvar { background: #189AD3 !important; border-color: #189AD3 !important; color: #fff; font-weight: 700; }
-      .atlas-info-nota-salvar:hover { background: #107DAC !important; }
+      .atlas-info-nota-salvar { background: #2a5a8c !important; border-color: #2a5a8c !important; color: #fff; font-weight: 700; }
+      .atlas-info-nota-salvar:hover { background: #1d4470 !important; }
       .atlas-info-body code { background: #F2F8FB; border-radius: 4px; padding: 0 4px; font-size: 11.5px; }
 
       /* ── V995: tipos de seção do manual ─────────────────────────────────── */
       /* índice — atalho pras seções, que agora são muitas */
       .atlas-info-idx { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 14px; }
       .atlas-info-idx button {
-        border: 1px solid #DCE7ED; background: #F6FAFC; color: #56645E;
+        border: 1px solid #DCE7ED; background: #F6FAFC; color: #5a6879;
         border-radius: 999px; padding: 3px 9px; font-size: 10.5px; font-weight: 700;
         cursor: pointer; transition: border-color .15s ease, color .15s ease;
       }
-      .atlas-info-idx button:hover { border-color: #189AD3; color: #107DAC; }
+      .atlas-info-idx button:hover { border-color: #2a5a8c; color: #1d4470; }
       /* memória de cálculo — fórmula em fonte mono, uma por linha */
       .atlas-info-formula {
-        background: #F2F8FB; border-left: 3px solid #189AD3; border-radius: 0 8px 8px 0;
+        background: #F2F8FB; border-left: 3px solid #2a5a8c; border-radius: 0 8px 8px 0;
         padding: 9px 11px; margin: 0 0 13px;
       }
       .atlas-info-formula > div { margin: 0 0 7px; }
       .atlas-info-formula > div:last-child { margin-bottom: 0; }
       .atlas-info-formula .fx-rot {
         display: block; font-size: 10px; font-weight: 800; letter-spacing: .05em;
-        text-transform: uppercase; color: #107DAC; margin-bottom: 1px;
+        text-transform: uppercase; color: #1d4470; margin-bottom: 1px;
       }
       .atlas-info-formula .fx-exp {
         display: block; font-family: var(--font-mono, ui-monospace, "SF Mono", Consolas, monospace);
-        font-size: 11.5px; line-height: 1.55; color: #06283A; white-space: pre-wrap;
+        font-size: 11.5px; line-height: 1.55; color: #0f1d2e; white-space: pre-wrap;
       }
       /* exemplo numérico — o mesmo cálculo com números de verdade */
       .atlas-info-exemplo {
         background: #EAF6FC; border: 1px solid #BEE2F3; border-radius: 10px;
-        padding: 9px 12px; margin: 0 0 13px; color: #16456b;
+        padding: 9px 12px; margin: 0 0 13px; color: #143352;
       }
       .atlas-info-exemplo div { margin: 0 0 3px; }
       .atlas-info-exemplo div:last-child { margin-bottom: 0; }
@@ -155,7 +155,7 @@
       .atlas-info-passos li::before {
         counter-increment: atlpasso; content: counter(atlpasso);
         position: absolute; left: 0; top: 1px; width: 19px; height: 19px; border-radius: 50%;
-        background: #189AD3; color: #fff; font-size: 10px; font-weight: 800;
+        background: #2a5a8c; color: #fff; font-size: 10px; font-weight: 800;
         display: flex; align-items: center; justify-content: center;
       }
       /* V952: variante compacta do ⓘ para títulos de gráfico/ilha/card */

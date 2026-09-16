@@ -79,9 +79,9 @@ const App = {
           <h2 style="color: #9B3A3A">Erro ao inicializar</h2>
           <p>${e.message}</p>
           <div style="margin: 18px 0; display: flex; gap: 10px; flex-wrap: wrap">
-            <button id="boot-tentar" style="padding: 9px 16px; border: 1px solid #107DAC; background: #107DAC; color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px">↻ Tentar de novo</button>
+            <button id="boot-tentar" style="padding: 9px 16px; border: 1px solid #1d4470; background: #1d4470; color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px">↻ Tentar de novo</button>
             ${ehBanco && window.Banco && Banco.restaurarDeArquivo ? `
-            <button id="boot-restaurar" style="padding: 9px 16px; border: 1px solid #107DAC; background: #fff; color: #107DAC; border-radius: 8px; cursor: pointer; font-size: 14px">Restaurar da cópia automática (.db)</button>
+            <button id="boot-restaurar" style="padding: 9px 16px; border: 1px solid #1d4470; background: #fff; color: #1d4470; border-radius: 8px; cursor: pointer; font-size: 14px">Restaurar da cópia automática (.db)</button>
             <input type="file" id="boot-arquivo" accept=".db,.sqlite,.bin,application/octet-stream" style="display:none">` : ''}
           </div>
           <p id="boot-rest-msg" style="font-size: 13px; color: #666"></p>
@@ -155,14 +155,9 @@ const App = {
     this._aplicarPermissoesMenu();
     this._iniciarFitaTitulos();
     this.pintarVersao();   // V858: o menu só existe agora — repinta o carimbo
-    // V699: o MODO EXTERNO sobrevive ao reload — volta direto pra Matriz
-    if (localStorage.getItem('atlas_modo_externo') === '1') {
-      this.setModoExterno(true, { navegar: true });
-    } else {
-      // Navega para o primeiro módulo permitido
-      const primeiraPermitida = this._primeiraTelaPermitida();
-      this.navegarPara(primeiraPermitida);
-    }
+    // Navega para o primeiro módulo permitido
+    try { localStorage.removeItem('atlas_modo_externo'); } catch (_) {}   // ATLAS v1.1: modo Externo não existe mais
+    this.navegarPara(this._primeiraTelaPermitida());
     // V647: compressão dos snapshots legados em SEGUNDO PLANO, bem depois do
     // login — nunca mais no caminho crítico do boot
     setTimeout(() => { this._migrarSnapshotsV644(); }, 15000);
@@ -412,12 +407,10 @@ const App = {
         if (titulo) {
           h.dataset.banner = '1';
           h.classList.add('titulo-banner');
-          h.innerHTML =
-            '<span class="tb-greencirc"></span>' +
-            '<span class="tb-pill-green"><span class="tb-pill-light">' +
-            '<span class="tb-pill-dark"></span></span></span>' +
-            '<span class="tb-circ"></span>';
-          h.querySelector('.tb-pill-dark').textContent = titulo;
+          // ATLAS v1.1: banner limpo — a marca redonda ao lado de uma pílula
+          // navy com o título (as camadas sobrepostas círculo/aro/pílula saíram)
+          h.innerHTML = '<span class="tb-marca" aria-hidden="true"></span><span class="tb-texto"></span>';
+          h.querySelector('.tb-texto').textContent = titulo;
           // botão informativo (ⓘ) some e clicar no banner abre o informativo
           const bloco = h.closest('.fic-titulo-wrap, .page-header, .fel-header, .per-header') || h.parentNode;
           // AUTO-MONTA o botão informativo novo (atlas-btn-info) se houver doc do
@@ -470,790 +463,140 @@ const App = {
     document.getElementById('app').innerHTML = `
       <div class="app-shell">
         <div class="atlas-marca-global" aria-hidden="true"></div>
-        <aside class="sidebar">
-          <!-- V494: cabeçalho no padrão do design handoff (marca + ATLAS / GESTÃO ESTRATÉGICA) -->
-          <div class="sidebar-brand" id="sidebar-toggle" title="Abrir / recolher menu">
-            <!-- V951: a marca do menu RECOLHIDO virou um <img> real (o mesmo
-                 arquivo e o mesmo mecanismo do menu aberto) — antes era
-                 background-image por CSS, que não aparecia na máquina do usuário. -->
-            <span class="brand-mini" role="img" aria-label="ATLAS"><img src="assets/atlas-mark.png" alt="" draggable="false"></span>
-            <!-- V700 (handoff 17C/18C): marca e alternador de base dividem UM
-                 painel recuado, empilhados — nada disputa fileira com o wordmark -->
-            <div class="brand-painel brand-full">
-              <div class="bp-marca">
-                <span class="bp-tile"><img src="assets/atlas-mark.png" alt="ATLAS"></span>
-                <div class="bp-texto">
-                  <h1 class="brand-nome">ATLAS</h1>
-                  <p class="brand-sub">AUDITORIA DE CONTAS</p>
-                  <p class="brand-sub brand-sub-ext">REPASSE EXTERNO</p>
-                </div>
-              </div>
-              <div class="modo-seg" id="modo-externo-switch" role="tablist" aria-label="Base de trabalho">
-                <button type="button" class="seg-btn seg-atlas ativo" data-modo="atlas" role="tab" aria-selected="true">Interno</button>
-                <button type="button" class="seg-btn seg-ext" data-modo="ext" role="tab" aria-selected="false">Externo</button>
-              </div>
-            </div>
+        <!-- ATLAS v1.1: o menu lateral e a barra de importação saíram — a
+             navegação é o FLOATING DOCK (embaixo, centralizado); aqui fica só
+             a marca, com o carimbo de versão que o Banco confere. -->
+        <header class="atlas-topo" id="atlas-topo">
+          <img class="atlas-topo-marca" src="assets/atlas-mark.png" alt="ATLAS" draggable="false">
+          <div class="atlas-topo-texto">
+            <h1 class="brand-nome">ATLAS</h1>
+            <p class="brand-sub">AUDITORIA DE CONTAS</p>
+            <div class="atlas-versao" title="Versão do pacote em uso nesta máquina">${(window.ATLAS_VERSAO || {}).pacote || 'versão não identificada'}</div>
           </div>
-          <nav class="sidebar-nav">
-            <div class="nav-inner nav-normal">
-            <div class="nav-section-title">Painel</div>
-            <button class="nav-item" data-tela="dashboard">
-              <span class="icon"><i class="ti ti-home"></i></span><span class="nav-label">Visão Geral</span>
-            </button>
-
-            <button class="nav-item nav-item-grupo" data-grupo="desempenho" id="grupo-desempenho">
-              <span class="icon"><i class="ti ti-chart-bar"></i></span><span class="nav-label">Desempenho</span>
-              <span class="seta" id="seta-desempenho">►</span>
-            </button>
-            <div class="nav-subgrupo" id="subitens-desempenho">
-              <button class="nav-subitem" data-tela="desempenho-lio">LIO</button>
-              <button class="nav-subitem" data-tela="desempenho-opme">OPME</button>
-              <button class="nav-subitem" data-tela="desempenho-fellow">Fellow</button>
-              <button class="nav-subitem" data-tela="desempenho-fracionamento">Fracionamento</button>
-              <button class="nav-subitem" data-tela="desempenho-refractive-laser">Refractive Laser</button>
-              <button class="nav-subitem" data-tela="desempenho-periodos">Períodos</button>
-              <button class="nav-subitem" data-tela="desempenho-cargos">Cargos Administrativos</button>
-              <button class="nav-subitem" data-tela="desempenho-lentes-contato">Lentes de Contato</button>
-              <button class="nav-subitem" data-tela="desempenho-luz-pulsada">Luz Pulsada</button>
-              <button class="nav-subitem" data-tela="desempenho-estrabismo">Estrabismo</button>
-              <button class="nav-subitem" data-tela="desempenho-laudos">Laudos</button>
-              <button class="nav-subitem" data-tela="desempenho-crosslink">Crosslink</button>
-            </div>
-
-            <div class="nav-section-title">Processamento</div>
-            <button class="nav-item" data-tela="calcular">
-              <span class="icon"><i class="ti ti-calculator"></i></span><span class="nav-label">Calcular Repasse</span>
-            </button>
-            <button class="nav-item" data-tela="auditoria">
-              <span class="icon"><i class="ti ti-clipboard-check"></i></span><span class="nav-label">Auditoria</span>
-            </button>
-            <button class="nav-item" data-tela="gerenciais">
-              <span class="icon"><i class="ti ti-adjustments"></i></span><span class="nav-label">Gerenciais</span>
-            </button>
-
-            <div class="nav-section-title">Saída</div>
-            <button class="nav-item" data-tela="relatorios">
-              <span class="icon"><i class="ti ti-report"></i></span><span class="nav-label">Relatórios</span>
-            </button>
-            <button class="nav-item" data-tela="producao-medica">
-              <span class="icon"><i class="ti ti-layout-grid"></i></span><span class="nav-label">Produção Médica</span>
-            </button>
-            <!-- V906: ciclo relatório → nota → CAV, com conferência automática -->
-            <button class="nav-item" data-tela="controle-notas">
-              <span class="icon"><i class="ti ti-receipt"></i></span><span class="nav-label">Controle de Notas</span>
-            </button>
-            <!-- V614: Consolidação por último — é o módulo final do fluxo -->
-            <button class="nav-item" data-tela="consolidacao">
-              <span class="icon"><i class="ti ti-lock-check"></i></span><span class="nav-label">Consolidação</span>
-            </button>
-            </div>
-
-            <!-- V699/V702: navegação do MODO EXTERNO (visível só com o switch
-                 ligado). Importar Admissões é o PRIMEIRO módulo; a Base de
-                 Cálculo mora nos Cadastros; a Visão Geral é própria do modo. -->
-            <div class="nav-inner nav-externo">
-              <!-- V703: a Visão Geral fica ACIMA de tudo (painel próprio do modo),
-                   como no modo normal; Importar segue como 1º módulo do grupo -->
-              <div class="nav-section-title">Painel</div>
-              <button class="nav-item" data-tela="externos-visao">
-                <span class="icon"><i class="ti ti-home"></i></span><span class="nav-label">Visão Geral</span>
-              </button>
-              <div class="nav-section-title">Módulo Externos</div>
-              <button class="nav-item" data-tela="externos-importar">
-                <span class="icon"><i class="ti ti-file-import"></i></span><span class="nav-label">Importar</span>
-              </button>
-              <button class="nav-item" data-tela="externos">
-                <span class="icon"><i class="ti ti-arrows-diff"></i></span><span class="nav-label">Matriz Externa</span>
-              </button>
-              <!-- V828: fim da esteira do Externo — extração dos relatórios
-                   que vão para cada médico (espelho do RELATÓRIOS do ATLAS) -->
-              <button class="nav-item" data-tela="externos-relatorios">
-                <span class="icon"><i class="ti ti-report"></i></span><span class="nav-label">Relatórios Externos</span>
-              </button>
-              <div class="nav-section-title">Cadastros</div>
-              <button class="nav-item" data-tela="externos-base">
-                <span class="icon"><i class="ti ti-adjustments-dollar"></i></span><span class="nav-label">Base de Cálculo</span>
-              </button>
-              <!-- V706: NÃO abre o cadastro completo — tela leve que só vincula
-                   clínica/tipo aos médicos JÁ cadastrados nesta base -->
-              <button class="nav-item" data-tela="externos-medicos">
-                <span class="icon"><i class="ti ti-user-circle"></i></span><span class="nav-label">Médicos & Clínicas</span>
-              </button>
-            </div>
-          </nav>
-
-          <!-- V494: card de usuário no padrão do design handoff (avatar gradiente + nome/cargo + sair) -->
-          <div class="sidebar-usuario">
-            <div class="su-avatar" id="su-avatar">${(usuario[0] || '?').toUpperCase()}</div>
-            <div class="su-info">
-              <div class="su-nome">${usuario}</div>
-              <div class="su-cargo">Administrador</div>
-            </div>
-          </div>
-          <!-- V858: qual pacote está rodando — é por aqui que as duas máquinas
-               conferem se estão na MESMA versão da ferramenta -->
-          <div class="sidebar-versao" title="Versão do pacote em uso nesta máquina">${(window.ATLAS_VERSAO || {}).pacote || 'versão não identificada'}</div>
-        </aside>
+        </header>
 
         <main class="main">
-          <div class="import-dock-wrap" id="topbar-import">
-            <div class="import-dock">
-              <button class="idock-btn" data-tela="importar-qvis"><span class="idock-ico"><i class="ti ti-file-import"></i></span> QVIS</button>
-              <button class="idock-btn" data-tela="importar-producao"><span class="idock-ico"><i class="ti ti-file-import"></i></span> PRODUÇÃO</button>
-              <span class="idock-sep" aria-hidden="true"></span>
-              <div class="idock-drop" id="idock-cadastros">
-                <button class="idock-btn idock-drop-btn" id="idock-cadastros-btn" aria-haspopup="true" aria-expanded="false"><span class="idock-ico"><i class="ti ti-folder"></i></span> CADASTROS <span class="idock-caret"><i class="ti ti-chevron-down"></i></span></button>
-                <div class="idock-menu" id="idock-cadastros-menu" role="menu">
-                  <button class="idock-menu-item" data-tela="base-tabela" role="menuitem"><i class="ti ti-table"></i> Base Tabela</button>
-                  <button class="idock-menu-item" data-tela="medicos" role="menuitem"><i class="ti ti-user-circle"></i> Médicos</button>
-                  <button class="idock-menu-item" data-tela="unidades" role="menuitem"><i class="ti ti-building"></i> Unidades</button>
-                  <button class="idock-menu-item" data-tela="de-para-nomes" role="menuitem"><i class="ti ti-arrows-exchange"></i> De-Para de Nomes</button>
-                </div>
-              </div>
-            </div>
-          </div>
           <div id="conteudo"></div>
         </main>
       </div>
 
-      <style>
-        .sidebar {
-          display: flex;
-          flex-direction: column;
-        }
-        .sidebar-nav {
-          flex: 1;
-          min-height: 0;
-        }
-
-        /* Item expansível (grupo) */
-        .nav-item-grupo {
-          position: relative;
-        }
-        .nav-item-grupo .seta {
-          position: absolute;
-          right: 14px;
-          top: 50%;
-          font-size: 10px;
-          opacity: 0.5;
-          display: inline-block;
-          transform-origin: center center;
-          transform: translateY(-50%) rotate(0deg);
-          transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms;
-        }
-        .nav-item-grupo.aberto .seta {
-          transform: translateY(-50%) rotate(90deg);
-          opacity: 0.9;
-        }
-        .nav-item-grupo.aberto {
-          color: #189AD3;
-          background: rgba(24, 154, 211, 0.10);
-        }
-
-        /* Subitens (recolhidos por padrão) */
-        .nav-subgrupo {
-          max-height: 0;
-          overflow: hidden;
-          transition: max-height 280ms cubic-bezier(0.4, 0, 0.2, 1);
-          margin-left: 22px;
-          padding-left: 10px;
-          border-left: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .nav-subgrupo.aberto {
-          max-height: 600px;
-        }
-
-        .nav-subitem {
-          display: block;
-          width: 100%;
-          padding: 6px 12px;
-          margin: 1px 0;
-          border-radius: 5px;
-          color: rgba(232, 237, 233, 0.65);
-          background: transparent;
-          border: none;
-          font-size: 12px;
-          font-weight: 500;
-          text-align: left;
-          font-family: inherit;
-          cursor: pointer;
-          transition: background-color 120ms, color 120ms, border-color 120ms, box-shadow 120ms, transform 120ms, opacity 120ms;
-        }
-        .nav-subitem:hover {
-          background: rgba(255, 255, 255, 0.06);
-          color: #F1F7F7;
-        }
-        .nav-subitem.active {
-          background: rgba(24, 154, 211, 0.15);
-          color: #189AD3;
-          font-weight: 600;
-        }
-
-        .sidebar-usuario {
-          padding: 9px 14px;
-          height: 40px; box-sizing: border-box;
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          background: rgba(0, 0, 0, 0.1);
-          flex: 0 0 auto;
-        }
-        .su-info { flex: 1; min-width: 0; }
-        .su-acoes { display: flex; flex-direction: row; gap: 8px; flex: 0 0 auto; }
-        .su-label {
-          font-size: 9px;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          color: rgba(232, 237, 233, 0.5);
-          font-weight: 600;
-          margin-bottom: 1px;
-        }
-        .su-nome {
-          font-size: 12px;
-          color: #F1F7F7;
-          font-weight: 500;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .su-logout {
-          background: transparent;
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          color: rgba(232, 237, 233, 0.75);
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 11px;
-          transition: background-color 120ms, color 120ms, border-color 120ms, box-shadow 120ms, transform 120ms, opacity 120ms;
-        }
-        .su-logout:hover {
-          background: rgba(24, 154, 211, 0.18);
-          color: #189AD3;
-          border-color: #189AD3;
-        }
-        .su-sistema {
-          flex: 0 0 auto;
-          background: transparent;
-          border: 1px solid rgba(184, 150, 90, 0.45);
-          color: #D9B981;
-          width: 22px; height: 22px;
-          border-radius: 6px; cursor: pointer; font-size: 11px;
-          display: flex; align-items: center; justify-content: center;
-          transition: background-color 120ms, color 120ms, border-color 120ms;
-        }
-        .su-sistema i { transition: transform 200ms ease; }
-        .su-sistema:hover {
-          background: rgba(184, 150, 90, 0.18);
-          color: #E8C98A; border-color: #B8965A;
-        }
-        .su-sistema:hover i { transform: rotate(60deg); }
-
-        /* ===== RAIL COLAPSÁVEL (abre/fecha clicando no logo) ===== */
-        .sidebar {
-          position: fixed;
-          left: 12px; top: 8px;
-          width: 44px;
-          height: calc(100vh - 16px);
-          z-index: 50;
-          overflow: visible;            /* deixa o tooltip "flutuar" pra fora */
-          border-radius: 999px;         /* V334: cápsula flutuante, pontas 100% redondas */
-          background: var(--sb-bg, #00003D);   /* V700: fundo por token (ATLAS/Externo) */
-          box-shadow: 0 20px 44px rgba(0, 0, 40, 0.42);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          transition: width 0.26s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.26s cubic-bezier(0.22, 1, 0.36, 1);
-          will-change: width;
-        }
-        body.rail-aberto .sidebar {
-          width: 220px;
-          border-radius: 26px;          /* expandida: cantos arredondados (não cápsula) */
-          overflow: hidden;
-        }
-        body.rail-aberto .sidebar-nav { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.18) transparent; }
-        body.rail-aberto .sidebar-nav::-webkit-scrollbar { width: 5px; }
-        body.rail-aberto .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 5px; }
-        body.rail-aberto .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
-        /* V340/341: durante a animação o texto é CORTADO pelo overflow do item/brand
-           (nunca quebra) e se revela/some deslizando conforme a barra alarga/estreita.
-           overflow do item está no base .nav-item; aqui só o brand. */
-        .sidebar-brand { overflow: hidden; }
-        .nav-label { white-space: nowrap; flex: 0 0 auto; }
-        .brand-full, .brand-sub { white-space: nowrap; }
-        /* abertura do rail: o conteúdo desliza via TRANSFORM (GPU, sem
-           reflow = suave). V495: restaurado o deslize — com a barra de 288px
-           o conteúdo ficava COBERTO (título/filtros atrás da barra).
-           122px = metade do crescimento (300-56), mantém o conteúdo
-           equilibrado nos dois estados. */
-        /* V701: o deslize do conteúdo virou FLIP em App._alternarRail — sem
-           transform permanente (o translateX(122px) fixo desalinhava o layout
-           aberto e cortava a borda direita). */
-
-        /* V700 (17C): aberto = painel recuado empilhado (altura livre);
-           colapsado = a faixa de 64px de sempre com o globo. */
-        .sidebar-brand { text-align: center; cursor: pointer; user-select: none;
-          padding: 0; box-sizing: border-box; display: block; }
-        .sidebar-brand:hover .brand-mini { transform: scale(1.12); }
-        /* V350: no menu colapsado, globo encostado mais no topo da cápsula */
-        body:not(.rail-aberto) .sidebar-brand { height: 64px; padding: 4px 8px 0;
-          display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
-        .brand-mini {
-          display: none; font-size: 26px; line-height: 1;
-          width: 1.35em; height: 1.35em;
-          /* V951: sem background-image — a marca é o <img> filho (mesmo
-             arquivo do menu aberto, assets/atlas-mark.png) */
-          filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.30));
-          transition: transform 0.18s ease;
-        }
-        .brand-mini img { display: block; width: 100%; height: 100%; object-fit: contain; }
-        .brand-mini svg { display: block; width: 1em; height: 1em; }
-
-        .sidebar-nav { padding: 8px 10px; }
-        .nav-item, .nav-item-grupo {
-          white-space: nowrap; position: relative; overflow: hidden;
-          transition: background 0.14s, transform 0.16s, box-shadow 0.16s;
-        }
-        .nav-item .icon { flex: 0 0 auto; font-size: 17px; }
-        .nav-item:hover { transform: translateY(-1px); }
-
-        .su-avatar {
-          flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%;
-          background: #1EBBD7;
-          color: #003A54; font-weight: 800; font-size: 12px;
-          display: flex; align-items: center; justify-content: center;
-          transition: transform 0.16s ease, box-shadow 0.16s ease;
-        }
-        .su-avatar-acao { cursor: pointer; }
-        .su-avatar-acao:hover { transform: scale(1.12); box-shadow: 0 0 10px rgba(30, 187, 215, 0.6); }
-        /* colapsado: avatar 'A' centralizado no eixo horizontal e colado no fundo da cápsula */
-        body:not(.rail-aberto) .sidebar-usuario { justify-content: center; align-items: flex-end; padding: 0 0 5px 0; }
-        .nav-section-title { margin-top: 14px; white-space: nowrap; }
-
-        /* ---- estado COLAPSADO (padrão: sem rail-aberto) ---- */
-        body:not(.rail-aberto) .brand-full,
-        body:not(.rail-aberto) .brand-sub,
-        body:not(.rail-aberto) .su-info,
-        body:not(.rail-aberto) .su-logout,
-        body:not(.rail-aberto) .su-sistema,
-        body:not(.rail-aberto) .su-acoes,
-        body:not(.rail-aberto) .nav-subgrupo,
-        body:not(.rail-aberto) .seta { display: none; }
-        body:not(.rail-aberto) .brand-mini { display: block; }
-        /* V338: SEM justify-content:center no colapsado. Agora ícone e avatar
-           ficam no MESMO X (centro da cápsula = 27px) em ambos os estados, via
-           flex-start + padding-left fixo (definidos no bloco MENU COMPACTO).
-           Assim não pulam ao abrir/fechar e ficam de fato centralizados. */
-        /* V339: nav colapsado usa o MESMO fluxo do aberto (block, de cima pra
-           baixo) e o ícone NÃO muda de tamanho. Assim os ícones ficam na MESMA
-           posição (vertical e horizontal) ao abrir/fechar — só os textos surgem. */
-        body:not(.rail-aberto) .nav-section-title {
-          color: transparent; overflow: hidden;
-        }
-        /* hover flutuante do ícone (colapsado) */
-        body:not(.rail-aberto) .nav-item { border-radius: 12px; }
-        body:not(.rail-aberto) .nav-item:hover {
-          background: rgba(24, 154, 211, 0.16);
-          transform: translateY(-2px) scale(1.06);
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
-        }
-        body:not(.rail-aberto) .nav-item:hover .icon {
-          color: #7BE8C8; text-shadow: 0 0 10px rgba(24, 154, 211, 0.5);
-        }
-        /* V341: no colapsado o label fica INLINE (cortado pelo overflow do item =
-           invisível). A tooltip só aparece no HOVER: o item libera o overflow e o
-           label vira pílula flutuante à direita. Assim, ao FECHAR, o label some
-           deslizando (igual ao abrir) em vez de "pular pra fora" como pílula. */
-        body:not(.rail-aberto) .nav-item:hover { overflow: visible; }
-        body:not(.rail-aberto) .nav-item:hover .nav-label {
-          position: absolute; left: calc(100% + 12px); top: 50%;
-          transform: translateY(-50%);
-          background: #2A2D2A; color: #F1F7F7;
-          padding: 6px 11px; border-radius: 8px;
-          font-size: 12.5px; font-weight: 600;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-          pointer-events: none; z-index: 60;
-          animation: navTipIn 0.16s ease-out;
-        }
-        @keyframes navTipIn {
-          from { opacity: 0; transform: translateY(-50%) translateX(-6px); }
-          to   { opacity: 1; transform: translateY(-50%) translateX(0); }
-        }
-
-        /* ===== ativo: brilho teal suave + barrinha de contraste no fim ===== */
-        .nav-subitem { position: relative; }
-        .nav-item.active, .nav-subitem.active { background: #1EBBD7; color: #F1F7F7; }
-        .nav-item.active { font-weight: 700; }
-        /* brilho suave (teal padrão ATLAS) */
-        .nav-item.active::after,
-        .nav-subitem.active::after {
-          content: ''; position: absolute; z-index: -1; pointer-events: none;
-          right: 0; top: 50%; transform: translateY(-50%);
-          width: 48%; height: 106%; border-radius: 14px;
-          background: radial-gradient(100% 82% at 100% 50%,
-                      rgba(24, 154, 211, 0.30) 0%,
-                      rgba(24, 154, 211, 0.10) 38%,
-                      transparent 66%);
-          animation: navGlowIn 0.4s ease-out;
-        }
-        /* barrinha de contraste no final (dourado ATLAS) */
-        .nav-item.active::before,
-        .nav-subitem.active::before {
-          content: ''; position: absolute; right: 0; top: 50%;
-          transform: translateY(-50%);
-          width: 3px; height: 58%; border-radius: 3px;
-          background: #F5F2EC; z-index: 1; pointer-events: none;
-          box-shadow: 0 0 8px rgba(255, 255, 255, 0.75), 0 0 3px rgba(255, 255, 255, 0.9);
-          animation: navBarIn 0.4s ease-out;
-        }
-        /* V335: no COLAPSADO o ativo é um quadradinho verde CENTRALIZADO e luminoso —
-           sem a barrinha/glow lateral (que ficavam deslocados no formato cápsula). */
-        body:not(.rail-aberto) .nav-item.active::before,
-        body:not(.rail-aberto) .nav-item.active::after,
-        body:not(.rail-aberto) .nav-subitem.active::before,
-        body:not(.rail-aberto) .nav-subitem.active::after { display: none; }
-        body:not(.rail-aberto) .nav-item.active {
-          box-shadow: 0 0 16px rgba(30, 187, 215, 0.55), 0 6px 14px rgba(0, 0, 0, 0.20);
-        }
-        @keyframes navGlowIn {
-          0%   { opacity: 0; transform: translateY(-50%) translateX(12px); }
-          100% { opacity: 1; transform: translateY(-50%) translateX(0); }
-        }
-        @keyframes navBarIn {
-          0%   { opacity: 0; transform: translateY(-50%) scaleY(0.3); }
-          100% { opacity: 1; transform: translateY(-50%) scaleY(1); }
-        }
-
-        /* ===== MENU COMPACTO (~75% — só o menu; conteúdo fica 100%) ===== */
-        .sidebar { width: 44px; padding-top: 16px; }
-        body.rail-aberto .sidebar { width: 220px; }
-        .sidebar-brand h1 { font-size: 27px; margin-bottom: 6px; }
-        .sidebar-brand p { font-size: 8px; }
-        .brand-mini { font-size: 24px; }
-        .sidebar-nav { padding: 6px 8px; }
-        /* V348: método à prova de bala — o .nav-inner tem min-height:100% e
-           centraliza (justify-content:center) quando o conteúdo CABE; quando a
-           lista passa da altura (Desempenho aberto), o inner cresce e o menu ROLA
-           a partir do TOPO dentro da barra, sem nunca cortar. */
-        .nav-inner {
-          min-height: 100%;
-          display: flex; flex-direction: column; justify-content: center;
-          box-sizing: border-box;
-        }
-        .nav-section-title { font-size: 8px; padding: 9px 9px 5px; }
-        .nav-item { font-size: 11px; gap: 9px; padding: 8px 6.5px; justify-content: flex-start; }
-        .nav-item .icon { font-size: 15px; width: 15px; height: 15px; }
-        .nav-subitem { font-size: 9.5px; padding: 5px 9px; }
-        .su-avatar { width: 30px; height: 30px; font-size: 13px; }
-        .sidebar-usuario { padding: 10px 12px 0px 7px; justify-content: flex-start; }
-        .nav-item-grupo .seta { right: 10px; font-size: 8px; }
-
-        /* ================================================================
-           V494 — BARRA DE MENU (design handoff Claude Design "Sidebar ATLAS")
-           Camada final da cascata: só VISUAL. Comportamentos (recolher,
-           permissões, tooltips, grupos) permanecem os das regras acima.
-           Paleta: fundo #0a1120 · texto #9fb4cd/#eaf4ff · acento #38bdf8
-           · indicador #22d3ee · seções #48607e · tipografia Manrope.
-           ================================================================ */
-        .sidebar {
-          background: #0a1120;
-          border: 1px solid rgba(120, 160, 220, .08);
-          box-shadow: 0 24px 60px -20px rgba(10, 20, 40, .55);
-          font-family: 'Manrope', 'Poppins', 'Inter Tight', sans-serif;
-        }
-        body.rail-aberto .sidebar { width: 288px; border-radius: 24px; }
-
-        /* V700 (17C): cabeçalho = painel recuado empilhado (marca + segmentado);
-           a altura é livre — o painel dita o tamanho. */
-        .sidebar-brand {
-          display: block; text-align: left; padding: 0;
-          border-bottom: none; height: auto;
-        }
-        .brand-mark { width: 44px; height: 44px; object-fit: contain; display: block; flex: 0 0 auto; }
-        .brand-texto { min-width: 0; }
-        .sidebar-brand .brand-nome {
-          font: 800 20px 'Manrope', sans-serif; letter-spacing: .14em;
-          color: #eaf4ff; margin: 0; line-height: 1.2;
-        }
-        .sidebar-brand .brand-sub {
-          font: 700 8px 'Manrope', sans-serif; letter-spacing: .24em;
-          color: #38bdf8; margin: 0; text-transform: uppercase;
-          display: block; white-space: nowrap;
-        }
-        .sidebar-brand:hover .brand-mark { transform: scale(1.08); transition: transform .18s ease; }
-        /* colapsado: a marca vira o logo pequeno centralizado (V951: <img>
-           dentro do .brand-mini — a regra de background-image saiu) */
-        body:not(.rail-aberto) .sidebar-brand { justify-content: center; padding: 4px 0 0; }
-        body:not(.rail-aberto) .brand-mark, body:not(.rail-aberto) .brand-texto { display: none; }
-
-        /* Seções */
-        .nav-section-title {
-          font: 800 10px 'Manrope', sans-serif; letter-spacing: .18em;
-          color: #48607e; text-transform: uppercase;
-        }
-        body.rail-aberto .sidebar-nav { padding: 8px 16px; }
-
-        /* Itens principais */
-        .nav-item, .nav-item-grupo {
-          gap: 13px; padding: 11px 12px; border-radius: 10px;
-          color: #9fb4cd; font: 600 15px 'Manrope', sans-serif;
-        }
-        .nav-item .icon { font-size: 19px; width: 19px; height: 19px; color: inherit; }
-        body.rail-aberto .nav-item:hover {
-          background: transparent; color: #eaf4ff; transform: none; box-shadow: none;
-        }
-        .nav-item.active {
-          background: rgba(56, 189, 248, .08); color: #eaf4ff; font-weight: 700;
-        }
-        .nav-item.active .icon { color: #38bdf8; }
-        /* indicador: barrinha ciano à ESQUERDA (substitui barrinha dourada + glow à direita) */
-        .nav-item.active::after, .nav-subitem.active::after { display: none; }
-        .nav-item.active::before, .nav-subitem.active::before {
-          content: ''; position: absolute; left: 2px; right: auto; top: 50%;
-          transform: translateY(-50%);
-          width: 3px; height: 55%; border-radius: 99px;
-          background: #22d3ee; box-shadow: none; z-index: 1; pointer-events: none;
-          animation: navBarIn 0.3s ease-out;
-        }
-
-        /* Grupo Desempenho aberto */
-        .nav-item-grupo.aberto { color: #eaf4ff; background: rgba(56, 189, 248, .08); }
-        .nav-item-grupo.aberto .icon { color: #38bdf8; }
-        .nav-item-grupo .seta { color: #48607e; opacity: 1; }
-
-        /* Subitens */
-        .nav-subgrupo { margin-left: 22px; padding-left: 10px; border-left: none; }
-        .nav-subitem {
-          padding: 8px 12px; border-radius: 8px;
-          font: 600 13.5px 'Manrope', sans-serif; color: #7c93af;
-        }
-        .nav-subitem:hover { background: transparent; color: #dbe8f5; }
-        .nav-subitem.active {
-          background: transparent; color: #22d3ee; font-weight: 700;
-        }
-        .nav-subitem.active::before { left: -10px; }
-
-        /* Card do usuário (rodapé) */
-        body.rail-aberto .sidebar-usuario {
-          margin: 0 12px 12px; padding: 14px 14px; height: auto;
-          border-radius: 14px; border-top: none;
-          background: rgba(255, 255, 255, .04);
-        }
-        .su-avatar {
-          width: 38px; height: 38px; border-radius: 11px;
-          background: linear-gradient(135deg, #22d3ee, #3b82f6);
-          color: #04121f; font: 800 15px 'Manrope', sans-serif;
-        }
-        .su-nome { font: 700 14px 'Manrope', sans-serif; color: #eaf4ff; }
-        .su-cargo { font: 600 11px 'Manrope', sans-serif; color: #5b7a9c; }
-        .su-sair {
-          flex: 0 0 auto; background: transparent; border: none; cursor: pointer;
-          color: #5b7a9c; font-size: 17px; padding: 4px; border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-          transition: color 140ms;
-        }
-        .su-sair:hover { color: #eaf4ff; }
-        body:not(.rail-aberto) .su-sair { display: none; }
-        /* V495: na cápsula recolhida o avatar volta a ser REDONDO — o quadrado
-           arredondado colado na ponta 100% redonda destoava do formato. */
-        body:not(.rail-aberto) .su-avatar { border-radius: 50%; }
-
-        /* V497: recolhido — ícone perfeitamente CENTRALIZADO e rótulo 100%
-           oculto. Antes o padding/gap do estado expandido (V494) vazava pro
-           recolhido: o ícone saía do centro e a 1ª letra do rótulo aparecia
-           ao lado, parecendo um ícone "quebrado". O centro do ícone fica em
-           ~22px nos DOIS estados, então ele não "pula" ao abrir/fechar. */
-        body:not(.rail-aberto) .nav-item,
-        body:not(.rail-aberto) .nav-item-grupo {
-          justify-content: center; padding: 9px 0; gap: 0;
-        }
-        body:not(.rail-aberto) .nav-label { display: none; }
-        body:not(.rail-aberto) .nav-item:hover .nav-label { display: block; }
-        /* V498: recolhido — ícones e avatar menores (mais "slim" na cápsula) */
-        body:not(.rail-aberto) .nav-item .icon {
-          font-size: 15px; width: 15px; height: 15px;
-        }
-        body:not(.rail-aberto) .su-avatar {
-          width: 28px; height: 28px; font-size: 12px;
-        }
-        /* V951: 34px (cabe na cápsula de 44px) — mais perto dos 40px do menu aberto */
-        body:not(.rail-aberto) .brand-mini { font-size: 22px; width: 34px; height: 34px; }
-
-        /* V496: recolhido — ícones distribuídos UNIFORMEMENTE pela cápsula.
-           Antes, os títulos de seção ficavam transparentes mas OCUPANDO espaço
-           e o conteúdo era centralizado — resultado: um buraco grande abaixo
-           do logo e vãos irregulares entre os grupos de ícones. */
-        body:not(.rail-aberto) .nav-section-title { display: none; }
-        body:not(.rail-aberto) .nav-inner { justify-content: space-evenly; }
-        body:not(.rail-aberto) .nav-item { margin: 0; }
-
-        /* V495: no recolhido, o grupo "aberto" NÃO acende — só o item ATIVO
-           brilha (nos prints, home + gráfico acesos pareciam dupla seleção). */
-        body:not(.rail-aberto) .nav-item-grupo.aberto:not(.active) {
-          background: transparent;
-        }
-        body:not(.rail-aberto) .nav-item-grupo.aberto:not(.active) .icon { color: inherit; }
-
-        /* Colapsado: ativo e hover na paleta nova */
-        body:not(.rail-aberto) .nav-item.active {
-          background: rgba(56, 189, 248, .16);
-          box-shadow: 0 0 16px rgba(34, 211, 238, .45), 0 6px 14px rgba(0, 0, 0, .20);
-        }
-        body:not(.rail-aberto) .nav-item:hover {
-          background: rgba(56, 189, 248, .14);
-        }
-        body:not(.rail-aberto) .nav-item:hover .icon {
-          color: #7dd3fc; text-shadow: 0 0 10px rgba(56, 189, 248, .5);
-        }
-        /* ================================================================
-           V499 — Barra EXPANDIDA mais SLIM como um todo: largura 240px
-           (era 288), tipografia/ícones menores, espaçamentos mais justos.
-           ================================================================ */
-        body.rail-aberto .sidebar { width: 240px; border-radius: 20px; }
-        /* V700 (17C): o cabeçalho é o painel recuado — altura LIVRE (nada de
-           height fixo aqui; o corte do segmentado vinha desta regra V499). */
-        .sidebar-brand { height: auto; padding: 0; }
-        .brand-mark { width: 34px; height: 34px; }
-        .sidebar-brand .brand-nome { font-size: 16px; }
-        .sidebar-brand .brand-sub { font-size: 8px; letter-spacing: .18em; }
-        body.rail-aberto .sidebar-nav { padding: 4px 12px; }
-        .nav-section-title { font-size: 9px; padding: 8px 8px 4px; margin-top: 10px; }
-        .nav-item, .nav-item-grupo {
-          gap: 10px; padding: 8px 10px; border-radius: 9px; font-size: 13px;
-        }
-        .nav-item .icon { font-size: 16px; width: 16px; height: 16px; }
-        .nav-subgrupo { margin-left: 18px; padding-left: 8px; }
-        .nav-subitem { padding: 6px 10px; font-size: 12px; }
-        body.rail-aberto .sidebar-usuario { margin: 0 10px 10px; padding: 10px 12px; gap: 9px; }
-        .su-avatar { width: 30px; height: 30px; border-radius: 9px; font-size: 12px; }
-        .su-nome { font-size: 12.5px; }
-        .su-cargo { font-size: 10px; }
-        .su-sair { font-size: 15px; }
-        /* V701: o translateX(98px) permanente saiu — ele deslocava o layout
-           aberto pra fora da tela (cortava a borda direita). O deslize agora é
-           FLIP em App._alternarRail; o estado final é só layout (padding). */
-
-        /* V495: scrollbar do menu mais discreta na paleta nova */
-        body.rail-aberto .sidebar-nav { scrollbar-color: rgba(120, 160, 220, .22) transparent; }
-        body.rail-aberto .sidebar-nav::-webkit-scrollbar { width: 4px; }
-        body.rail-aberto .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(120, 160, 220, .22); }
-
-        /* pílula do tooltip (hover colapsado) */
-        body:not(.rail-aberto) .nav-item:hover .nav-label {
-          background: #0f1a2e; color: #eaf4ff;
-          border: 1px solid rgba(120, 160, 220, .14);
-          font-family: 'Manrope', sans-serif;
-        }
-      </style>
+      ${this._dockMarkup()}
     `;
 
-    // Eventos de navegação - apenas para nav-item que tem data-tela
-    document.querySelectorAll('.nav-item[data-tela]').forEach(btn => {
-      btn.addEventListener('click', () => this.navegarPara(btn.dataset.tela));
-    });
+    try { localStorage.removeItem('rail_aberto'); } catch (_) {}   // chave do menu lateral antigo
+    this._ligarDock();
+  },
 
-    // V700: segmentado ATLAS | Externo (handoff 17C) — o clique num lado troca a
-    // base; não pode abrir/recolher o rail. Setas ←→ alternam com foco nele.
-    const segExt = document.getElementById('modo-externo-switch');
-    if (segExt) {
-      segExt.addEventListener('click', (e) => {
+  // ──────────────────────────────────────────────────────────────────────
+  // FLOATING DOCK (ATLAS v1.1) — réplica em JS/CSS puro do componente
+  // "Floating Dock" (Aceternity): ícones redondos que CRESCEM conforme o
+  // mouse se aproxima (±150px → 40..80px, ícone 20..40px), rótulo em cima ao
+  // passar e, no celular, um botão que abre os itens em coluna. Sem React,
+  // Tailwind ou motion — a ferramenta é offline e sem build; os ícones são
+  // os mesmos Tabler, já vendorizados em libs/.
+  //
+  // O que aparece aqui é decisão do Pedro (16/09/2026): Visão Geral, Calcular,
+  // Auditoria, Relatórios · Importar Sistema (o QVIS) e Produção · Base
+  // Tabela, Médicos, De-Para · Configurações. Gerenciais, Produção Médica,
+  // Controle de Notas, Consolidação, Unidades e os 12 Desempenhos continuam
+  // registrados em App.telas (a lógica fica), só não têm botão.
+  // ──────────────────────────────────────────────────────────────────────
+  DOCK_ITENS: [
+    { tela: 'dashboard',         titulo: 'Visão Geral',       icone: 'ti-home' },
+    { tela: 'calcular',          titulo: 'Calcular Repasse',  icone: 'ti-calculator' },
+    { tela: 'auditoria',         titulo: 'Auditoria',         icone: 'ti-clipboard-check' },
+    { tela: 'relatorios',        titulo: 'Relatórios',        icone: 'ti-report' },
+    { sep: true },
+    { tela: 'importar-qvis',     titulo: 'Importar Sistema',  icone: 'ti-database-import' },
+    { tela: 'importar-producao', titulo: 'Importar Produção', icone: 'ti-file-spreadsheet' },
+    { sep: true },
+    { tela: 'base-tabela',       titulo: 'Base Tabela',       icone: 'ti-table' },
+    { tela: 'medicos',           titulo: 'Médicos',           icone: 'ti-stethoscope' },
+    { tela: 'de-para-nomes',     titulo: 'De-Para de Nomes',  icone: 'ti-arrows-exchange' },
+    { sep: true },
+    { tela: 'sistema',           titulo: 'Configurações',     icone: 'ti-settings' },
+  ],
+
+  _dockMarkup() {
+    const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const itens = this.DOCK_ITENS.filter(i => !i.sep);
+    const desktop = this.DOCK_ITENS.map(i => i.sep
+      ? '<span class="dock-sep" aria-hidden="true"></span>'
+      : `<button type="button" class="dock-item" data-tela="${esc(i.tela)}" aria-label="${esc(i.titulo)}">
+           <span class="dock-tip" aria-hidden="true">${esc(i.titulo)}</span>
+           <span class="dock-ico"><i class="ti ${esc(i.icone)}"></i></span>
+         </button>`).join('');
+    // no celular a coluna nasce de baixo para cima: o último item entra primeiro
+    const mobile = itens.map((i, idx) =>
+      `<button type="button" class="dock-mitem" data-tela="${esc(i.tela)}" title="${esc(i.titulo)}"
+         aria-label="${esc(i.titulo)}" style="--i:${itens.length - 1 - idx}"><i class="ti ${esc(i.icone)}"></i></button>`).join('');
+    return `
+      <nav id="atlas-dock" class="atlas-dock" aria-label="Módulos da ATLAS">
+        <div class="dock-desktop" id="dock-desktop">${desktop}</div>
+        <div class="dock-mobile" id="dock-mobile">
+          <div class="dock-mobile-itens" id="dock-mobile-itens" hidden>${mobile}</div>
+          <button type="button" class="dock-mobile-toggle" id="dock-mobile-toggle" aria-label="Abrir os módulos" aria-expanded="false">
+            <i class="ti ti-layout-navbar-collapse"></i>
+          </button>
+        </div>
+      </nav>`;
+  },
+
+  _ligarDock() {
+    const dock = document.getElementById('atlas-dock');
+    if (!dock) return;
+    dock.querySelectorAll('[data-tela]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const btn = e.target.closest('.seg-btn');
-        if (!btn) return;
-        this.setModoExterno(btn.dataset.modo === 'ext', { navegar: true });
+        this._alternarDockMobile(false);
+        this.navegarPara(btn.dataset.tela);
       });
-      segExt.addEventListener('keydown', (e) => {
-        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-        e.preventDefault(); e.stopPropagation();
-        this.setModoExterno(e.key === 'ArrowRight', { navegar: true });
-      });
-    }
-
-    // Eventos dos subitens
-    document.querySelectorAll('.nav-subitem').forEach(btn => {
-      btn.addEventListener('click', () => this.navegarPara(btn.dataset.tela));
     });
 
-    // Botões da barra fixa de importação (topo)
-    document.querySelectorAll('.idock-btn[data-tela]').forEach(btn => {
-      btn.addEventListener('click', () => this.navegarPara(btn.dataset.tela));
+    // ── desktop: magnificação por distância do mouse (o efeito "dock do Mac") ──
+    // Cada item mede a distância do centro dele ao mouse; a 0px vale 80px, a
+    // 150px (ou mais) volta aos 40px, linear no meio — os mesmos números do
+    // componente. A mola (spring) vira a transição com leve overshoot no CSS.
+    const desk = document.getElementById('dock-desktop');
+    const itens = [...desk.querySelectorAll('.dock-item')];
+    const MIN = 40, MAX = 80, ALCANCE = 150;
+    const aplicar = (mouseX) => {
+      for (const it of itens) {
+        let tam = MIN;
+        if (mouseX !== Infinity) {
+          const r = it.getBoundingClientRect();
+          const d = Math.abs(mouseX - (r.left + r.width / 2));
+          tam = Math.round(MIN + (MAX - MIN) * Math.max(0, 1 - Math.min(d, ALCANCE) / ALCANCE));
+        }
+        it.style.setProperty('--dock-tam', tam + 'px');
+      }
+    };
+    let quadro = null;
+    desk.addEventListener('mousemove', (e) => {
+      const x = e.clientX;
+      if (quadro !== null) return;
+      quadro = requestAnimationFrame(() => { quadro = null; aplicar(x); });
     });
+    desk.addEventListener('mouseleave', () => aplicar(Infinity));
+    aplicar(Infinity);
 
-    // Dropdown "Cadastros" do dock (abre em cascata pra baixo)
-    const cadDrop = document.getElementById('idock-cadastros');
-    const cadDropBtn = document.getElementById('idock-cadastros-btn');
-    if (cadDrop && cadDropBtn) {
-      cadDropBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const abrir = !cadDrop.classList.contains('aberto');
-        cadDrop.classList.toggle('aberto', abrir);
-        cadDropBtn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
-      });
-      cadDrop.querySelectorAll('.idock-menu-item[data-tela]').forEach(it => {
-        it.addEventListener('click', (e) => {
-          e.stopPropagation();
-          cadDrop.classList.remove('aberto');
-          cadDropBtn.setAttribute('aria-expanded', 'false');
-          this.navegarPara(it.dataset.tela);
-        });
-      });
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('#idock-cadastros')) {
-          cadDrop.classList.remove('aberto');
-          cadDropBtn.setAttribute('aria-expanded', 'false');
-        }
-      });
-    }
-
-    // Grupo "Desempenho" — expande/recolhe ao clicar (não navega, é só container)
-    const grupoDesemp = document.getElementById('grupo-desempenho');
-    if (grupoDesemp) {
-      grupoDesemp.addEventListener('click', () => {
-        // Desempenho tem submenu → garante o rail aberto pra mostrar os itens
-        const railFechado = !document.body.classList.contains('rail-aberto');
-        if (railFechado) {
-          document.body.classList.add('rail-aberto');
-          localStorage.setItem('rail_aberto', '1');
-        }
-        // se acabou de abrir o rail, abre o submenu; senão alterna normalmente
-        const aberto = railFechado ? true : grupoDesemp.classList.toggle('aberto');
-        grupoDesemp.classList.toggle('aberto', aberto);
-        document.getElementById('subitens-desempenho').classList.toggle('aberto', aberto);
-      });
-
-      // V966: por regra o grupo SEMPRE nasce ABERTO (inverte a V948, que o
-      // trazia fechado). Nada é persistido: o clique alterna só na sessão e a
-      // próxima abertura volta aberto (chave antiga do localStorage descartada).
-      try { localStorage.removeItem('grupo_desempenho_aberto'); } catch (_) {}
-      grupoDesemp.classList.add('aberto');
-      const subDesemp = document.getElementById('subitens-desempenho');
-      if (subDesemp) subDesemp.classList.add('aberto');
-    }
-
-    // V287: engrenagem → módulo SISTEMA (master-only)
-    const btnSis = document.getElementById('btn-sidebar-sistema');
-    if (btnSis) btnSis.addEventListener('click', () => App.navegarPara('sistema'));
-    // V343: clicar no círculo 'A' abre as Configurações/Sistema (os botões de
-    // engrenagem/sair foram removidos do rodapé). Gate pela permissão real.
-    const avSis = document.getElementById('su-avatar');
-    if (avSis && Auth.podeAcessar('sistema')) {
-      avSis.classList.add('su-avatar-acao');
-      avSis.title = 'Configurações do sistema';
-      avSis.addEventListener('click', () => App.navegarPara('sistema'));
-    }
-
-    // Abrir/recolher o rail (só por clique)
-    const railToggle = document.getElementById('sidebar-toggle');
-    if (railToggle) {
-      railToggle.addEventListener('click', () => this._alternarRail());
-    }
-    if (localStorage.getItem('rail_aberto') === '1') document.body.classList.add('rail-aberto');
-
-    // Clicar no conteúdo (fora do menu) recolhe o rail
+    // ── celular: o botão abre/fecha a coluna; clicar fora fecha ──
+    const tog = document.getElementById('dock-mobile-toggle');
+    if (tog) tog.addEventListener('click', (e) => { e.stopPropagation(); this._alternarDockMobile(); });
     document.addEventListener('click', (e) => {
-      if (!document.body.classList.contains('rail-aberto')) return;
-      if (e.target.closest('.sidebar')) return;   // cliques dentro do menu não fecham
-      this._alternarRail(false);
+      if (!e.target.closest('#atlas-dock')) this._alternarDockMobile(false);
     });
+  },
+
+  _alternarDockMobile(forcar) {
+    const lista = document.getElementById('dock-mobile-itens');
+    const tog = document.getElementById('dock-mobile-toggle');
+    if (!lista || !tog) return;
+    const abrir = (forcar !== undefined) ? !!forcar : lista.hidden;
+    if (abrir === !lista.hidden) return;
+    lista.hidden = !abrir;
+    tog.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+    tog.classList.toggle('aberto', abrir);
   },
 
   /**
@@ -1264,7 +607,7 @@ const App = {
    * em que ele mais precisava do aviso.
    */
   pintarVersao() {
-    const el = document.querySelector('.sidebar-versao');
+    const el = document.querySelector('.atlas-versao');
     if (!el) return;
     const pacote = (window.ATLAS_VERSAO || {}).pacote || 'versão não identificada';
     const atrasada = Number(window.Banco && window.Banco._versaoAtrasada) || 0;
@@ -1282,101 +625,13 @@ const App = {
   },
 
   /**
-   * V701: abre/recolhe o rail com FLIP — o padding do shell muda de uma vez
-   * (UM relayout) e o conteúdo desliza por TRANSFORM puro (GPU). Antes, o
-   * padding-left era animado (relayout da página inteira a cada frame — a
-   * "travada" nas telas pesadas) e o .main ainda carregava um translateX(122px)
-   * permanente que desalinhava o layout aberto (cortava a borda direita).
-   */
-  _alternarRail(forcar) {
-    const abrir = (forcar !== undefined) ? !!forcar : !document.body.classList.contains('rail-aberto');
-    if (abrir === document.body.classList.contains('rail-aberto')) return;
-    const main = document.querySelector('.main');
-    const antes = main ? main.getBoundingClientRect().left : 0;
-    document.body.classList.toggle('rail-aberto', abrir);
-    localStorage.setItem('rail_aberto', abrir ? '1' : '0');
-    if (!main) return;
-    const delta = antes - main.getBoundingClientRect().left;
-    if (!delta) return;
-    clearTimeout(this._railFlipTmr);
-    main.style.transition = 'none';
-    main.style.transform = `translateX(${delta}px)`;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      main.style.transition = 'transform 0.26s cubic-bezier(0.22, 1, 0.36, 1)';
-      main.style.transform = '';
-      this._railFlipTmr = setTimeout(() => { main.style.transition = ''; }, 300);
-    }));
-  },
-
-  /**
    * Aplica as permissões: esconde itens do menu não permitidos.
    * Chamado depois do login e também quando o admin altera permissões.
    */
   _aplicarPermissoesMenu() {
-    document.querySelectorAll('.nav-item[data-tela]').forEach(btn => {
-      const modulo = btn.dataset.tela;
-      // Administração é sempre visível para quem está logado
-      if (modulo === 'administracao') {
-        btn.style.display = '';
-        return;
-      }
-      btn.style.display = Auth.podeAcessar(modulo) ? '' : 'none';
-    });
-
-    // Aplica permissões também aos subitens
-    document.querySelectorAll('.nav-subitem').forEach(btn => {
-      const modulo = btn.dataset.tela;
-      btn.style.display = Auth.podeAcessar(modulo) ? '' : 'none';
-    });
-
-    // Barra de importação: esconde botão sem acesso; some a barra se nenhum visível
-    document.querySelectorAll('.idock-btn[data-tela]').forEach(btn => {
+    // ATLAS v1.1: sem login está tudo liberado; fica o gancho para o dock.
+    document.querySelectorAll('#atlas-dock [data-tela]').forEach(btn => {
       btn.style.display = Auth.podeAcessar(btn.dataset.tela) ? '' : 'none';
-    });
-    const topbar = document.getElementById('topbar-import');
-    if (topbar) {
-      // Itens do menu "Cadastros": esconde os sem acesso
-      const itensCad = [...topbar.querySelectorAll('.idock-menu-item[data-tela]')];
-      itensCad.forEach(it => { it.style.display = Auth.podeAcessar(it.dataset.tela) ? '' : 'none'; });
-      const temCadastro = itensCad.some(it => it.style.display !== 'none');
-      const drop = topbar.querySelector('.idock-drop');
-      if (drop) drop.style.display = temCadastro ? '' : 'none';
-      // Importações soltas (QVIS / PRODUÇÃO)
-      const IMPORT_TELAS = ['importar-qvis', 'importar-producao'];
-      const temImport = [...topbar.querySelectorAll('.idock-btn[data-tela]')]
-        .some(b => IMPORT_TELAS.includes(b.dataset.tela) && b.style.display !== 'none');
-      // Separador some se um dos grupos ficar sem nada visível
-      const sep = topbar.querySelector('.idock-sep');
-      if (sep) sep.style.display = (temImport && temCadastro) ? '' : 'none';
-      topbar.style.display = (temImport || temCadastro) ? '' : 'none';
-    }
-
-    // Se TODOS os subitens de Desempenho estão escondidos, esconde o grupo todo
-    const grupo = document.getElementById('grupo-desempenho');
-    if (grupo) {
-      const subs = document.querySelectorAll('.nav-subitem');
-      let temSubVisivel = false;
-      subs.forEach(s => {
-        if (s.dataset.tela.startsWith('desempenho-') && s.style.display !== 'none') {
-          temSubVisivel = true;
-        }
-      });
-      grupo.style.display = temSubVisivel ? '' : 'none';
-      document.getElementById('subitens-desempenho').style.display = temSubVisivel ? '' : 'none';
-    }
-
-    // Esconde seções inteiras se todos seus itens estão escondidos
-    document.querySelectorAll('.sidebar-nav .nav-section-title').forEach(titulo => {
-      let proximo = titulo.nextElementSibling;
-      let temVisivel = false;
-      while (proximo && (proximo.classList.contains('nav-item') || proximo.classList.contains('nav-subgrupo'))) {
-        if (proximo.style.display !== 'none') {
-          temVisivel = true;
-          break;
-        }
-        proximo = proximo.nextElementSibling;
-      }
-      titulo.style.display = temVisivel ? '' : 'none';
     });
   },
 
@@ -1390,37 +645,15 @@ const App = {
     return document.getElementById('conteudo');
   },
 
-  /**
-   * V699: MODO EXTERNO — o switch ao lado da marca ATLAS troca a ferramenta de
-   * "modo normal" para o layout do módulo Externos (analogia do botão sport de
-   * um carro: mesma máquina, outra pele e outro painel).
-   */
-  setModoExterno(ligar, opts = {}) {
-    const mudou = document.body.classList.contains('modo-externo') !== !!ligar;
-    document.body.classList.toggle('modo-externo', !!ligar);
-    try { localStorage.setItem('atlas_modo_externo', ligar ? '1' : '0'); } catch (_) {}
-    // V700: o lado ativo do segmentado é preenchido (aria acompanha)
-    document.querySelectorAll('#modo-externo-switch .seg-btn').forEach(b => {
-      const ativo = (b.dataset.modo === 'ext') === !!ligar;
-      b.classList.toggle('ativo', ativo);
-      b.setAttribute('aria-selected', ativo ? 'true' : 'false');
-    });
-    if (opts.navegar) {
-      // V705: a Visão Geral externa está em construção — o modo aterrissa no
-      // 1º módulo (Importar Admissões) até ela ser estruturada.
-      this.navegarPara(ligar ? 'externos-importar' : 'dashboard');
-    } else if (mudou && !ligar && String(this.telaAtual).startsWith('externos')) {
-      this.navegarPara('dashboard');
-    }
+  /** ATLAS v1.1: o módulo Externos saiu da ferramenta. O stub fica para
+   *  quem ainda chamar — e garante o modo desligado. */
+  setModoExterno() {
+    document.body.classList.remove('modo-externo');
+    try { localStorage.removeItem('atlas_modo_externo'); } catch (_) {}
   },
 
   navegarPara(tela) {
     this._alvoSistemaAtivo = false;
-    // V699: cair numa tela do módulo Externos liga o modo (e vice-versa não —
-    // no modo externo os cadastros normais continuam acessíveis).
-    if (String(tela).startsWith('externos') && !document.body.classList.contains('modo-externo')) {
-      this.setModoExterno(true);
-    }
     // Bloqueia acesso a módulos não permitidos
     if (!Auth.podeAcessar(tela)) {
       Utilidades.toast('Acesso não permitido a este módulo', 'error');
@@ -1448,39 +681,10 @@ const App = {
       }
     } catch (_) {}
 
-    // Atualiza estado visual da sidebar (itens principais)
-    document.querySelectorAll('.nav-item[data-tela]').forEach(btn => {
+    // ATLAS v1.1: o item ativo do dock (desktop e celular)
+    document.querySelectorAll('#atlas-dock [data-tela]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tela === tela);
     });
-
-    // Atualiza estado visual dos sub-itens
-    document.querySelectorAll('.nav-subitem').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tela === tela);
-    });
-
-    // Atualiza estado visual da barra de importação
-    document.querySelectorAll('.idock-btn[data-tela]').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tela === tela);
-    });
-    // Botão "Cadastros" acende se a tela atual for um dos cadastros; itens do menu idem
-    const CAD_TELAS = ['base-tabela', 'medicos', 'unidades', 'de-para-nomes'];
-    const cadBtnAtivo = document.getElementById('idock-cadastros-btn');
-    if (cadBtnAtivo) cadBtnAtivo.classList.toggle('active', CAD_TELAS.includes(tela));
-    document.querySelectorAll('.idock-menu-item[data-tela]').forEach(it => {
-      it.classList.toggle('active', it.dataset.tela === tela);
-    });
-
-    // Se a tela é de desempenho, garante que o grupo está aberto (V966: por
-    // regra o grupo já nasce aberto; isto só cobre o caso de o usuário tê-lo
-    // recolhido e depois navegado para uma tela de desempenho)
-    if (tela.startsWith('desempenho-')) {
-      const grupo = document.getElementById('grupo-desempenho');
-      const sub = document.getElementById('subitens-desempenho');
-      if (grupo && sub) {
-        grupo.classList.add('aberto');
-        sub.classList.add('aberto');
-      }
-    }
 
     // Renderiza a tela — com a tela de loading nas telas pesadas (suaviza a travada)
     const renderizador = this.telas[tela];
@@ -1513,7 +717,7 @@ const App = {
 
   _renderizarTelaNaoImplementada(tela) {
     const titulos = {
-      'importar-qvis':        'Importar QVIS',
+      'importar-qvis':        'Importar Sistema',
       'calcular':             'Calcular Repasse',
       'pagamentos-externos':  'Pagamentos Externos',
       'auditoria':            'Auditoria',
