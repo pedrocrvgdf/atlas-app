@@ -54,7 +54,7 @@ App.telas['base-tabela'] = function () {
           <button class="btn" id="btn-casar-sim">🔗 Casar por similaridade</button>
           <button class="btn" id="btn-dedup">🧹 Remover duplicados</button>
           <button class="btn" id="btn-novo-proc">+ Novo Procedimento</button>
-          <button class="btn" id="btn-limpar-base" style="color: var(--danger, #9B3A3A)">🗑 Limpar base</button>
+          <button class="btn" id="btn-limpar-base" style="color: var(--danger, #a15646)">🗑 Limpar base</button>
         </div>
       </header>
 
@@ -113,19 +113,19 @@ App.telas['base-tabela'] = function () {
     <style>
       .bt-tipo-overlay {
         position: fixed; inset: 0; z-index: 9999;
-        background: rgba(20, 51, 82, 0.35);
+        background: rgba(89, 128, 166, 0.35);
         display: flex; align-items: center; justify-content: center;
       }
       .bt-tipo-modal {
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #dfe4ea);
+        border: 1px solid var(--border, #eef0f2);
         border-radius: var(--radius-md, 10px);
         box-shadow: 0 12px 40px rgba(0,0,0,0.18);
         padding: 22px; width: 420px; max-width: 92vw;
       }
       .bt-sim-modal {
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #dfe4ea);
+        border: 1px solid var(--border, #eef0f2);
         border-radius: var(--radius-md, 10px);
         box-shadow: 0 12px 40px rgba(0,0,0,0.18);
         width: 880px; max-width: 95vw; max-height: 90vh;
@@ -134,20 +134,20 @@ App.telas['base-tabela'] = function () {
       .bt-sim-top { display: flex; justify-content: space-between; align-items: center; }
       .bt-sim-sub { font-size: 13px; color: var(--ink-soft); margin: 8px 0 10px; }
       .bt-sim-ctrl { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 13px; }
-      .bt-sim-lista { overflow: auto; border: 1px solid var(--border, #dfe4ea); border-radius: 8px; padding: 6px; flex: 1; min-height: 0; }
-      .bt-sim-bloco { padding: 8px; border-bottom: 1px solid var(--bg-sunken, #e9edf1); }
+      .bt-sim-lista { overflow: auto; border: 1px solid var(--border, #eef0f2); border-radius: 8px; padding: 6px; flex: 1; min-height: 0; }
+      .bt-sim-bloco { padding: 8px; border-bottom: 1px solid var(--bg-sunken, #f2f3f5); }
       .bt-sim-head { display: flex; flex-direction: column; margin-bottom: 4px; }
-      .bt-sim-vals { font-size: 11px; color: var(--accent, #2a5a8c); }
+      .bt-sim-vals { font-size: 11px; color: var(--accent, #3f6489); }
       .bt-sim-row { display: flex; align-items: center; gap: 8px; padding: 3px 0 3px 14px; font-size: 13px; cursor: pointer; }
-      .bt-sim-row:hover { background: var(--bg-sunken, #e9edf1); border-radius: 4px; }
+      .bt-sim-row:hover { background: var(--bg-sunken, #f2f3f5); border-radius: 4px; }
       .bt-sim-score { font-weight: 700; font-size: 11px; width: 40px; text-align: right; flex-shrink: 0; }
-      .bt-sim-score.alto { color: #0A7A5A; }
-      .bt-sim-score.medio { color: #2a5a8c; }
-      .bt-sim-score.baixo { color: #9B3A3A; }
+      .bt-sim-score.alto { color: #4f8a5b; }
+      .bt-sim-score.medio { color: #3f6489; }
+      .bt-sim-score.baixo { color: #a15646; }
       .bt-sim-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
       .col-usar { width: 48px; text-align: center; }
       .cel-usar { text-align: center; }
-      .chk-usar { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary, #143352); }
+      .chk-usar { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary, #5980a6); }
       tr.proc-inativo { opacity: 0.45; }
       tr.proc-inativo .nome-proc { text-decoration: line-through; }
       .btn-toggle {
@@ -182,7 +182,7 @@ App.telas['base-tabela'] = function () {
       .tabela-valores thead th {
         padding: 12px 14px;
         text-align: left;
-        color: #f6f4ef;
+        color: #fafbfc;
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -200,7 +200,7 @@ App.telas['base-tabela'] = function () {
         font-family: inherit; font-size: 12px; outline: none;
         transition: border-color 150ms, box-shadow 150ms;
       }
-      .nomenclatura-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79, 127, 176,.14); }
+      .nomenclatura-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(89, 128, 166,.14); }
       .nomenclatura-input::placeholder { color: var(--ink-faint); }
       /* V554: colunas de classificação vindas da PRODUÇÃO (editáveis) */
       .tabela-valores th.col-classif { width: 118px; }
@@ -213,7 +213,7 @@ App.telas['base-tabela'] = function () {
         font-family: inherit; font-size: 12px; outline: none;
         transition: border-color 150ms, box-shadow 150ms;
       }
-      .classif-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79, 127, 176,.14); }
+      .classif-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(89, 128, 166,.14); }
       .classif-input::placeholder { color: var(--ink-faint); }
       .tabela-valores tbody tr {
         border-bottom: 1px solid var(--border);
@@ -365,12 +365,12 @@ App.telas['base-tabela'] = function () {
       /* ===== V489/V490: TRAVA DA BASE TABELA (FABs ficam no style.css) ===== */
       .bt-trava-overlay {
         position: fixed; inset: 0; z-index: 10000;
-        background: rgba(11, 35, 64, 0.42);
+        background: rgba(29, 31, 32, 0.42);
         display: flex; align-items: center; justify-content: center;
       }
       .bt-trava-modal {
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #dfe4ea);
+        border: 1px solid var(--border, #eef0f2);
         border-radius: var(--radius-md, 10px);
         box-shadow: 0 18px 50px rgba(0,0,0,0.22);
         width: 480px; max-width: 94vw;
@@ -378,7 +378,7 @@ App.telas['base-tabela'] = function () {
         overflow: hidden;
       }
       .bt-trava-head {
-        background: var(--primary, #0b2340);
+        background: var(--primary, #3a5877);
         color: #FFF; padding: 14px 18px;
         display: flex; align-items: center; gap: 10px;
       }
@@ -393,32 +393,32 @@ App.telas['base-tabela'] = function () {
       .bt-trava-passo {
         flex: 1; font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
         color: var(--ink-faint, #9AA); text-align: center;
-        padding-bottom: 6px; border-bottom: 2px solid var(--border, #dfe4ea);
+        padding-bottom: 6px; border-bottom: 2px solid var(--border, #eef0f2);
       }
-      .bt-trava-passo.ativo { color: var(--primary, #0b2340); border-bottom-color: var(--primary, #0b2340); font-weight: 700; }
+      .bt-trava-passo.ativo { color: var(--primary, #3a5877); border-bottom-color: var(--primary, #3a5877); font-weight: 700; }
       .bt-trava-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
       .bt-trava-input {
         width: 100%; box-sizing: border-box; height: 38px; padding: 0 12px;
-        border: 1px solid var(--border, #dfe4ea); border-radius: 8px;
+        border: 1px solid var(--border, #eef0f2); border-radius: 8px;
         background: var(--bg-elevated, #FFF); color: var(--ink);
         font-family: inherit; font-size: 14px; outline: none;
         transition: border-color 150ms, box-shadow 150ms;
       }
       .bt-trava-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,0,178,.12); }
-      .bt-trava-erro { color: var(--danger, #9B3A3A); font-size: 12px; margin-top: 8px; min-height: 16px; }
+      .bt-trava-erro { color: var(--danger, #a15646); font-size: 12px; margin-top: 8px; min-height: 16px; }
       .bt-motivos { display: flex; flex-direction: column; gap: 8px; }
       .bt-motivo-op {
         display: flex; align-items: center; gap: 10px;
-        padding: 10px 12px; border: 1px solid var(--border, #dfe4ea);
+        padding: 10px 12px; border: 1px solid var(--border, #eef0f2);
         border-radius: 8px; cursor: pointer; font-size: 13px;
         transition: border-color 140ms, background-color 140ms;
       }
       .bt-motivo-op:hover { background: var(--bg-sunken, #F3F6FA); }
       .bt-motivo-op.sel { border-color: var(--primary); background: var(--primary-soft, #EEF1FF); font-weight: 600; }
-      .bt-motivo-op input { accent-color: var(--primary, #0b2340); }
+      .bt-motivo-op input { accent-color: var(--primary, #3a5877); }
       .bt-trava-foot {
         display: flex; justify-content: flex-end; gap: 10px;
-        padding: 14px 18px; border-top: 1px solid var(--border, #dfe4ea);
+        padding: 14px 18px; border-top: 1px solid var(--border, #eef0f2);
         background: var(--bg-sunken, #F7F9FC);
       }
       .bt-trava-aviso {
@@ -430,7 +430,7 @@ App.telas['base-tabela'] = function () {
       /* ===== V489: HISTÓRICO / SNAPSHOTS ===== */
       .bt-hist-modal {
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #dfe4ea);
+        border: 1px solid var(--border, #eef0f2);
         border-radius: var(--radius-md, 10px);
         box-shadow: 0 18px 50px rgba(0,0,0,0.22);
         width: 860px; max-width: 95vw; max-height: 88vh;
@@ -439,7 +439,7 @@ App.telas['base-tabela'] = function () {
       .bt-hist-body { padding: 0; overflow: auto; flex: 1; min-height: 0; }
       .bt-snap-item {
         display: flex; align-items: center; gap: 14px;
-        padding: 12px 18px; border-bottom: 1px solid var(--border, #dfe4ea);
+        padding: 12px 18px; border-bottom: 1px solid var(--border, #eef0f2);
         cursor: pointer; transition: background-color 120ms;
       }
       .bt-snap-item:hover { background: var(--bg-sunken, #F3F6FA); }
@@ -452,15 +452,15 @@ App.telas['base-tabela'] = function () {
       }
       .bt-diff-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
       .bt-diff-tab thead th {
-        position: sticky; top: 0; background: var(--primary, #0b2340); color: #f6f4ef;
+        position: sticky; top: 0; background: var(--primary, #3a5877); color: #fafbfc;
         font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase;
         padding: 9px 12px; text-align: left;
       }
       .bt-diff-tab thead th.num { text-align: right; }
-      .bt-diff-tab tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border, #dfe4ea); }
+      .bt-diff-tab tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border, #eef0f2); }
       .bt-diff-tab tbody td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-      .bt-diff-antes { color: var(--danger, #9B3A3A); text-decoration: line-through; }
-      .bt-diff-depois { color: #0A7A5A; font-weight: 700; }
+      .bt-diff-antes { color: var(--danger, #a15646); text-decoration: line-through; }
+      .bt-diff-depois { color: #4f8a5b; font-weight: 700; }
       .bt-diff-seta { color: var(--ink-faint); text-align: center; }
       .bt-vazio { padding: 40px 18px; text-align: center; color: var(--ink-soft); font-size: 13px; }
       /* V566: badge da versão em exibição, no subtítulo */
@@ -470,13 +470,13 @@ App.telas['base-tabela'] = function () {
         letter-spacing: 0.03em; vertical-align: 1px;
       }
       .bt-sub-versao:empty { display: none; }
-      .bt-sub-versao.vig  { background: rgba(29, 68, 112, 0.12); color: #1d4470; border: 1px solid rgba(29, 68, 112, 0.35); }
+      .bt-sub-versao.vig  { background: rgba(70, 104, 140, 0.12); color: #46688c; border: 1px solid rgba(70, 104, 140, 0.35); }
       .bt-sub-versao.rasc { background: rgba(176, 122, 10, 0.12); color: #8A5E00; border: 1px solid rgba(176, 122, 10, 0.35); }
       .bt-sub-versao.hist { background: rgba(2, 26, 28, 0.08); color: #032C2E; border: 1px solid rgba(2, 26, 28, 0.25); }
       /* V565: painel de versões (ícone flutuante) */
       .bt-ver-linha {
         display: flex; align-items: center; justify-content: space-between;
-        gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--bg-sunken, #e9edf1);
+        gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--bg-sunken, #f2f3f5);
         font-size: 13px;
       }
       .bt-ver-linha:last-child { border-bottom: none; }
@@ -1009,7 +1009,7 @@ App.telas['base-tabela'] = function () {
           <h3>Snapshot #${snapId}</h3>
           <button class="bt-trava-close" id="bt-det-x" title="Fechar">✕</button>
         </div>
-        <div style="padding:14px 18px; border-bottom:1px solid var(--border,#dfe4ea); background:var(--bg-sunken,#F7F9FC)">
+        <div style="padding:14px 18px; border-bottom:1px solid var(--border,#eef0f2); background:var(--bg-sunken,#F7F9FC)">
           <div style="display:flex; gap:26px; flex-wrap:wrap; font-size:12.5px">
             <div><span style="color:var(--ink-soft)">Data</span><br><strong>${dt.data}</strong></div>
             <div><span style="color:var(--ink-soft)">Horário</span><br><strong>${dt.hora}</strong></div>
@@ -1124,12 +1124,12 @@ App.telas['base-tabela'] = function () {
     const btnOk = ov.querySelector('#bt-pub-confirmar');
     const atualizarNota = () => {
       const d = inpData.value;
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { nota.innerHTML = '<span style="color: var(--danger, #9B3A3A)">Escolha uma data válida.</span>'; btnOk.disabled = true; return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { nota.innerHTML = '<span style="color: var(--danger, #a15646)">Escolha uma data válida.</span>'; btnOk.disabled = true; return; }
       btnOk.disabled = false;
       const br = fmtISOBR(d);
       if (d === hojeISO) nota.textContent = `Vigente a partir de hoje (${br}).`;
       else if (d > hojeISO) nota.innerHTML = `📅 <strong>Publicação agendada:</strong> a Versão ${proxima} passa a valer para admissões a partir de ${br}; até lá, segue valendo a versão atual.`;
-      else nota.innerHTML = `<span style="color: var(--danger, #9B3A3A)">⚠ Data no passado: admissões desde ${br} passam a ser pagas pela Versão ${proxima} (efeito retroativo nos recálculos).</span>`;
+      else nota.innerHTML = `<span style="color: var(--danger, #a15646)">⚠ Data no passado: admissões desde ${br} passam a ser pagas pela Versão ${proxima} (efeito retroativo nos recálculos).</span>`;
     };
     inpData.addEventListener('input', atualizarNota);
     atualizarNota();
@@ -1293,7 +1293,7 @@ App.telas['base-tabela'] = function () {
               </label>`).join('')}
           </div>
         </div>` : ''}
-        <div id="rj-previa" class="small" style="background: var(--bg-sunken, #e9edf1); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; min-height: 64px; color: var(--ink-soft)"></div>
+        <div id="rj-previa" class="small" style="background: var(--bg-sunken, #f2f3f5); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; min-height: 64px; color: var(--ink-soft)"></div>
         <div style="display: flex; justify-content: flex-end; gap: 10px">
           <button class="btn" id="rj-cancelar">Cancelar</button>
           <button class="btn btn-primary" id="rj-aplicar" disabled>Aplicar reajuste</button>
@@ -1335,14 +1335,14 @@ App.telas['base-tabela'] = function () {
         linhas = porEspecialidade ? carregarLinhas(selEsp.value) : carregarLinhas(null);
         if (porEspecialidade && !linhas.length) {
           btnAplicar.disabled = true;
-          previa.innerHTML = `<span style="color: var(--danger, #9B3A3A)">A subespecialidade "${escapeHTML(selEsp.value)}" não tem valores de Convênio para reajustar.</span>`;
+          previa.innerHTML = `<span style="color: var(--danger, #a15646)">A subespecialidade "${escapeHTML(selEsp.value)}" não tem valores de Convênio para reajustar.</span>`;
           return;
         }
         const p = lerPct();
         if (p == null) {
           btnAplicar.disabled = true;
           previa.innerHTML = inp.value.trim()
-            ? '<span style="color: var(--danger, #9B3A3A)">Percentual inválido — informe um número maior que zero (só aumento).</span>'
+            ? '<span style="color: var(--danger, #a15646)">Percentual inválido — informe um número maior que zero (só aumento).</span>'
             : 'Digite o percentual para ver a prévia.';
           return;
         }
@@ -1359,13 +1359,13 @@ App.telas['base-tabela'] = function () {
       linhasPart = carregarLinhasPart(selEsp.value);
       if (!linhasPart.length) {
         btnAplicar.disabled = true;
-        previa.innerHTML = `<span style="color: var(--danger, #9B3A3A)">A subespecialidade "${escapeHTML(selEsp.value)}" não tem percentuais de Particular para alterar (só linhas em modo % entram).</span>`;
+        previa.innerHTML = `<span style="color: var(--danger, #a15646)">A subespecialidade "${escapeHTML(selEsp.value)}" não tem percentuais de Particular para alterar (só linhas em modo % entram).</span>`;
         return;
       }
       const { valores, invalido, algum } = lerPapeis();
       if (invalido) {
         btnAplicar.disabled = true;
-        previa.innerHTML = '<span style="color: var(--danger, #9B3A3A)">Percentual inválido em algum papel — use números entre 0 e 100.</span>';
+        previa.innerHTML = '<span style="color: var(--danger, #a15646)">Percentual inválido em algum papel — use números entre 0 e 100.</span>';
         return;
       }
       if (!algum) {
@@ -1383,7 +1383,7 @@ App.telas['base-tabela'] = function () {
       previa.innerHTML = `
         <div style="margin-bottom: 6px">Particular · subespecialidade <strong>${escapeHTML(selEsp.value)}</strong> — ${total} percentua${total === 1 ? 'l' : 'is'} ser${total === 1 ? 'á' : 'ão'} definido${total === 1 ? '' : 's'}:</div>
         ${blocos}
-        ${total === 0 ? '<div style="color: var(--danger, #9B3A3A)">Nenhum procedimento da subespecialidade tem % cadastrada nos papéis preenchidos.</div>' : ''}`;
+        ${total === 0 ? '<div style="color: var(--danger, #a15646)">Nenhum procedimento da subespecialidade tem % cadastrada nos papéis preenchidos.</div>' : ''}`;
     };
     const trocarAba = (novo) => {
       modo = novo;
@@ -1481,7 +1481,7 @@ App.telas['base-tabela'] = function () {
     // V568: cada versão tem Ver + Exportar; a ÚLTIMA (sem rascunho aberto)
     // também pode ser excluída. Rascunho aberto pode ser descartado.
     const btnMini = (attrs, rotulo, vermelho) =>
-      `<button class="btn" ${attrs} style="padding: 4px 12px; font-size: 12px${vermelho ? '; color: var(--danger, #9B3A3A)' : ''}">${rotulo}</button>`;
+      `<button class="btn" ${attrs} style="padding: 4px 12px; font-size: 12px${vermelho ? '; color: var(--danger, #a15646)' : ''}">${rotulo}</button>`;
     const linhaVersao = (v) => {
       const ehUltima = ult && v.id === ult.id;
       return `
@@ -1588,13 +1588,13 @@ App.telas['base-tabela'] = function () {
             Ela sai do histórico (e da Linha do tempo) e a tabela volta a espelhar
             ${anterior ? `a <strong>Versão ${anterior.numero}</strong>` : 'a fase de preparação da <strong>Versão 1.0</strong> (tabela livre)'}.
           </p>
-          <p style="font-size: 13px; color: var(--danger, #9B3A3A); margin: 0 0 14px">
+          <p style="font-size: 13px; color: var(--danger, #a15646); margin: 0 0 14px">
             Atenção: admissões que eram pagas pela Versão ${escapeHTML(ult.numero)} passam a usar
             ${anterior ? `a Versão ${anterior.numero}` : 'a tabela atual'}. Esta ação não pode ser desfeita.
           </p>
           <div style="display: flex; justify-content: flex-end; gap: 10px">
             <button class="btn" id="bt-del-cancelar">Cancelar</button>
-            <button class="btn" id="bt-del-confirmar" style="color: var(--danger, #9B3A3A); font-weight: 700">Excluir Versão ${escapeHTML(ult.numero)}</button>
+            <button class="btn" id="bt-del-confirmar" style="color: var(--danger, #a15646); font-weight: 700">Excluir Versão ${escapeHTML(ult.numero)}</button>
           </div>
         </div>`;
       document.body.appendChild(ov2);
@@ -1628,7 +1628,7 @@ App.telas['base-tabela'] = function () {
           </p>
           <div style="display: flex; justify-content: flex-end; gap: 10px">
             <button class="btn" id="bt-desc-cancelar">Cancelar</button>
-            <button class="btn" id="bt-desc-confirmar" style="color: var(--danger, #9B3A3A); font-weight: 700">Descartar rascunho</button>
+            <button class="btn" id="bt-desc-confirmar" style="color: var(--danger, #a15646); font-weight: 700">Descartar rascunho</button>
           </div>
         </div>`;
       document.body.appendChild(ov2);

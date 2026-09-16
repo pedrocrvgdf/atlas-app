@@ -5006,8 +5006,8 @@ App.telas['desempenho-opme'] = (function () {
           .opme-vf-grupo { margin-top: 10px; }
           .opme-vf-grupo-tit {
             font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
-            color: var(--primary, #0f1d2e); opacity: .85; margin-bottom: 5px; padding-bottom: 3px;
-            border-bottom: 1px dashed var(--border, #dfe4ea);
+            color: var(--primary, #1d1f20); opacity: .85; margin-bottom: 5px; padding-bottom: 3px;
+            border-bottom: 1px dashed var(--border, #eef0f2);
           }
           .opme-vf-grupo-tit em { font-style: italic; opacity: .7; text-transform: none; letter-spacing: 0; }
           .opme-vf-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -5017,28 +5017,28 @@ App.telas['desempenho-opme'] = (function () {
           .opme-vf-chips { flex: 1 1 auto; min-width: 120px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
           .opme-vf-chip {
             display: inline-flex; align-items: center; gap: 3px;
-            background: rgba(79, 127, 176,.10); color: var(--primary, #0f1d2e);
+            background: rgba(89, 128, 166,.10); color: var(--primary, #1d1f20);
             padding: 3px 3px 3px 8px; border-radius: 4px;
             font-size: 11px; font-weight: 600; letter-spacing: .02em;
-            border: 1px solid rgba(79, 127, 176,.30); white-space: nowrap;
+            border: 1px solid rgba(89, 128, 166,.30); white-space: nowrap;
             transition: background-color 150ms, border-color 150ms;
           }
-          .opme-vf-chip:hover { background: rgba(79, 127, 176,.18); border-color: rgba(79, 127, 176,.5); }
+          .opme-vf-chip:hover { background: rgba(89, 128, 166,.18); border-color: rgba(89, 128, 166,.5); }
           .opme-vf-chip-txt { cursor: text; padding: 0 2px; }
           .opme-vf-chip-txt:hover { text-decoration: underline dotted; }
           .opme-vf-chip-x {
-            background: transparent; border: none; color: var(--primary, #0f1d2e);
+            background: transparent; border: none; color: var(--primary, #1d1f20);
             cursor: pointer; padding: 0 4px; font-size: 10px; line-height: 1;
             border-radius: 3px; opacity: .55;
             transition: background-color 120ms, color 120ms, opacity 120ms;
           }
-          .opme-vf-chip-x:hover { background: rgba(192,57,43,.15); color: var(--danger, #C0392B); opacity: 1; }
+          .opme-vf-chip-x:hover { background: rgba(192,57,43,.15); color: var(--danger, #c07a66); opacity: 1; }
           .opme-vf-termo-edit, .opme-vf-termo-novo {
             padding: 3px 8px; font-size: 11px; font-weight: 600; font-family: inherit;
-            background: var(--surface, #fff); border: 1px solid #4f7fb0; border-radius: 4px;
-            outline: none; color: var(--ink, #0f1d2e); text-transform: uppercase;
+            background: var(--surface, #fff); border: 1px solid #5980a6; border-radius: 4px;
+            outline: none; color: var(--ink, #1d1f20); text-transform: uppercase;
             letter-spacing: .02em; min-width: 100px; max-width: 200px;
-            box-shadow: 0 0 0 2px rgba(79, 127, 176,.15);
+            box-shadow: 0 0 0 2px rgba(89, 128, 166,.15);
           }
           .opme-vf-chip-add {
             background: transparent; border: 1px dashed var(--border, #D9D2C5);
@@ -5046,11 +5046,11 @@ App.telas['desempenho-opme'] = (function () {
             font-size: 11px; font-weight: 500; font-family: inherit; cursor: pointer;
             white-space: nowrap; transition: background-color 150ms, border-color 150ms, color 150ms;
           }
-          .opme-vf-chip-add:hover { border-color: #4f7fb0; border-style: solid; color: var(--primary, #143352); background: rgba(79, 127, 176,.08); }
+          .opme-vf-chip-add:hover { border-color: #5980a6; border-style: solid; color: var(--primary, #5980a6); background: rgba(89, 128, 166,.08); }
           /* Tabela de valores fixos (cabeçalho escuro, igual ao LIO) */
           .opme-vf-tabela { width: 100%; border-collapse: collapse; margin-top: 4px; }
           .opme-vf-tabela thead th {
-            background: var(--primary, #0f1d2e); color: #fff;
+            background: var(--primary, #1d1f20); color: #fff;
             text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .04em;
             text-transform: uppercase; padding: 7px 10px; white-space: nowrap;
           }
@@ -5096,7 +5096,7 @@ App.telas['desempenho-opme'] = (function () {
           .opme-vf-nova > input[type="text"]:focus,
           .opme-vf-nova .opme-vf-valor-wrap:focus-within {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(20, 51, 82,0.08);
+            box-shadow: 0 0 0 3px rgba(89, 128, 166,0.08);
           }
           .opme-vf-nova .opme-vf-valor-wrap { gap: 5px; }
           .opme-vf-nova .opme-vf-cifrao { font-size: 12px; font-weight: 600; opacity: .5; }
@@ -5108,7 +5108,7 @@ App.telas['desempenho-opme'] = (function () {
           .opme-vf-nova .btn { padding: 0 16px; font-weight: 600; cursor: pointer; white-space: nowrap; }
           .opme-vf-nova .btn:hover { background: var(--bg-sunken); border-color: var(--border-strong); }
           .opme-vf-remover {
-            border: none; background: transparent; color: var(--danger, #C0392B);
+            border: none; background: transparent; color: var(--danger, #c07a66);
             cursor: pointer; font-size: 14px; line-height: 1; padding: 4px 6px; border-radius: 6px;
           }
           .opme-vf-remover:hover { background: rgba(192,57,43,.12); }
@@ -5128,8 +5128,8 @@ App.telas['desempenho-opme'] = (function () {
             border-color: rgba(184,134,74,.55) !important;
           }
           .opme-tag-usando-real {
-            background: rgba(29, 68, 112,.14) !important; color: #1d4470 !important;
-            border-color: rgba(29, 68, 112,.45) !important;
+            background: rgba(70, 104, 140,.14) !important; color: #46688c !important;
+            border-color: rgba(70, 104, 140,.45) !important;
           }
           .opme-col-real { color: var(--ink-soft); }
           /* V661: chips dos produtos adicionados da Produção (⚙ Ajustes) */
@@ -5141,14 +5141,14 @@ App.telas['desempenho-opme'] = (function () {
           }
           .opme-extra-chip .opme-extra-toggle {
             border: none; background: transparent; cursor: pointer; padding: 4px 4px 4px 10px;
-            font-size: 11px; font-weight: 700; color: var(--primary, #143352); font-family: inherit;
+            font-size: 11px; font-weight: 700; color: var(--primary, #5980a6); font-family: inherit;
           }
           .opme-extra-chip.opme-extra-off .opme-extra-toggle { color: var(--ink-faint); text-decoration: line-through; }
           .opme-extra-chip .opme-extra-rm {
             border: none; background: transparent; cursor: pointer; padding: 4px 8px 4px 2px;
             font-size: 10px; color: var(--ink-faint);
           }
-          .opme-extra-chip .opme-extra-rm:hover { color: #C0392B; }
+          .opme-extra-chip .opme-extra-rm:hover { color: #c07a66; }
           /* V662: pesquisa em tempo real dos produtos da Produção */
           .opme-add-extra-wrap { position: relative; }
           .opme-extra-ac-wrap { position: relative; flex: 1; }
@@ -5164,12 +5164,12 @@ App.telas['desempenho-opme'] = (function () {
             border: none; background: transparent; cursor: pointer; text-align: left;
             padding: 8px 12px; font-size: 12px; color: var(--ink); font-family: inherit;
           }
-          .opme-extra-sug-item:hover { background: rgba(29, 68, 112,0.08); color: #1d4470; }
+          .opme-extra-sug-item:hover { background: rgba(70, 104, 140,0.08); color: #46688c; }
           .opme-extra-sug-vazio { padding: 10px 12px; font-size: 11.5px; color: var(--ink-faint); }
           .opme-ev-pagoem {
             display: inline-block; padding: 1px 7px; border-radius: 9px;
             font-size: 10px; font-weight: 700;
-            background: rgba(29, 68, 112,0.12); color: #1d4470;
+            background: rgba(70, 104, 140,0.12); color: #46688c;
           }
           /* V663: seções de regra com switch desligado ficam esmaecidas
              (o cadastro continua acessível — só não afeta o cálculo) */
@@ -5188,13 +5188,13 @@ App.telas['desempenho-opme'] = (function () {
             display: flex; align-items: stretch;
             margin-top: 10px; padding: 6px;
             background: #fff;
-            border: 1px solid #e4ecf4;
+            border: 1px solid #eef2f6;
             border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+            box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
             flex-wrap: wrap;
           }
           .opme-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-          .opme-sb-celwrap:not(:last-child) .opme-sb-cel { border-right: 1px solid #f0f4f8; }
+          .opme-sb-celwrap:not(:last-child) .opme-sb-cel { border-right: 1px solid #f7f8fa; }
           .opme-sb-cel {
             flex: 1; min-width: 0;
             display: flex; align-items: center; gap: 9px;
@@ -5203,69 +5203,69 @@ App.telas['desempenho-opme'] = (function () {
             font-family: inherit; text-align: left;
             transition: background-color 120ms;
           }
-          .opme-sb-cel:hover, .opme-sb-cel.ativo, .opme-sb-cel.aberta { background: #f6f4ef; }
-          .opme-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+          .opme-sb-cel:hover, .opme-sb-cel.ativo, .opme-sb-cel.aberta { background: #fafbfc; }
+          .opme-sb-cel:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
           .opme-sb-tile {
             width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center;
-            background: #f0f5f9; color: #5a6879;
+            background: #f0f5f9; color: #585d62;
           }
-          .opme-sb-cel.ativo .opme-sb-tile, .opme-sb-cel.aberta .opme-sb-tile { background: #e4ecf4; color: #1d4470; }
+          .opme-sb-cel.ativo .opme-sb-tile, .opme-sb-cel.aberta .opme-sb-tile { background: #eef2f6; color: #46688c; }
           .opme-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
           .opme-sb-rot {
             font-size: 10px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: .09em; color: #5a6879; white-space: nowrap;
+            letter-spacing: .09em; color: #585d62; white-space: nowrap;
           }
           .opme-sb-val {
-            font-size: 13px; font-weight: 500; color: #5a6879;
+            font-size: 13px; font-weight: 500; color: #585d62;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
           }
-          .opme-sb-cel.ativo .opme-sb-val { font-weight: 700; color: #12304f; }
-          .opme-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+          .opme-sb-cel.ativo .opme-sb-val { font-weight: 700; color: #3a5877; }
+          .opme-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
           .opme-sb-cel.aberta .opme-sb-chev { transform: rotate(180deg); }
 
           /* painel ancorado na célula, por cima dos cards */
           .opme-sb-painel {
             position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
             min-width: 100%; width: max-content; max-width: 340px;
-            background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-            box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
+            background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+            box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42);
             overflow: hidden;
           }
           .opme-sb-buscabox {
             display: flex; align-items: center; gap: 8px;
-            padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
+            padding: 11px 12px 10px; border-bottom: 1px solid #f7f8fa;
           }
           .opme-sb-buscabox .opme-sb-busca-ic { color: #6b7d8e; display: flex; }
           .opme-sb-busca {
-            flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
-            background: #f6f4ef; padding: 0 10px; font-size: 13px;
-            font-family: inherit; color: #12304f; outline: none;
+            flex: 1; height: 30px; border: 1px solid #eef0f2; border-radius: 8px;
+            background: #fafbfc; padding: 0 10px; font-size: 13px;
+            font-family: inherit; color: #3a5877; outline: none;
           }
-          .opme-sb-busca::placeholder { color: #96a2b1; }
-          .opme-sb-busca:focus { border-color: #2a5a8c; }
+          .opme-sb-busca::placeholder { color: #8a9096; }
+          .opme-sb-busca:focus { border-color: #3f6489; }
           .opme-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
           .opme-sb-lista::-webkit-scrollbar { width: 8px; }
-          .opme-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
-          .opme-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+          .opme-sb-lista::-webkit-scrollbar-track { background: #f7f8fa; }
+          .opme-sb-lista::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
           .opme-sb-it {
             display: flex; align-items: center; gap: 10px;
             height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-            font-size: 13px; color: #12304f;
+            font-size: 13px; color: #3a5877;
           }
-          .opme-sb-it:hover, .opme-sb-it.foco { background: #f0f4f8; }
-          .opme-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+          .opme-sb-it:hover, .opme-sb-it.foco { background: #f7f8fa; }
+          .opme-sb-it.sel { background: #f7f8fa; font-weight: 700; }
           .opme-sb-it-todos { font-weight: 700; }
           .opme-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .opme-sb-ck { color: #1d4470; display: flex; }
+          .opme-sb-ck { color: #46688c; display: flex; }
           .opme-sb-chip {
             width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center;
-            background: #f0f4f8; color: #1d4470; font-size: 9.5px; font-weight: 700;
+            background: #f7f8fa; color: #46688c; font-size: 9.5px; font-weight: 700;
           }
           .opme-sb-rodape {
-            padding: 7px 12px; border-top: 1px solid #f0f4f8;
-            font-size: 10.5px; font-weight: 600; color: #96a2b1;
+            padding: 7px 12px; border-top: 1px solid #f7f8fa;
+            font-size: 10.5px; font-weight: 600; color: #8a9096;
           }
           @media (max-width: 1280px) { .opme-sb-celwrap { flex-basis: 32%; } }
           @media (max-width: 900px)  { .opme-sb-celwrap { flex-basis: 48%; } }
@@ -5278,7 +5278,7 @@ App.telas['desempenho-opme'] = (function () {
             border: 1.5px solid var(--border); border-radius: 12px;
             transition: border-color 150ms, box-shadow 150ms;
           }
-          .opme-filtro-combo:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 127, 176,.16); }
+          .opme-filtro-combo:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(89, 128, 166,.16); }
           .opme-dd-pre {
             flex: none; font-size: 11.5px; color: var(--ink-faint); white-space: nowrap;
           }
@@ -5300,7 +5300,7 @@ App.telas['desempenho-opme'] = (function () {
           .opme-filtro-combo .opme-combo-arrow.aberto { transform: rotate(180deg); }
           .opme-filtro-combo .opme-combo-dropdown { border-radius: 12px; padding: 6px; }
           .opme-filtro-combo .opme-combo-opt { border-radius: 9px; padding: 10px 12px; }
-          .opme-filtro-combo .opme-combo-opt:hover { background: rgba(79, 127, 176,.14); color: var(--primary); }
+          .opme-filtro-combo .opme-combo-opt:hover { background: rgba(89, 128, 166,.14); color: var(--primary); }
           .opme-cards {
             display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 8px; margin: 8px 0 12px; width: 100%; box-sizing: border-box;
@@ -5328,7 +5328,7 @@ App.telas['desempenho-opme'] = (function () {
           /* card Quantidade/Glosas: dois blocos, mesma linguagem */
           .opme-card-qtd-dupla { display: flex; gap: 10px; flex: 1; margin-top: 1px; }
           .opme-card-qtd-bloco { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-          .opme-card-qtd-sep { width: 1px; background: var(--border, #dfe4ea); }
+          .opme-card-qtd-sep { width: 1px; background: var(--border, #eef0f2); }
           .opme-card-qtd-rotulo { font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; margin-bottom: 2px; color: #0F6E56; }
           .opme-card-valor-mini { font-size: 17px; font-weight: 800; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .opme-card-glosas .opme-card-valor-mini { font-size: 15px; }
@@ -5336,20 +5336,20 @@ App.telas['desempenho-opme'] = (function () {
           .opme-card-glosas .opme-card-qtd-bloco:first-child { flex: 1.8; }
           .opme-card-glosas .opme-card-qtd-bloco:last-child  { flex: 1; }
           /* Glosas em VERMELHO (algo não recebido) — vence o override global preto */
-          .main .opme-card.opme-card-glosas .opme-card-valor-mini { color: #C0392B !important; }
-          .opme-card-glosas .opme-card-qtd-rotulo { color: #C0392B; }
-          /* V718: título dos cards totalizadores em #0f1d2e (a regra global de
+          .main .opme-card.opme-card-glosas .opme-card-valor-mini { color: #c07a66 !important; }
+          .opme-card-glosas .opme-card-qtd-rotulo { color: #c07a66; }
+          /* V718: título dos cards totalizadores em #1d1f20 (a regra global de
              cards pintava #0F6E56 com !important — este override vence por vir
              depois no cascade). */
-          .main .opme-card .opme-card-titulo { color: #0f1d2e !important; }
+          .main .opme-card .opme-card-titulo { color: #1d1f20 !important; }
           /* V718: card de GLOSAS com a mesma moldura do card de glosa da VISÃO
-             GERAL (V712): a linha azul #4f7fb0 em volta vira o terroso #c0563f.
+             GERAL (V712): a linha azul #5980a6 em volta vira o terroso #c0563f.
              Só a coloração da moldura — estrutura intacta. */
           .main .opme-card.opme-card-glosas {
             box-shadow:
               -4px -3px 0 0 #c0563f,
               -4px -3px 10px rgba(192, 86, 63, 0.28),
-              0 8px 18px rgba(16, 45, 75, 0.13) !important;
+              0 8px 18px rgba(29, 31, 32, 0.13) !important;
           }
           .opme-chk-ocultar {
             display: inline-flex;
@@ -5425,7 +5425,7 @@ App.telas['desempenho-opme'] = (function () {
             display: inline-flex; align-items: center; justify-content: center;
             transition: background-color 150ms, color 150ms, border-color 150ms;
           }
-          .opme-ajustes-close-modal:hover { background: #4f7fb0; color: #fff; border-color: #4f7fb0; }
+          .opme-ajustes-close-modal:hover { background: #5980a6; color: #fff; border-color: #5980a6; }
           .opme-ajustes-body { flex: 1; overflow-y: auto; padding: 18px 22px 22px; }
           @media (max-width: 980px) {
             .opme-ajustes-modal { width: 96vw; max-height: 92vh; }
@@ -5464,7 +5464,7 @@ App.telas['desempenho-opme'] = (function () {
             display: inline-flex; align-items: center; justify-content: center;
             transition: background-color 150ms, color 150ms, border-color 150ms;
           }
-          .opme-teste-close-modal:hover { background: #4f7fb0; color: #fff; border-color: #4f7fb0; }
+          .opme-teste-close-modal:hover { background: #5980a6; color: #fff; border-color: #5980a6; }
           .opme-teste-body { flex: 1; overflow-y: auto; padding: 16px 22px 22px; }
           .opme-teste-form {
             display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 14px 0 4px;
@@ -5487,7 +5487,7 @@ App.telas['desempenho-opme'] = (function () {
           }
           .opme-teste-campo > input:focus,
           .opme-teste-valor-wrap:focus-within {
-            border-color: var(--primary); box-shadow: 0 0 0 3px rgba(20, 51, 82,0.08);
+            border-color: var(--primary); box-shadow: 0 0 0 3px rgba(89, 128, 166,0.08);
           }
           .opme-teste-valor-wrap { display: inline-flex; align-items: center; gap: 5px; }
           .opme-teste-valor-wrap input {
@@ -5504,7 +5504,7 @@ App.telas['desempenho-opme'] = (function () {
             padding: 0 52px 0 12px; outline: none;
             transition: border-color 150ms, box-shadow 150ms;
           }
-          .opme-combo-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(20, 51, 82,0.08); }
+          .opme-combo-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(89, 128, 166,0.08); }
           .opme-combo-arrow {
             position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
             width: 24px; height: 24px; border: none; background: transparent;
@@ -5526,7 +5526,7 @@ App.telas['desempenho-opme'] = (function () {
             position: absolute; top: calc(100% + 4px); left: 0; right: 0;
             z-index: 30; background: var(--bg-elevated);
             border: 1px solid var(--border); border-radius: 8px;
-            box-shadow: 0 12px 30px rgba(11, 35, 64,0.18), 0 2px 6px rgba(11, 35, 64,0.08);
+            box-shadow: 0 12px 30px rgba(29, 31, 32,0.18), 0 2px 6px rgba(29, 31, 32,0.08);
             max-height: 240px; overflow-y: auto; padding: 4px; font-size: 12.5px;
             animation: opme-pop-in 150ms ease-out;
           }
@@ -5536,7 +5536,7 @@ App.telas['desempenho-opme'] = (function () {
             transition: background 100ms, color 100ms;
           }
           .opme-combo-opt:hover { background: var(--bg-sunken); color: var(--primary); }
-          .opme-combo-opt.sel { background: rgba(79, 127, 176,.14); color: var(--primary); font-weight: 700; }
+          .opme-combo-opt.sel { background: rgba(89, 128, 166,.14); color: var(--primary); font-weight: 700; }
           .opme-combo-vazio { padding: 10px; text-align: center; font-size: 11px; color: var(--ink-faint); font-style: italic; }
           .opme-combo-dropdown::-webkit-scrollbar { width: 8px; }
           .opme-combo-dropdown::-webkit-scrollbar-track { background: transparent; }
@@ -5554,13 +5554,13 @@ App.telas['desempenho-opme'] = (function () {
             color: var(--primary); margin-bottom: 6px;
           }
           .opme-teste-linha { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
-          .opme-teste-linha.ok { color: var(--primary, #143352); }
+          .opme-teste-linha.ok { color: var(--primary, #5980a6); }
           .opme-teste-linha.no { color: #B0413A; }
           .opme-teste-linha.opme-teste-warn { color: #B0413A; font-weight: 600; }
           .opme-teste-nota { font-size: 11px; color: var(--ink-faint); font-style: italic; margin-top: 4px; line-height: 1.45; }
           .opme-teste-final {
             margin-top: 4px; padding: 12px 16px;
-            background: var(--primary); color: #f6f4ef;
+            background: var(--primary); color: #fafbfc;
             border-radius: 10px; font-size: 13px; font-weight: 700;
             display: flex; align-items: center; justify-content: space-between;
           }
@@ -5616,7 +5616,7 @@ App.telas['desempenho-opme'] = (function () {
           .opme-macro.is-ativo {
             border-color: var(--primary);
             background: var(--primary);
-            color: #f6f4ef;
+            color: #fafbfc;
           }
           .opme-macro.is-inativo {
             opacity: 0.55;
@@ -5671,7 +5671,7 @@ App.telas['desempenho-opme'] = (function () {
           .opme-macro-pct input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
           .opme-macro-pct input::placeholder { color: inherit; opacity: .45; font-weight: 500; }
           .opme-macro-pct-sufixo { font-size: 10px; font-weight: 700; opacity: .7; }
-          .opme-macro-pct.tem-pct { background: rgba(79, 127, 176,0.30); box-shadow: 0 0 0 1px rgba(79, 127, 176,0.55) inset; }
+          .opme-macro-pct.tem-pct { background: rgba(89, 128, 166,0.30); box-shadow: 0 0 0 1px rgba(89, 128, 166,0.55) inset; }
           .opme-macro.is-ativo .opme-macro-pct.tem-pct { background: rgba(255,255,255,0.30); }
           /* Switch: respeitar regra do médico */
           .opme-switch-respeita {
@@ -5786,7 +5786,7 @@ App.telas['desempenho-opme'] = (function () {
             line-height: 1.3;
             transition: background 120ms;
           }
-          .opme-produto:hover { background: rgba(20, 51, 82, 0.06); }
+          .opme-produto:hover { background: rgba(89, 128, 166, 0.06); }
           .opme-produto-nome {
             flex: 1;
             font-size: 10.5px;
@@ -5826,12 +5826,12 @@ App.telas['desempenho-opme'] = (function () {
             transform: scale(1.08);
           }
           .opme-produto-restaurar {
-            color: #0A7A5A;
+            color: #4f8a5b;
             background: rgba(46, 125, 50, 0.10);
             font-size: 12px;
           }
           .opme-produto-restaurar:hover {
-            background: #0A7A5A;
+            background: #4f8a5b;
             color: #FFFFFF;
             transform: scale(1.08);
           }
@@ -5841,8 +5841,8 @@ App.telas['desempenho-opme'] = (function () {
             display: inline-block;
             margin-left: 6px;
             padding: 0 6px;
-            background: rgba(155, 58, 58, 0.12);
-            color: #9B3A3A;
+            background: rgba(161, 86, 70, 0.12);
+            color: #a15646;
             font-size: 9px;
             font-weight: 800;
             letter-spacing: 0.04em;
@@ -5974,7 +5974,7 @@ App.telas['desempenho-opme'] = (function () {
             padding: 2px 6px;
             border-radius: 3px;
           }
-          .opme-regra-remover:hover { color: var(--danger); background: rgba(155,58,58,0.08); }
+          .opme-regra-remover:hover { color: var(--danger); background: rgba(161, 86, 70,0.08); }
 
           /* GRID DOS PAINÉIS */
           .opme-grid {
@@ -6020,10 +6020,10 @@ App.telas['desempenho-opme'] = (function () {
             user-select: none;
           }
           .opme-resize-divisor:hover {
-            background: rgba(42, 90, 140, 0.15);  /* accent suave */
+            background: rgba(63, 100, 137, 0.15);  /* accent suave */
           }
           .opme-resize-divisor.is-dragging {
-            background: rgba(42, 90, 140, 0.30);
+            background: rgba(63, 100, 137, 0.30);
           }
           .opme-divisor-grip {
             width: 6px;
@@ -6039,7 +6039,7 @@ App.telas['desempenho-opme'] = (function () {
           .opme-resize-divisor:hover .opme-divisor-grip {
             background: var(--accent);
             height: 80px;
-            box-shadow: 0 2px 8px rgba(42, 90, 140, 0.30);
+            box-shadow: 0 2px 8px rgba(63, 100, 137, 0.30);
           }
           .opme-resize-divisor.is-dragging .opme-divisor-grip {
             background: var(--accent);
@@ -6110,7 +6110,7 @@ App.telas['desempenho-opme'] = (function () {
             border-radius: 999px;
             border: 1px solid var(--primary);
             background: var(--primary);
-            color: #f6f4ef;
+            color: #fafbfc;
             font-size: 10.5px;
             font-weight: 700;
             cursor: pointer;
@@ -6130,7 +6130,7 @@ App.telas['desempenho-opme'] = (function () {
           }
           .opme-macro-dropdown-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(20, 51, 82, 0.25);
+            box-shadow: 0 2px 6px rgba(89, 128, 166, 0.25);
           }
 
           /* DROPDOWN DE PRODUTOS (Produção QVIS) */
@@ -6149,7 +6149,7 @@ App.telas['desempenho-opme'] = (function () {
             font-weight: 700;
             cursor: pointer;
             letter-spacing: 0.03em;
-            color: #f6f4ef;
+            color: #fafbfc;
             transition: background-color 120ms, color 120ms, border-color 120ms, box-shadow 120ms, transform 120ms, opacity 120ms;
             font-family: inherit;
             display: inline-flex;
@@ -6160,12 +6160,12 @@ App.telas['desempenho-opme'] = (function () {
           }
           .opme-prod-dropdown-btn.is-filtrado {
             background: var(--primary);
-            color: #f6f4ef;
+            color: #fafbfc;
             border-color: var(--primary);
           }
           .opme-prod-dropdown-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(20, 51, 82, 0.18);
+            box-shadow: 0 2px 6px rgba(89, 128, 166, 0.18);
           }
           .opme-prod-seta {
             font-size: 8px;
@@ -6235,7 +6235,7 @@ App.telas['desempenho-opme'] = (function () {
             font-family: inherit;
           }
           .opme-prod-popover-link:hover {
-            background: rgba(20, 51, 82, 0.08);
+            background: rgba(89, 128, 166, 0.08);
           }
           .opme-prod-popover-lista {
             max-height: 320px;
@@ -6351,7 +6351,7 @@ App.telas['desempenho-opme'] = (function () {
           }
           .opme-filtro-chip.is-on {
             background: var(--primary);
-            color: #f6f4ef;
+            color: #fafbfc;
             border-color: var(--primary);
           }
           .opme-filtro-chip.is-off {
@@ -6360,7 +6360,7 @@ App.telas['desempenho-opme'] = (function () {
           }
           .opme-filtro-chip:hover {
             transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(20, 51, 82, 0.18);
+            box-shadow: 0 2px 6px rgba(89, 128, 166, 0.18);
           }
           .opme-filtro-chip.is-off:hover {
             opacity: 1;
@@ -6411,7 +6411,7 @@ App.telas['desempenho-opme'] = (function () {
             letter-spacing: 0.04em;
           }
           .opme-badge-pago {
-            background: #0A7A5A;
+            background: #4f8a5b;
             color: #FFFFFF;
             font-size: 11px;
             font-weight: 700;
@@ -6482,11 +6482,11 @@ App.telas['desempenho-opme'] = (function () {
             line-height: 1.3;
             min-width: 150px;
           }
-          .opme-tabela tr:hover td { background: rgba(20, 51, 82, 0.03); }
+          .opme-tabela tr:hover td { background: rgba(89, 128, 166, 0.03); }
 
           /* SINC HOVER */
           .opme-tabela tr.opme-row-sync-hover td {
-            background: rgba(42, 90, 140, 0.10) !important;
+            background: rgba(63, 100, 137, 0.10) !important;
           }
           .opme-tabela tr.opme-row-sync-hover.opme-linha-paga td {
             background: #D6EBD8 !important;
@@ -6513,7 +6513,7 @@ App.telas['desempenho-opme'] = (function () {
             vertical-align: middle;
           }
           .opme-badge-geral  { background: var(--bg-sunken);            color: var(--ink-soft); }
-          .opme-badge-medico { background: rgba(42, 90, 140,0.18);        color: #143352; }
+          .opme-badge-medico { background: rgba(63, 100, 137,0.18);        color: #5980a6; }
 
           /* Checkbox pago */
           .opme-chk-pago {
@@ -6526,7 +6526,7 @@ App.telas['desempenho-opme'] = (function () {
           }
           .opme-chk-pago input {
             width: 16px; height: 16px;
-            accent-color: #0A7A5A;
+            accent-color: #4f8a5b;
             cursor: pointer; margin: 0;
           }
           .opme-chk-pago input:disabled {
@@ -6541,7 +6541,7 @@ App.telas['desempenho-opme'] = (function () {
             justify-content: center;
             width: 16px;
             height: 16px;
-            background: #0A7A5A;
+            background: #4f8a5b;
             color: white;
             font-size: 11px;
             font-weight: 900;
@@ -6567,7 +6567,7 @@ App.telas['desempenho-opme'] = (function () {
           .opme-linha-paga td { background: #E8F5E9 !important; }
           .opme-linha-paga:hover td { background: #D6EBD8 !important; }
           .opme-linha-paga td:first-child {
-            border-left: 3px solid #0A7A5A;
+            border-left: 3px solid #4f8a5b;
           }
 
           /* ===== TROCA DE MÉDICO (redirecionamento de repasse) ===== */
@@ -6608,7 +6608,7 @@ App.telas['desempenho-opme'] = (function () {
             opacity: 0.55;
           }
           .opme-btn-trocar-medico:hover {
-            background: rgba(42, 90, 140, 0.18);
+            background: rgba(63, 100, 137, 0.18);
             color: var(--accent);
             opacity: 1;
             transform: scale(1.15);
@@ -6694,7 +6694,7 @@ App.telas['desempenho-opme'] = (function () {
           .opme-medico-opcao:hover { background: var(--bg-sunken); }
           .opme-medico-opcao-nome { font-weight: 600; }
           .opme-medicos-tag-regra {
-            background: rgba(20, 51, 82, 0.15);
+            background: rgba(89, 128, 166, 0.15);
             color: var(--primary);
             padding: 2px 8px;
             border-radius: 999px;
@@ -6703,8 +6703,8 @@ App.telas['desempenho-opme'] = (function () {
             letter-spacing: 0.04em;
           }
           .opme-medicos-tag-geral {
-            background: rgba(42, 90, 140, 0.18);
-            color: #143352;
+            background: rgba(63, 100, 137, 0.18);
+            color: #5980a6;
             padding: 2px 8px;
             border-radius: 999px;
             font-size: 9.5px;
@@ -6979,7 +6979,7 @@ App.telas['desempenho-opme'] = (function () {
             font-size: 8.5px;
             font-weight: 800;
             letter-spacing: 0.04em;
-            color: #102d4b;
+            color: #3a5877;
             background: rgba(198, 138, 0, 0.18);
             padding: 1px 6px;
             border-radius: 3px;
@@ -6994,7 +6994,7 @@ App.telas['desempenho-opme'] = (function () {
             font-size: 8px;
             font-weight: 800;
             letter-spacing: 0.03em;
-            color: #102d4b;
+            color: #3a5877;
             background: rgba(198, 138, 0, 0.18);
             padding: 1px 5px;
             border-radius: 3px;
@@ -7010,7 +7010,7 @@ App.telas['desempenho-opme'] = (function () {
             border-radius: 3px;
             margin-left: 4px;
             vertical-align: middle;
-            color: #102d4b;
+            color: #3a5877;
             background: rgba(198, 138, 0, 0.22);
             letter-spacing: 0.02em;
           }
@@ -7070,7 +7070,7 @@ App.telas['desempenho-opme'] = (function () {
           /* Modal */
           .opme-modal-overlay {
             position: fixed; inset: 0;
-            background: rgba(20, 51, 82, 0.4);
+            background: rgba(89, 128, 166, 0.4);
             
             z-index: 1000;
             display: flex; align-items: center; justify-content: center;
@@ -7164,7 +7164,7 @@ App.telas['desempenho-opme'] = (function () {
             color: var(--ink-soft);
             padding: 8px 12px;
             background: #E8F5E9;
-            border-left: 3px solid #0A7A5A;
+            border-left: 3px solid #4f8a5b;
             border-radius: 4px;
             line-height: 1.45;
           }
@@ -7227,7 +7227,7 @@ App.telas['desempenho-opme'] = (function () {
             gap: 4px;
           }
           .opme-modal-comp-atual {
-            background: rgba(20, 51, 82, 0.07);
+            background: rgba(89, 128, 166, 0.07);
             border: 1px solid var(--primary);
           }
           .opme-modal-comp-pago {

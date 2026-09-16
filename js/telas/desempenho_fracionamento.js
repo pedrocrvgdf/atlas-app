@@ -623,7 +623,7 @@ App.telas['desempenho-fracionamento'] = (function () {
     // V860: EXTRAÇÃO NO PADRÃO DO FELLOW
     //
     // O botão flutuante passa a abrir um MENU com os dois relatórios
-    // estilizados (Sintética / Analítica, via ExcelJS: cabeçalho #1d4470,
+    // estilizados (Sintética / Analítica, via ExcelJS: cabeçalho #46688c,
     // subtotais em negrito, moeda) — o mesmo desenho do Fellow.
     //
     // A individualidade do ficheiro fica preservada em dois pontos:
@@ -1710,7 +1710,7 @@ App.telas['desempenho-fracionamento'] = (function () {
               </button>
               <button class="btn btn-pequeno" id="btn-cfg-restaurar"
                       title="Volta aos valores padrão de fábrica">↺ Padrão</button>
-              <button class="btn btn-pequeno" id="btn-cfg-recalcular" style="background:var(--primary,#143352);color:#fff;border-color:transparent"
+              <button class="btn btn-pequeno" id="btn-cfg-recalcular" style="background:var(--primary,#5980a6);color:#fff;border-color:transparent"
                       title="Reaplica a regra atual sobre as aplicações já importadas de TODOS os meses ainda não consolidados. Meses consolidados são preservados (registro oficial).">
                 ⟳ Recalcular Fracionamento
               </button>
@@ -2247,12 +2247,12 @@ App.telas['desempenho-fracionamento'] = (function () {
         }
         .frac-input-wrap:hover {
           border-color: var(--accent);
-          background: rgba(42, 90, 140, 0.04);
+          background: rgba(63, 100, 137, 0.04);
         }
         .frac-input-wrap:focus-within {
           border-color: var(--primary);
-          background: rgba(20, 51, 82, 0.04);
-          box-shadow: 0 0 0 2px rgba(20, 51, 82, 0.08);
+          background: rgba(89, 128, 166, 0.04);
+          box-shadow: 0 0 0 2px rgba(89, 128, 166, 0.08);
         }
         .frac-input-prefix {
           padding: 0 8px;
@@ -2336,10 +2336,10 @@ App.telas['desempenho-fracionamento'] = (function () {
           vertical-align: middle;
         }
         .frac-preview-table tr:last-child td { border-bottom: none; }
-        /* V738: valores da coluna "= Repasse" em #1d4470 */
+        /* V738: valores da coluna "= Repasse" em #46688c */
         .frac-preview-table .frac-total {
           font-weight: 800;
-          color: #1d4470;
+          color: #46688c;
           font-family: var(--mono);
         }
         .frac-preview-table .frac-deducao {
@@ -2379,13 +2379,13 @@ App.telas['desempenho-fracionamento'] = (function () {
           padding: 6px;
           box-sizing: border-box;
           background: #fff;
-          border: 1px solid #e4ecf4;
+          border: 1px solid #eef2f6;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+          box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
           flex-wrap: wrap;
         }
         .frac-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-        .frac-sb-celwrap:not(:last-child) .frac-sb-cel { border-right: 1px solid #f0f4f8; }
+        .frac-sb-celwrap:not(:last-child) .frac-sb-cel { border-right: 1px solid #f7f8fa; }
         .frac-sb-cel {
           flex: 1; min-width: 0;
           display: flex; align-items: center; gap: 9px;
@@ -2394,69 +2394,69 @@ App.telas['desempenho-fracionamento'] = (function () {
           font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .frac-sb-cel:hover, .frac-sb-cel.ativo, .frac-sb-cel.aberta { background: #f6f4ef; }
-        .frac-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+        .frac-sb-cel:hover, .frac-sb-cel.ativo, .frac-sb-cel.aberta { background: #fafbfc; }
+        .frac-sb-cel:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
         .frac-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f5f9; color: #5a6879;
+          background: #f0f5f9; color: #585d62;
         }
-        .frac-sb-cel.ativo .frac-sb-tile, .frac-sb-cel.aberta .frac-sb-tile { background: #e4ecf4; color: #1d4470; }
+        .frac-sb-cel.ativo .frac-sb-tile, .frac-sb-cel.aberta .frac-sb-tile { background: #eef2f6; color: #46688c; }
         .frac-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
         .frac-sb-rot {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .09em; color: #5a6879; white-space: nowrap;
+          letter-spacing: .09em; color: #585d62; white-space: nowrap;
         }
         .frac-sb-val {
-          font-size: 13px; font-weight: 500; color: #5a6879;
+          font-size: 13px; font-weight: 500; color: #585d62;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .frac-sb-cel.ativo .frac-sb-val { font-weight: 700; color: #12304f; }
-        .frac-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .frac-sb-cel.ativo .frac-sb-val { font-weight: 700; color: #3a5877; }
+        .frac-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .frac-sb-cel.aberta .frac-sb-chev { transform: rotate(180deg); }
 
         /* painel ancorado na célula, por cima dos cards */
         .frac-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 340px;
-          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
+          background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42);
           overflow: hidden;
         }
         .frac-sb-buscabox {
           display: flex; align-items: center; gap: 8px;
-          padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
+          padding: 11px 12px 10px; border-bottom: 1px solid #f7f8fa;
         }
         .frac-sb-buscabox .frac-sb-busca-ic { color: #6b7d8e; display: flex; }
         .frac-sb-busca {
-          flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
-          background: #f6f4ef; padding: 0 10px; font-size: 13px;
-          font-family: inherit; color: #12304f; outline: none;
+          flex: 1; height: 30px; border: 1px solid #eef0f2; border-radius: 8px;
+          background: #fafbfc; padding: 0 10px; font-size: 13px;
+          font-family: inherit; color: #3a5877; outline: none;
         }
-        .frac-sb-busca::placeholder { color: #96a2b1; }
-        .frac-sb-busca:focus { border-color: #2a5a8c; }
+        .frac-sb-busca::placeholder { color: #8a9096; }
+        .frac-sb-busca:focus { border-color: #3f6489; }
         .frac-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
         .frac-sb-lista::-webkit-scrollbar { width: 8px; }
-        .frac-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
-        .frac-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+        .frac-sb-lista::-webkit-scrollbar-track { background: #f7f8fa; }
+        .frac-sb-lista::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
         .frac-sb-it {
           display: flex; align-items: center; gap: 10px;
           height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-          font-size: 13px; color: #12304f;
+          font-size: 13px; color: #3a5877;
         }
-        .frac-sb-it:hover, .frac-sb-it.foco { background: #f0f4f8; }
-        .frac-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+        .frac-sb-it:hover, .frac-sb-it.foco { background: #f7f8fa; }
+        .frac-sb-it.sel { background: #f7f8fa; font-weight: 700; }
         .frac-sb-it-todos { font-weight: 700; }
         .frac-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .frac-sb-ck { color: #1d4470; display: flex; }
+        .frac-sb-ck { color: #46688c; display: flex; }
         .frac-sb-chip {
           width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f4f8; color: #1d4470; font-size: 9.5px; font-weight: 700;
+          background: #f7f8fa; color: #46688c; font-size: 9.5px; font-weight: 700;
         }
         .frac-sb-rodape {
-          padding: 7px 12px; border-top: 1px solid #f0f4f8;
-          font-size: 10.5px; font-weight: 600; color: #96a2b1;
+          padding: 7px 12px; border-top: 1px solid #f7f8fa;
+          font-size: 10.5px; font-weight: 600; color: #8a9096;
         }
         @media (max-width: 1100px) { .frac-sb-celwrap { flex-basis: 48%; } }
 
@@ -2500,22 +2500,22 @@ App.telas['desempenho-fracionamento'] = (function () {
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
-        /* Título dos cards em #0f1d2e — a regra global V181 ([class*="-label"]
+        /* Título dos cards em #1d1f20 — a regra global V181 ([class*="-label"]
            dentro dos cards listados) pinta #0F6E56 com !important; este
            override vence o empate por vir DEPOIS no cascade (mesmo padrão do
            V718 no OPME). */
-        .main .frac-card-cat .frac-card-label { color: #0f1d2e !important; }
+        .main .frac-card-cat .frac-card-label { color: #1d1f20 !important; }
         .main .frac-card-cat .frac-card-valor-monetario {
           font-size: 21px;
           font-weight: 800;
           line-height: 1.1;
-          color: #0f1d2e !important;
+          color: #1d1f20 !important;
         }
-        /* V738: quantidade de aplicações em #1d4470 */
+        /* V738: quantidade de aplicações em #46688c */
         .main .frac-card-cat .frac-card-qtd-rotulo {
           font-size: 11px;
           font-weight: 600;
-          color: #1d4470 !important;
+          color: #46688c !important;
         }
         /* Linhas de comparativo (vs LM, vs LY) */
         .frac-card-comparativos {
@@ -2539,8 +2539,8 @@ App.telas['desempenho-fracionamento'] = (function () {
           border-radius: 4px;
           background: rgba(255, 255, 255, 0.7);
         }
-        .frac-card-comp-positivo { color: #0A7A5A; }
-        .frac-card-comp-negativo { color: #9B3A3A; }
+        .frac-card-comp-positivo { color: #4f8a5b; }
+        .frac-card-comp-negativo { color: #a15646; }
         .frac-card-comp-neutro   { color: var(--ink-soft); }
         .frac-card-comp-vazio    { font-weight: 600; }
 
@@ -2558,37 +2558,37 @@ App.telas['desempenho-fracionamento'] = (function () {
 
         /* ── Paleta PARTICULAR (bege) ────────────────────────────────────── */
         .frac-card-aviso {
-          background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%);
-          border-color: #9FE6C9;
+          background: linear-gradient(135deg, #f2f3f5 0%, #eef2f6 100%);
+          border-color: #cfe3d1;
         }
         .frac-card-aviso .frac-card-label,
         .frac-card-aviso .frac-card-qtd,
-        .frac-card-aviso .frac-card-valor-monetario { color: #143352; }
+        .frac-card-aviso .frac-card-valor-monetario { color: #5980a6; }
         .frac-card-aviso .frac-card-comp-label,
-        .frac-card-aviso .frac-card-comp-vazio { color: #143352; opacity: 0.75; }
+        .frac-card-aviso .frac-card-comp-vazio { color: #5980a6; opacity: 0.75; }
         .frac-card-aviso .frac-card-comparativos { border-top-color: rgba(138, 107, 44, 0.18); }
 
         /* ── Paleta TOTAL (verde escuro, destaque) ───────────────────────── */
         .frac-card-destaque {
-          background: linear-gradient(135deg, #143352 0%, #0b2340 100%);
-          border-color: #143352;
-          box-shadow: 0 4px 12px rgba(20, 51, 82, 0.2);
+          background: linear-gradient(135deg, #5980a6 0%, #3a5877 100%);
+          border-color: #5980a6;
+          box-shadow: 0 4px 12px rgba(89, 128, 166, 0.2);
         }
-        .frac-card-destaque .frac-card-label             { color: #5a6879; }
-        .frac-card-destaque .frac-card-qtd               { color: #143352; }
-        .frac-card-destaque .frac-card-valor-monetario   { color: #143352; }
+        .frac-card-destaque .frac-card-label             { color: #585d62; }
+        .frac-card-destaque .frac-card-qtd               { color: #5980a6; }
+        .frac-card-destaque .frac-card-valor-monetario   { color: #5980a6; }
         .frac-card-destaque .frac-card-comp-label,
-        .frac-card-destaque .frac-card-comp-vazio { color: #c5d5e5; }
-        .frac-card-destaque .frac-card-comparativos { border-top-color: #5a6879; }
+        .frac-card-destaque .frac-card-comp-vazio { color: #e4eaf1; }
+        .frac-card-destaque .frac-card-comparativos { border-top-color: #585d62; }
         .frac-card-destaque .frac-card-comp-pct { background: rgba(255, 255, 255, 0.92); }
         .frac-card-destaque.is-selected {
-          box-shadow: 0 0 0 2px #2a5a8c, 0 4px 12px rgba(20, 51, 82, 0.3);
+          box-shadow: 0 0 0 2px #3f6489, 0 4px 12px rgba(89, 128, 166, 0.3);
         }
         .frac-card-convenio.is-selected {
           box-shadow: 0 0 0 2px #2C5C8A, 0 6px 16px rgba(44, 92, 138, 0.15);
         }
         .frac-card-aviso.is-selected {
-          box-shadow: 0 0 0 2px #143352, 0 6px 16px rgba(138, 107, 44, 0.15);
+          box-shadow: 0 0 0 2px #5980a6, 0 6px 16px rgba(138, 107, 44, 0.15);
         }
 
         /* ─────────────────────────────────────────────────────────────────
@@ -2647,7 +2647,7 @@ App.telas['desempenho-fracionamento'] = (function () {
           top: 30%;
           bottom: 30%;
           width: 2px;
-          background: rgba(42, 90, 140, 0.35);
+          background: rgba(63, 100, 137, 0.35);
           border-radius: 2px;
           transition: background-color 150ms, top 150ms, bottom 150ms;
         }
@@ -2665,13 +2665,13 @@ App.telas['desempenho-fracionamento'] = (function () {
 
         /* ── 🛠 Ajuste de Matriz (modal no <body>, padrão Fellow .fel-ajm-*) ── */
         .frac-ajm-fundo {
-          position: fixed; inset: 0; background: rgba(15, 29, 46, .45);
+          position: fixed; inset: 0; background: rgba(29, 31, 32, .45);
           display: flex; align-items: center; justify-content: center; z-index: 5000;
         }
         .frac-ajm-box {
           background: var(--bg-elevated, #fff); border-radius: 12px; padding: 20px;
           width: 430px; max-width: calc(100vw - 32px); max-height: 84vh; overflow-y: auto;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64, .42);
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32, .42);
         }
         .frac-ajm-box h4 { margin: 0 0 6px; font-size: 15px; }
         .frac-ajm-box p { margin: 0 0 14px; font-size: 12px; color: var(--ink-soft); }
@@ -2688,7 +2688,7 @@ App.telas['desempenho-fracionamento'] = (function () {
           padding: 0 10px; font-size: 13px; font-family: inherit; color: var(--ink);
           background: var(--bg-raised, #fff); outline: none;
         }
-        .frac-ajm-inp:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 127, 176, .16); }
+        .frac-ajm-inp:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(89, 128, 166, .16); }
         .frac-ajm-acoes { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
 
         /* V738: diálogo de OPÇÕES da extração (padrão do Fellow) */
@@ -2699,8 +2699,8 @@ App.telas['desempenho-fracionamento'] = (function () {
           cursor: pointer; background: white;
         }
         .frac-ext-op:hover { background: var(--bg-sunken); }
-        .frac-ext-op:has(input:checked) { background: #e4ecf4; border-color: #1d4470; }
-        .frac-ext-op input { margin-top: 2px; accent-color: #1d4470; }
+        .frac-ext-op:has(input:checked) { background: #eef2f6; border-color: #46688c; }
+        .frac-ext-op input { margin-top: 2px; accent-color: #46688c; }
         .frac-ext-op span { display: flex; flex-direction: column; gap: 1px; }
         .frac-ext-op strong { font-size: 12px; color: var(--ink); }
         .frac-ext-op small { font-size: 10px; color: var(--ink-soft); }
@@ -2720,7 +2720,7 @@ App.telas['desempenho-fracionamento'] = (function () {
         /* V413: backdrop escuro atrás do <thead> — mata a "costura" branca (fundo
            claro do container vazando numa junção sub-pixel entre células sticky). */
         .frac-tabela-aplicacoes thead,
-        .frac-tabela-aplicacoes thead tr { background: #071a30; }
+        .frac-tabela-aplicacoes thead tr { background: #3a5877; }
         /* V414: Ajustes como MODAL (pop-up), montado no document.body */
         .frac-cfg-overlay {
           position: fixed; inset: 0; z-index: 9998;
@@ -2756,9 +2756,9 @@ App.telas['desempenho-fracionamento'] = (function () {
         }
         .frac-tabela-aplicacoes th.num,
         .frac-tabela-aplicacoes td.num { text-align: right; }
-        /* V738: valores da coluna "= Repasse" em #1d4470 */
+        /* V738: valores da coluna "= Repasse" em #46688c */
         .frac-tabela-aplicacoes td.frac-total {
-          color: #1d4470;
+          color: #46688c;
           font-weight: 700;
         }
         .frac-tabela-aplicacoes td {
@@ -2772,7 +2772,7 @@ App.telas['desempenho-fracionamento'] = (function () {
           font-size: 12px;
           font-weight: inherit;
         }
-        .frac-tabela-aplicacoes tr:hover td { background: rgba(20, 51, 82, 0.03); }
+        .frac-tabela-aplicacoes tr:hover td { background: rgba(89, 128, 166, 0.03); }
         .frac-row-particular td { color: var(--ink-soft); }
         .frac-row-particular td:first-child {
           border-left: 2px solid #B87A5A;
@@ -2846,12 +2846,12 @@ App.telas['desempenho-fracionamento'] = (function () {
           font-style: normal;
         }
         .frac-origem-qvis     { background: #E1ECF4; color: #2C5C8A; }
-        .frac-origem-producao { background: #e9edf1; color: #143352; }
+        .frac-origem-producao { background: #f2f3f5; color: #5980a6; }
 
         /* MODAL de detalhes da admissão sem valor */
         .frac-detalhes-overlay {
           position: fixed; inset: 0;
-          background: rgba(20, 51, 82, 0.4);
+          background: rgba(89, 128, 166, 0.4);
           
           z-index: 1000;
           display: flex; align-items: center; justify-content: center;
@@ -2873,17 +2873,17 @@ App.telas['desempenho-fracionamento'] = (function () {
           align-items: flex-start;
           padding: 16px 20px;
           border-bottom: 1px solid var(--border);
-          background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%);
+          background: linear-gradient(135deg, #f2f3f5 0%, #eef2f6 100%);
         }
         .frac-detalhes-head h3 {
           margin: 0;
           font-size: 17px;
-          color: #143352;
+          color: #5980a6;
           font-weight: 700;
         }
         .frac-detalhes-head small {
           font-size: 12px;
-          color: #143352;
+          color: #5980a6;
           opacity: 0.85;
         }
         .frac-detalhes-fechar {
@@ -2893,7 +2893,7 @@ App.telas['desempenho-fracionamento'] = (function () {
           width: 28px; height: 28px;
           cursor: pointer;
           font-size: 14px;
-          color: #143352;
+          color: #5980a6;
         }
         .frac-detalhes-fechar:hover { background: white; }
         .frac-detalhes-body {
@@ -2950,11 +2950,11 @@ App.telas['desempenho-fracionamento'] = (function () {
           border-bottom: 1px solid var(--border);
         }
         .frac-detalhes-tabela td.num { text-align: right; }
-        .frac-detalhes-match td { background: rgba(20, 51, 82, 0.05); }
+        .frac-detalhes-match td { background: rgba(89, 128, 166, 0.05); }
         .frac-tag-match {
           display: inline-block;
-          background: #143352;
-          color: #f6f4ef;
+          background: #5980a6;
+          color: #fafbfc;
           font-size: 9px;
           padding: 1px 5px;
           border-radius: 3px;
@@ -2968,7 +2968,7 @@ App.telas['desempenho-fracionamento'] = (function () {
           border: 1px solid #E0C97A;
           border-radius: 6px;
           font-size: 12px;
-          color: #102d4b;
+          color: #3a5877;
           line-height: 1.45;
         }
       </style>

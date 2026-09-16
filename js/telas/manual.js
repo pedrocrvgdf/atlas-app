@@ -284,11 +284,11 @@
       <style>
         @page { size: A4; margin: 18mm 16mm; }
         body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1b2a3a; margin: 0; }
-        h1 { font-size: 20pt; color: #0f1d2e; }
+        h1 { font-size: 20pt; color: #1d1f20; }
         h2 { font-size: 15pt; color: #0b3a55; border-bottom: 1pt solid #b9c8d4; padding-bottom: 3pt;
              margin-top: 22pt; break-before: page; page-break-before: always; }
         h1 + p + h2 { break-before: auto; page-break-before: auto; }  /* o Índice segue a capa */
-        h3 { font-size: 12pt; color: #143352; margin-top: 12pt; }
+        h3 { font-size: 12pt; color: #5980a6; margin-top: 12pt; }
         p, li { line-height: 1.45; }
         table { border-collapse: collapse; width: 100%; }
         td { border: 1pt solid #b9c8d4; padding: 4pt 8pt; font-size: 10.5pt; vertical-align: top; }
@@ -311,50 +311,50 @@
     const st = document.createElement('style');
     st.id = 'mn-estilos';
     st.textContent = `
-      .mn-ov { position: fixed; inset: 0; z-index: 100000; background: rgba(11, 35, 64,.5);
+      .mn-ov { position: fixed; inset: 0; z-index: 100000; background: rgba(29, 31, 32,.5);
         display: flex; align-items: center; justify-content: center; padding: 30px 22px;
         animation: mnFade .16s ease-out; }
       @keyframes mnFade { from { opacity: 0 } to { opacity: 1 } }
       .mn-modal { background: var(--bg-elevated, #fff); border-radius: 16px; width: 100%; max-width: 1020px;
         height: calc(100vh - 70px); max-height: 860px; display: flex; flex-direction: column;
-        box-shadow: 0 24px 60px -20px rgba(11, 35, 64,.45); overflow: hidden; }
+        box-shadow: 0 24px 60px -20px rgba(29, 31, 32,.45); overflow: hidden; }
       .mn-head { display: flex; align-items: center; justify-content: space-between; gap: 14px;
-        padding: 16px 22px; border-bottom: 1px solid var(--border, #dfe4ea);
-        background: linear-gradient(90deg, #0f1d2e 0%, #12304f 60%, #1d4470 100%); }
+        padding: 16px 22px; border-bottom: 1px solid var(--border, #eef0f2);
+        background: linear-gradient(90deg, #1d1f20 0%, #3a5877 60%, #46688c 100%); }
       .mn-titulo { font: 700 17px/1.2 'Inter Tight', -apple-system, sans-serif; color: #fff; }
       .mn-sub { font-size: 11.5px; color: rgba(255,255,255,.75); margin-top: 2px; }
       .mn-head-r { display: flex; align-items: center; gap: 8px; }
-      .mn-btn-word { font: 700 12.5px/1 'Inter Tight', -apple-system, sans-serif; color: #0f1d2e;
+      .mn-btn-word { font: 700 12.5px/1 'Inter Tight', -apple-system, sans-serif; color: #1d1f20;
         background: #fff; border: none; border-radius: 9px; padding: 10px 14px; cursor: pointer;
-        box-shadow: 0 2px 6px rgba(11, 35, 64,.25); transition: background-color .12s ease; }
+        box-shadow: 0 2px 6px rgba(29, 31, 32,.25); transition: background-color .12s ease; }
       .mn-btn-word:hover { background: #eaf7fc; }
       .mn-x { width: 32px; height: 32px; border-radius: 8px; border: none;
         background: rgba(255,255,255,.16); color: #fff; font-size: 18px; line-height: 1;
         cursor: pointer; padding: 0; transition: background-color .12s ease; }
       .mn-x:hover { background: rgba(255,255,255,.3); }
       .mn-corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: 250px 1fr; }
-      .mn-indice { border-right: 1px solid var(--border, #dfe4ea); background: var(--bg-sunken, #F7F9F8);
+      .mn-indice { border-right: 1px solid var(--border, #eef0f2); background: var(--bg-sunken, #F7F9F8);
         overflow-y: auto; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; }
       .mn-indice-t { font: 700 10px/1 'Inter Tight', -apple-system, sans-serif; letter-spacing: .1em;
         text-transform: uppercase; color: var(--ink-faint, #9aa09c); padding: 2px 10px 8px; }
       .mn-ind-item { text-align: left; font-size: 12.5px; font-weight: 600; color: var(--ink-soft, #4b5a55);
         background: none; border: none; border-radius: 8px; padding: 7px 10px; cursor: pointer;
         transition: background-color .12s ease, color .12s ease; }
-      .mn-ind-item:hover { background: rgba(29, 68, 112,.08); color: #1d4470; }
-      .mn-ind-item.on { background: #1d4470; color: #fff; }
+      .mn-ind-item:hover { background: rgba(70, 104, 140,.08); color: #46688c; }
+      .mn-ind-item.on { background: #46688c; color: #fff; }
       .mn-conteudo { overflow-y: auto; padding: 20px 26px 30px; scroll-behavior: smooth; position: relative; }
       .mn-cap { margin-bottom: 26px; }
       .mn-h3 { margin: 0 0 10px; font: 700 18px/1.25 'Inter Tight', -apple-system, sans-serif;
-        color: var(--ink, #0f1d2e); padding-bottom: 7px; border-bottom: 2px solid #1d4470; }
+        color: var(--ink, #1d1f20); padding-bottom: 7px; border-bottom: 2px solid #46688c; }
       .mn-h4 { margin: 14px 0 6px; font: 700 13px/1.3 'Inter Tight', -apple-system, sans-serif;
-        color: #143352; text-transform: uppercase; letter-spacing: .04em; }
+        color: #5980a6; text-transform: uppercase; letter-spacing: .04em; }
       .mn-p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft, #37423e); }
       .mn-lista { margin: 0 0 8px; padding-left: 20px; }
       .mn-lista li { font-size: 13.5px; line-height: 1.6; color: var(--ink-soft, #37423e); margin-bottom: 5px; }
       .mn-glos { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
-      .mn-glos td { border: 1px solid var(--border, #dfe4ea); padding: 7px 10px; font-size: 13px;
+      .mn-glos td { border: 1px solid var(--border, #eef0f2); padding: 7px 10px; font-size: 13px;
         line-height: 1.5; color: var(--ink-soft, #37423e); vertical-align: top; }
-      .mn-glos-k { width: 200px; font-weight: 700; color: var(--ink, #0f1d2e);
+      .mn-glos-k { width: 200px; font-weight: 700; color: var(--ink, #1d1f20);
         background: var(--bg-sunken, #F7F9F8); }
       .mn-fim { text-align: center; font-size: 11.5px; color: var(--ink-faint, #9aa09c); padding: 8px 0 4px; }
       @media (max-width: 760px) { .mn-corpo { grid-template-columns: 1fr; } .mn-indice { display: none; } }

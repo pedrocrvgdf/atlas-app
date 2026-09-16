@@ -153,7 +153,7 @@ App.telas['importar-producao'] = function () {
           </table>
         </div>` : ''}
 
-        <div class="card" style="background: #e4ecf4; border-color: #9FE6C9; padding: 14px; margin-bottom: 16px">
+        <div class="card" style="background: #eef2f6; border-color: #cfe3d1; padding: 14px; margin-bottom: 16px">
           <div style="display: flex; gap: 10px; align-items: flex-start">
             <div style="font-size: 20px; line-height: 1">ℹ</div>
             <div style="font-size: 12px; color: #4A5754; line-height: 1.5">
@@ -246,12 +246,12 @@ App.telas['importar-producao'] = function () {
           font-size: 11px;
           font-weight: 600;
         }
-        .btn-atualizar { margin-right: 6px; background: #e4ecf4; color: #0F6E56; border: 1px solid #9FE6C9; }
+        .btn-atualizar { margin-right: 6px; background: #eef2f6; color: #0F6E56; border: 1px solid #cfe3d1; }
         .btn-atualizar:hover { background: #D4E9DF; }
         /* V848: drilldown por ano */
         .prod-ano { cursor: pointer; background: var(--bg-sunken, #F4F6F5); }
         .prod-ano:hover { background: #E9EEEC; }
-        .prod-ano .prod-ano-seta { display: inline-block; width: 14px; color: var(--accent, #1d4470); }
+        .prod-ano .prod-ano-seta { display: inline-block; width: 14px; color: var(--accent, #46688c); }
       </style>
     `;
 

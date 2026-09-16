@@ -144,7 +144,7 @@ App.telas['importar-qvis'] = function () {
         <div class="page-content">
           <header class="page-header"><h2>Importar Sistema</h2></header>
           <div class="card" style="background: #FEE; border-color: #D88; padding: 18px">
-            <h3 style="margin: 0 0 8px; color: #9B3A3A">⚠ Erro</h3>
+            <h3 style="margin: 0 0 8px; color: #a15646">⚠ Erro</h3>
             <pre style="font-size: 11px; white-space: pre-wrap">${escapeHTML(e.message)}\n\n${escapeHTML(e.stack || '')}</pre>
           </div>
         </div>
@@ -296,7 +296,7 @@ App.telas['importar-qvis'] = function () {
 
     return `
       <div class="impq-drops-grid">
-        ${renderDropArea('convenio', '🏥', 'Convênio', '#102d4b', window.__impQvis.arquivoConvenio, temConv)}
+        ${renderDropArea('convenio', '🏥', 'Convênio', '#3a5877', window.__impQvis.arquivoConvenio, temConv)}
         ${renderDropArea('particular', '💳', 'Particular', '#6B4587', window.__impQvis.arquivoParticular, temPart)}
       </div>
     `;
@@ -354,19 +354,19 @@ App.telas['importar-qvis'] = function () {
               <div class="impq-resumo-divisor"></div>
               <div class="impq-resumo-linha">
                 <span class="impq-resumo-lbl">Total PRODUZIDO:</span>
-                <span class="impq-resumo-val mono" style="color: #0A7A5A">R$ ${formatarBR(p.estatisticas?.totalProduzido || 0)}</span>
+                <span class="impq-resumo-val mono" style="color: #4f8a5b">R$ ${formatarBR(p.estatisticas?.totalProduzido || 0)}</span>
               </div>
               <div class="impq-resumo-linha">
                 <span class="impq-resumo-lbl">Total RECEBIDO:</span>
-                <span class="impq-resumo-val mono" style="color: #0A7A5A">R$ ${formatarBR(p.estatisticas?.totalRecebido || 0)}</span>
+                <span class="impq-resumo-val mono" style="color: #4f8a5b">R$ ${formatarBR(p.estatisticas?.totalRecebido || 0)}</span>
               </div>
               <div class="impq-resumo-linha">
                 <span class="impq-resumo-lbl">Adm. c/ PRODUZIDO zero:</span>
-                <span class="impq-resumo-val mono" style="color: ${(p.estatisticas?.linhasProduzidoZero || 0) > 0 ? '#9B3A3A' : 'var(--ink)'}">${(p.estatisticas?.linhasProduzidoZero || 0).toLocaleString('pt-BR')}</span>
+                <span class="impq-resumo-val mono" style="color: ${(p.estatisticas?.linhasProduzidoZero || 0) > 0 ? '#a15646' : 'var(--ink)'}">${(p.estatisticas?.linhasProduzidoZero || 0).toLocaleString('pt-BR')}</span>
               </div>
               <div class="impq-resumo-linha">
                 <span class="impq-resumo-lbl">Adm. c/ RECEBIDO zero:</span>
-                <span class="impq-resumo-val mono" style="color: ${(p.estatisticas?.linhasRecebidoZero || 0) > 0 ? '#143352' : 'var(--ink)'}">${(p.estatisticas?.linhasRecebidoZero || 0).toLocaleString('pt-BR')}</span>
+                <span class="impq-resumo-val mono" style="color: ${(p.estatisticas?.linhasRecebidoZero || 0) > 0 ? '#5980a6' : 'var(--ink)'}">${(p.estatisticas?.linhasRecebidoZero || 0).toLocaleString('pt-BR')}</span>
               </div>
               ${temProb ? `
                 <div class="impq-problemas">
@@ -463,11 +463,11 @@ App.telas['importar-qvis'] = function () {
           </div>
           <div class="impq-preview-item">
             <div class="impq-preview-lbl">Linhas a inserir</div>
-            <div class="impq-preview-val mono" style="color: #0A7A5A">+${totalLinhasNovas.toLocaleString('pt-BR')}</div>
+            <div class="impq-preview-val mono" style="color: #4f8a5b">+${totalLinhasNovas.toLocaleString('pt-BR')}</div>
           </div>
           <div class="impq-preview-item">
             <div class="impq-preview-lbl">Linhas a substituir</div>
-            <div class="impq-preview-val mono" style="color: ${temSubstituicao ? '#143352' : 'var(--ink-faint)'}">${temSubstituicao ? '−' : ''}${totalLinhasSubstituidas.toLocaleString('pt-BR')}</div>
+            <div class="impq-preview-val mono" style="color: ${temSubstituicao ? '#5980a6' : 'var(--ink-faint)'}">${temSubstituicao ? '−' : ''}${totalLinhasSubstituidas.toLocaleString('pt-BR')}</div>
           </div>
         </div>
 
@@ -854,25 +854,25 @@ App.telas['importar-qvis'] = function () {
           <div class="impq-detalhe-divisor"></div>
           <div class="impq-detalhe-linha">
             <span class="impq-detalhe-lbl">Total PRODUZIDO</span>
-            <span class="impq-detalhe-val mono" style="color:#0A7A5A">R$ ${formatarBR(dados.produzido)}</span>
+            <span class="impq-detalhe-val mono" style="color:#4f8a5b">R$ ${formatarBR(dados.produzido)}</span>
           </div>
           <div class="impq-detalhe-linha">
             <span class="impq-detalhe-lbl">Total RECEBIDO</span>
-            <span class="impq-detalhe-val mono" style="color:#0A7A5A">R$ ${formatarBR(dados.recebido)}</span>
+            <span class="impq-detalhe-val mono" style="color:#4f8a5b">R$ ${formatarBR(dados.recebido)}</span>
           </div>
           <div class="impq-detalhe-linha">
             <span class="impq-detalhe-lbl">
               Adm. c/ PRODUZIDO zero
               ${dados.adm_prod_zero > 0 ? `<button class="impq-extrair-mini" data-extrair-zero="${dados.mes_pagamento}|${dados.origem}|PRODUZIDO" title="Exportar admissões com PRODUZIDO=0">📥</button>` : ''}
             </span>
-            <span class="impq-detalhe-val mono" style="color:${dados.adm_prod_zero > 0 ? '#9B3A3A' : 'var(--ink)'}">${dados.adm_prod_zero.toLocaleString('pt-BR')}</span>
+            <span class="impq-detalhe-val mono" style="color:${dados.adm_prod_zero > 0 ? '#a15646' : 'var(--ink)'}">${dados.adm_prod_zero.toLocaleString('pt-BR')}</span>
           </div>
           <div class="impq-detalhe-linha">
             <span class="impq-detalhe-lbl">
               Adm. c/ RECEBIDO zero
               ${dados.adm_receb_zero > 0 ? `<button class="impq-extrair-mini" data-extrair-zero="${dados.mes_pagamento}|${dados.origem}|RECEBIDO" title="Exportar admissões com RECEBIDO=0">📥</button>` : ''}
             </span>
-            <span class="impq-detalhe-val mono" style="color:${dados.adm_receb_zero > 0 ? '#143352' : 'var(--ink)'}">${dados.adm_receb_zero.toLocaleString('pt-BR')}</span>
+            <span class="impq-detalhe-val mono" style="color:${dados.adm_receb_zero > 0 ? '#5980a6' : 'var(--ink)'}">${dados.adm_receb_zero.toLocaleString('pt-BR')}</span>
           </div>
           ${dados.arquivo_nome ? `
             <div class="impq-detalhe-linha impq-detalhe-arquivo">
@@ -897,7 +897,7 @@ App.telas['importar-qvis'] = function () {
         ${headerCompacto}
         <div class="impq-card-snap-corpo">
           <div class="impq-detalhe-grid">
-            ${renderDetalheOrigem('🏥 CONVÊNIO', '#102d4b', s.conv)}
+            ${renderDetalheOrigem('🏥 CONVÊNIO', '#3a5877', s.conv)}
             ${renderDetalheOrigem('💳 PARTICULAR', '#6B4587', s.part)}
           </div>
           <div class="impq-detalhe-rodape">
@@ -1359,7 +1359,7 @@ App.telas['importar-qvis'] = function () {
   function pedirCodigoRelatorio(arquivoNome, tipo, codigoAtual = '', dataAtual = '') {
     return new Promise((resolve) => {
       const labelOrigem = tipo === 'convenio' ? 'Convênio' : 'Particular';
-      const corOrigem = tipo === 'convenio' ? '#102d4b' : '#6B4587';
+      const corOrigem = tipo === 'convenio' ? '#3a5877' : '#6B4587';
       const isEdicao = !!codigoAtual;
 
       const overlay = document.createElement('div');
@@ -2481,7 +2481,7 @@ App.telas['importar-qvis'] = function () {
 
           ${qtdConv > 0 ? `
             <div class="impq-edit-pgto-campo">
-              <label class="impq-edit-pgto-label" style="color:#102d4b">🏥 Código do relatório — Convênio</label>
+              <label class="impq-edit-pgto-label" style="color:#3a5877">🏥 Código do relatório — Convênio</label>
               <input type="text" id="impq-edit-cod-conv"
                      class="impq-codigo-input mono"
                      value="${escapeAttr(codConvAtual)}"
@@ -2704,7 +2704,7 @@ App.telas['importar-qvis'] = function () {
         .impq-filtro-grid .input { width: 100%; padding: 7px 9px; }
         .impq-filtro-rodape {
           margin-top: 9px; display: flex; align-items: center; gap: 10px;
-          font-size: 12px; color: var(--ink-soft, #5a6879);
+          font-size: 12px; color: var(--ink-soft, #585d62);
         }
         .impq-filtro-on {
           background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important;
@@ -2716,7 +2716,7 @@ App.telas['importar-qvis'] = function () {
           display: inline-block; padding: 1px 7px; border-radius: 999px;
           font-size: 10px; font-weight: 800; letter-spacing: .04em; color: #fff;
         }
-        .impq-f-convenio { background: #102d4b; }
+        .impq-f-convenio { background: #3a5877; }
         .impq-f-particular { background: #6B4587; }
 
         .impq-drops-grid {
@@ -2752,7 +2752,7 @@ App.telas['importar-qvis'] = function () {
           font-size: 12px;
         }
         .impq-drop-remover:hover {
-          background: #FEE; color: #9B3A3A; border-color: #D88;
+          background: #FEE; color: #a15646; border-color: #D88;
         }
 
         /* Botão Exportar dentro do header do card */
@@ -2785,11 +2785,11 @@ App.telas['importar-qvis'] = function () {
         }
         .impq-drop-zona:hover {
           border-color: var(--accent);
-          background: rgba(42, 90, 140, 0.05);
+          background: rgba(63, 100, 137, 0.05);
         }
         .impq-drop-zona.impq-drag-hover {
           border-color: var(--primary);
-          background: rgba(20, 51, 82, 0.06);
+          background: rgba(89, 128, 166, 0.06);
         }
         .impq-drop-area { text-align: center; padding: 10px; }
         .impq-drop-icone-grande { font-size: 24px; margin-bottom: 6px; opacity: 0.55; }
@@ -2824,30 +2824,30 @@ App.telas['importar-qvis'] = function () {
         .impq-problemas {
           margin-top: 8px;
           padding: 6px 10px;
-          background: #e4ecf4; border: 1px solid #9FE6C9;
+          background: #eef2f6; border: 1px solid #cfe3d1;
           border-radius: 6px;
-          font-size: 10px; color: #143352;
+          font-size: 10px; color: #5980a6;
           display: flex; align-items: center; justify-content: space-between;
         }
         .impq-ver-problemas {
-          background: transparent; border: 1px solid #143352;
-          color: #143352; padding: 1px 8px; border-radius: 4px;
+          background: transparent; border: 1px solid #5980a6;
+          color: #5980a6; padding: 1px 8px; border-radius: 4px;
           font-size: 10px; cursor: pointer;
         }
-        .impq-ver-problemas:hover { background: #143352; color: white; }
+        .impq-ver-problemas:hover { background: #5980a6; color: white; }
 
         /* Preview */
         .impq-preview {
-          background: linear-gradient(135deg, #143352, #0b2340);
-          color: #f6f4ef;
+          background: linear-gradient(135deg, #5980a6, #3a5877);
+          color: #fafbfc;
           border-radius: 12px; padding: 18px 22px;
           margin-bottom: 18px;
-          box-shadow: 0 4px 12px rgba(20, 51, 82,.2);
+          box-shadow: 0 4px 12px rgba(89, 128, 166,.2);
         }
         .impq-preview-titulo {
           font-size: 12px; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.06em;
-          color: #2a5a8c;
+          color: #3f6489;
           display: flex; align-items: center; gap: 8px;
           margin-bottom: 14px;
         }
@@ -2858,16 +2858,16 @@ App.telas['importar-qvis'] = function () {
         @media (max-width: 700px) { .impq-preview-grid { grid-template-columns: repeat(2, 1fr); } }
         .impq-preview-item {}
         .impq-preview-lbl {
-          font-size: 9px; color: #c5d5e5; font-weight: 700;
+          font-size: 9px; color: #e4eaf1; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.05em;
           margin-bottom: 4px;
         }
         .impq-preview-val {
-          font-size: 18px; font-weight: 800; color: #9FE6C9;
+          font-size: 18px; font-weight: 800; color: #cfe3d1;
         }
         .impq-aviso {
           background: rgba(232, 201, 122, 0.15);
-          border-left: 3px solid #9FE6C9;
+          border-left: 3px solid #cfe3d1;
           padding: 10px 14px; border-radius: 6px;
           font-size: 12px; line-height: 1.55;
           margin-bottom: 14px;
@@ -2876,8 +2876,8 @@ App.telas['importar-qvis'] = function () {
           display: flex; gap: 8px; justify-content: flex-end;
         }
         .impq-acoes .btn-pequeno {
-          background: transparent; color: #f6f4ef;
-          border: 1px solid #c5d5e5;
+          background: transparent; color: #fafbfc;
+          border: 1px solid #e4eaf1;
         }
         .impq-acoes .btn-pequeno:hover {
           background: rgba(255,255,255,0.1);
@@ -2983,9 +2983,9 @@ App.telas['importar-qvis'] = function () {
           background: var(--bg-elevated);
           transition: background 150ms;
         }
-        .impq-card-snap-header:hover { background: rgba(42, 90, 140, 0.06); }
+        .impq-card-snap-header:hover { background: rgba(63, 100, 137, 0.06); }
         .impq-card-snap-expandido .impq-card-snap-header {
-          background: linear-gradient(135deg, #e9edf1, #e4ecf4);
+          background: linear-gradient(135deg, #f2f3f5, #eef2f6);
           border-bottom: 1px solid var(--border);
         }
         .impq-card-snap-seta {
@@ -3088,11 +3088,11 @@ App.telas['importar-qvis'] = function () {
         .impq-status-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
 
         .btn-perigo {
-          background: white; color: #9B3A3A;
+          background: white; color: #a15646;
           border: 1px solid #D88;
         }
         .btn-perigo:hover:not(:disabled) {
-          background: #9B3A3A; color: white;
+          background: #a15646; color: white;
         }
         .btn-perigo:disabled {
           opacity: 0.4; cursor: not-allowed;
@@ -3101,25 +3101,25 @@ App.telas['importar-qvis'] = function () {
         /* Seletor de mês de pagamento na área de arquivo */
         .impq-mes-pgto {
           margin-top: 12px; padding: 10px 12px;
-          background: linear-gradient(135deg, #e9edf1, #e4ecf4);
-          border: 1px solid #9FE6C9;
-          border-left: 3px solid #2a5a8c;
+          background: linear-gradient(135deg, #f2f3f5, #eef2f6);
+          border: 1px solid #cfe3d1;
+          border-left: 3px solid #3f6489;
           border-radius: 6px;
         }
         .impq-mes-pgto-label {
           font-size: 10px; font-weight: 700;
-          color: #102d4b; letter-spacing: 0.05em;
+          color: #3a5877; letter-spacing: 0.05em;
           text-transform: uppercase; margin-bottom: 6px;
         }
         .impq-mes-pgto-select {
           width: 100%; padding: 6px 8px;
-          border: 1px solid #9FE6C9; border-radius: 4px;
+          border: 1px solid #cfe3d1; border-radius: 4px;
           font-size: 13px; font-weight: 700;
           background: white; color: var(--primary);
           cursor: pointer;
         }
         .impq-mes-pgto-hint {
-          font-size: 10px; color: #143352;
+          font-size: 10px; color: #5980a6;
           margin-top: 4px; font-style: italic;
         }
 
@@ -3175,7 +3175,7 @@ App.telas['importar-qvis'] = function () {
           border: 1px solid var(--border); border-radius: 6px;
           cursor: pointer;
         }
-        .impq-comp-linha:hover { background: rgba(42, 90, 140, 0.08); }
+        .impq-comp-linha:hover { background: rgba(63, 100, 137, 0.08); }
         .impq-comp-linha input[type="radio"] { cursor: pointer; }
         .impq-comp-nome {
           flex: 1; font-weight: 700;
@@ -3188,14 +3188,14 @@ App.telas['importar-qvis'] = function () {
           font-size: 10px; padding: 2px 8px;
           border-radius: 4px; font-weight: 700;
         }
-        .impq-tag-conv { background: #e4ecf4; color: #143352; }
+        .impq-tag-conv { background: #eef2f6; color: #5980a6; }
         .impq-tag-part { background: #ECE5F2; color: #6B4587; }
         .impq-tag-conv-sem-cod, .impq-tag-part-sem-cod {
           font-size: 10px; padding: 2px 8px;
           border-radius: 4px; font-weight: 700;
-          background: #e9edf1;
-          border: 1px dashed #9FE6C9;
-          color: #143352;
+          background: #f2f3f5;
+          border: 1px dashed #cfe3d1;
+          color: #5980a6;
         }
         .impq-tag-conv-sem-cod em, .impq-tag-part-sem-cod em {
           font-style: italic; font-weight: 500;
@@ -3235,7 +3235,7 @@ App.telas['importar-qvis'] = function () {
           font-size: 11px;
           color: var(--accent);
           font-weight: 700;
-          background: rgba(42, 90, 140, 0.12);
+          background: rgba(63, 100, 137, 0.12);
           padding: 2px 8px;
           border-radius: 10px;
         }
@@ -3336,7 +3336,7 @@ App.telas['importar-qvis'] = function () {
         }
         .impq-codigo-input:focus {
           border-color: var(--primary);
-          box-shadow: 0 0 0 3px rgba(20, 51, 82, 0.1);
+          box-shadow: 0 0 0 3px rgba(89, 128, 166, 0.1);
         }
         .impq-codigo-hint {
           font-size: 10px;
@@ -3349,14 +3349,14 @@ App.telas['importar-qvis'] = function () {
           font-family: var(--font-mono);
         }
         .impq-tag-adm {
-          background: #e9edf1; color: #102d4b;
+          background: #f2f3f5; color: #3a5877;
           font-family: var(--font-mono);
         }
         .impq-aviso-modal {
           margin-top: 14px;
-          background: #e4ecf4; border-left: 3px solid #9FE6C9;
+          background: #eef2f6; border-left: 3px solid #cfe3d1;
           padding: 10px 14px; border-radius: 6px;
-          font-size: 12px; color: #102d4b; line-height: 1.5;
+          font-size: 12px; color: #3a5877; line-height: 1.5;
         }
 
         /* Lista detalhada de competências no Status */
@@ -3413,11 +3413,11 @@ App.telas['importar-qvis'] = function () {
           display: flex; align-items: center; gap: 6px;
         }
         .impq-pgto-ok {
-          padding: 2px 8px; background: #e4ecf4; color: #143352;
+          padding: 2px 8px; background: #eef2f6; color: #5980a6;
           border-radius: 4px; font-size: 11px; font-weight: 700;
         }
         .impq-pgto-vazio {
-          padding: 2px 8px; background: #e4ecf4; color: #143352;
+          padding: 2px 8px; background: #eef2f6; color: #5980a6;
           border-radius: 4px; font-size: 11px; font-weight: 700;
           font-style: italic;
         }
@@ -3435,7 +3435,7 @@ App.telas['importar-qvis'] = function () {
         .impq-comp-master {
           display: flex; justify-content: space-between; align-items: center;
           padding: 8px 12px;
-          background: rgba(20, 51, 82, 0.04);
+          background: rgba(89, 128, 166, 0.04);
           border: 1px solid var(--border);
           border-radius: 8px;
           margin-bottom: 10px;
@@ -3454,11 +3454,11 @@ App.telas['importar-qvis'] = function () {
         }
         .impq-resumo-exp {
           margin-top: 12px; padding: 10px 14px;
-          background: linear-gradient(135deg, #143352, #0b2340);
-          color: #f6f4ef;
+          background: linear-gradient(135deg, #5980a6, #3a5877);
+          color: #fafbfc;
           border-radius: 8px; font-size: 13px;
         }
-        .impq-resumo-exp strong { color: #9FE6C9; }
+        .impq-resumo-exp strong { color: #cfe3d1; }
 
         /* Modal editar mês de pagamento */
         .impq-edit-pgto-info {
@@ -3522,7 +3522,7 @@ App.telas['importar-qvis'] = function () {
         .impq-snap-mes {
           font-weight: 700;
           color: var(--accent);
-          background: rgba(42, 90, 140, 0.1);
+          background: rgba(63, 100, 137, 0.1);
           padding: 4px 10px;
           border-radius: 6px;
           text-align: center;
@@ -3532,11 +3532,11 @@ App.telas['importar-qvis'] = function () {
           display: flex; gap: 4px; justify-content: flex-end;
         }
         .impq-btn-apagar {
-          color: #9B3A3A !important;
+          color: #a15646 !important;
         }
         .impq-btn-apagar:hover {
-          background: #9B3A3A !important; color: white !important;
-          border-color: #9B3A3A !important;
+          background: #a15646 !important; color: white !important;
+          border-color: #a15646 !important;
         }
 
         /* Detalhes dos snapshots no preview */
@@ -3562,16 +3562,16 @@ App.telas['importar-qvis'] = function () {
           background: rgba(236, 229, 242, 0.15); color: #DAC8E4;
         }
         .impq-snap-substituir {
-          color: #9FE6C9; font-weight: 600;
+          color: #cfe3d1; font-weight: 600;
         }
         .impq-snap-novo {
           color: #C8F5C0; font-weight: 600;
         }
         .impq-snap-arrow {
-          color: #c5d5e5; font-weight: 700;
+          color: #e4eaf1; font-weight: 700;
         }
         .impq-aviso-erro {
-          background: rgba(155, 58, 58, 0.15) !important;
+          background: rgba(161, 86, 70, 0.15) !important;
           border-left-color: #F5B5B5 !important;
           color: #F5B5B5 !important;
         }
@@ -3593,8 +3593,8 @@ App.telas['importar-qvis'] = function () {
           border-radius: 8px;
           padding: 12px 14px;
         }
-        .impq-secao-ok { background: rgba(31, 132, 76, 0.06); border-left: 3px solid #0A7A5A; }
-        .impq-secao-aviso { background: rgba(232, 201, 122, 0.12); border-left: 3px solid #9FE6C9; }
+        .impq-secao-ok { background: rgba(31, 132, 76, 0.06); border-left: 3px solid #4f8a5b; }
+        .impq-secao-aviso { background: rgba(232, 201, 122, 0.12); border-left: 3px solid #cfe3d1; }
         .impq-secao-novo { background: rgba(107, 69, 135, 0.06); border-left: 3px solid #6B4587; }
         .impq-analise-titulo {
           font-size: 12px; font-weight: 700;
@@ -3621,7 +3621,7 @@ App.telas['importar-qvis'] = function () {
           padding: 3px 9px;
           background: white;
           border: 1px solid #C8E0D2;
-          color: #0A7A5A;
+          color: #4f8a5b;
           border-radius: 4px;
           font-weight: 600;
         }
@@ -3630,7 +3630,7 @@ App.telas['importar-qvis'] = function () {
           padding: 3px 9px;
           background: white;
           border: 1px dashed #D8B870;
-          color: #143352;
+          color: #5980a6;
           border-radius: 4px;
           font-weight: 600;
         }

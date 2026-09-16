@@ -761,7 +761,7 @@ App.telas['desempenho-fellow'] = function () {
           <div class="fel-card-breakdown">
             <div class="fel-bd-item">Fellows: <strong data-ocultavel>${k.fellows}</strong></div>
             <div class="fel-bd-item">Com refeição: <strong data-ocultavel>${k.plantoes_refeicao}</strong></div>
-            ${k.plantoes_neg > 0 ? `<div class="fel-bd-item fel-bd-item-neg"><strong>${k.plantoes_neg}</strong> Sem complemento</div>` : ''}<!-- V967: número + texto em vermelho (era #993556 só no texto, número em #1d4470) -->
+            ${k.plantoes_neg > 0 ? `<div class="fel-bd-item fel-bd-item-neg"><strong>${k.plantoes_neg}</strong> Sem complemento</div>` : ''}<!-- V967: número + texto em vermelho (era #993556 só no texto, número em #46688c) -->
             ${k.plantoes_manual > 0 ? `<div class="fel-bd-item" style="color:#8A6B0F"><strong>${k.plantoes_manual}</strong> manual</div>` : ''}
           </div>
           ${linhaComp(k.linhas, kLM?.linhas, kLY?.linhas)}
@@ -888,7 +888,7 @@ App.telas['desempenho-fellow'] = function () {
         }
         if (c.id === 'refeicao')      return `<td class="num mono" ${attr}>R$ ${fmt(l.refeicao > 0 ? l.refeicao : 0, 2)}</td>`;   /* V735: era "—" quando 0 */
         if (c.id === 'total_repassar') {
-          return `<td class="num mono atlas-rep" ${attr}>R$ ${fmt(tEfetivo, 2)}</td>`;   /* V735 · V962: valor de repasse em #1d4470 */
+          return `<td class="num mono atlas-rep" ${attr}>R$ ${fmt(tEfetivo, 2)}</td>`;   /* V735 · V962: valor de repasse em #46688c */
         }
         return '<td></td>';
       }).join('');
@@ -912,13 +912,13 @@ App.telas['desempenho-fellow'] = function () {
       const sumTotal = linhasFellow.reduce((s, l) => s + totalEfetivo(l), 0);
       const attr = grupoMascarado ? 'data-mascarar data-ocultavel' : 'data-ocultavel';
 
-      /* V735: valores do subtotal em #2a5a8c (rótulo "Subtotal" fica na cor
+      /* V735: valores do subtotal em #3f6489 (rótulo "Subtotal" fica na cor
          padrão); saiu o ícone "↳" */
       const tdsSub = cols.map(c => {
         if (c.id === 'data')           return `<td style="font-weight: 600">Subtotal</td>`;
-        if (c.id === 'qtd_atendim')    return `<td class="num mono" ${attr} style="font-weight: 700; color: #2a5a8c">${sumAtend}</td>`;
-        if (c.id === 'valor_complem')  return `<td class="num mono" ${attr} style="font-weight: 700; color: #2a5a8c">R$ ${fmt(sumComplem, 2)}</td>`;
-        if (c.id === 'refeicao')       return `<td class="num mono" ${attr} style="font-weight: 700; color: #2a5a8c">R$ ${fmt(sumRefeicao, 2)}</td>`;
+        if (c.id === 'qtd_atendim')    return `<td class="num mono" ${attr} style="font-weight: 700; color: #3f6489">${sumAtend}</td>`;
+        if (c.id === 'valor_complem')  return `<td class="num mono" ${attr} style="font-weight: 700; color: #3f6489">R$ ${fmt(sumComplem, 2)}</td>`;
+        if (c.id === 'refeicao')       return `<td class="num mono" ${attr} style="font-weight: 700; color: #3f6489">R$ ${fmt(sumRefeicao, 2)}</td>`;
         if (c.id === 'total_repassar') return `<td class="num mono atlas-rep" ${attr}>R$ ${fmt(sumTotal, 2)}</td>`;   /* V962 */
         return '<td></td>';
       }).join('');
@@ -1826,7 +1826,7 @@ App.telas['desempenho-fellow'] = function () {
   }
 
   /** Matriz Sintética: estrutura da matriz com drilldown aberto (grupos +
-   *  subtotais + Total), TÍTULO em negrito + fundo #1d4470 e linhas de
+   *  subtotais + Total), TÍTULO em negrito + fundo #46688c e linhas de
    *  SUBTOTAL/TOTAL em negrito. V737: UMA ABA POR SUBCONJUNTO. */
   async function exportarSinteticaFellow(subs, cols, nomeArquivo) {
     const wb = new ExcelJS.Workbook();
@@ -1975,7 +1975,7 @@ App.telas['desempenho-fellow'] = function () {
           font-family: inherit; color: var(--ink); width: 100%;
         }
         .fel-menu-item:hover { background: var(--bg-sunken); }
-        .fel-menu-item.ativo { background: #e4ecf4; }
+        .fel-menu-item.ativo { background: #eef2f6; }
         .fel-menu-ico { font-size: 14px; line-height: 1.2; }
         .fel-menu-txt { display: flex; flex-direction: column; gap: 2px; }
         .fel-menu-txt strong { font-size: 12px; font-weight: 700; color: var(--ink); }
@@ -1992,15 +1992,15 @@ App.telas['desempenho-fellow'] = function () {
         .fel-linha-mascarada td { color: var(--ink-faint); opacity: 0.85; }
         .fel-fellow-ofuscado { font-style: italic; color: var(--ink-faint); letter-spacing: 0.02em; }
         .fel-foco-banner {
-          background: linear-gradient(90deg, #e9edf1 0%, #e4ecf4 100%);
-          border: 1px solid #2a5a8c;
+          background: linear-gradient(90deg, #f2f3f5 0%, #eef2f6 100%);
+          border: 1px solid #3f6489;
           border-radius: 8px;
           padding: 8px 14px;
           margin-bottom: 8px;
           display: flex; justify-content: space-between; align-items: center;
           gap: 12px; font-size: 12px; color: #4B3814;
         }
-        .fel-foco-banner strong { color: #102d4b; }
+        .fel-foco-banner strong { color: #3a5877; }
 
         /* V732: virou o CONTÊINER da peça 20C (.fel-sb) + botão "✕ Limpar" —
            os selects/combo antigos saíram junto com o grid de controles */
@@ -2028,13 +2028,13 @@ App.telas['desempenho-fellow'] = function () {
           display: flex; align-items: stretch;
           padding: 6px;
           background: #fff;
-          border: 1px solid #e4ecf4;
+          border: 1px solid #eef2f6;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+          box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
           flex-wrap: wrap;
         }
         .fel-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-        .fel-sb-celwrap:not(:last-child) .fel-sb-cel { border-right: 1px solid #f0f4f8; }
+        .fel-sb-celwrap:not(:last-child) .fel-sb-cel { border-right: 1px solid #f7f8fa; }
         .fel-sb-cel {
           flex: 1; min-width: 0;
           display: flex; align-items: center; gap: 9px;
@@ -2043,69 +2043,69 @@ App.telas['desempenho-fellow'] = function () {
           font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .fel-sb-cel:hover, .fel-sb-cel.ativo, .fel-sb-cel.aberta { background: #f6f4ef; }
-        .fel-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+        .fel-sb-cel:hover, .fel-sb-cel.ativo, .fel-sb-cel.aberta { background: #fafbfc; }
+        .fel-sb-cel:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
         .fel-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f5f9; color: #5a6879;
+          background: #f0f5f9; color: #585d62;
         }
-        .fel-sb-cel.ativo .fel-sb-tile, .fel-sb-cel.aberta .fel-sb-tile { background: #e4ecf4; color: #1d4470; }
+        .fel-sb-cel.ativo .fel-sb-tile, .fel-sb-cel.aberta .fel-sb-tile { background: #eef2f6; color: #46688c; }
         .fel-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
         .fel-sb-rot {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .09em; color: #5a6879; white-space: nowrap;
+          letter-spacing: .09em; color: #585d62; white-space: nowrap;
         }
         .fel-sb-val {
-          font-size: 13px; font-weight: 500; color: #5a6879;
+          font-size: 13px; font-weight: 500; color: #585d62;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .fel-sb-cel.ativo .fel-sb-val { font-weight: 700; color: #12304f; }
-        .fel-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .fel-sb-cel.ativo .fel-sb-val { font-weight: 700; color: #3a5877; }
+        .fel-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .fel-sb-cel.aberta .fel-sb-chev { transform: rotate(180deg); }
 
         /* painel ancorado na célula, por cima dos cards */
         .fel-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 340px;
-          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
+          background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42);
           overflow: hidden;
         }
         .fel-sb-buscabox {
           display: flex; align-items: center; gap: 8px;
-          padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
+          padding: 11px 12px 10px; border-bottom: 1px solid #f7f8fa;
         }
         .fel-sb-buscabox .fel-sb-busca-ic { color: #6b7d8e; display: flex; }
         .fel-sb-busca {
-          flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
-          background: #f6f4ef; padding: 0 10px; font-size: 13px;
-          font-family: inherit; color: #12304f; outline: none;
+          flex: 1; height: 30px; border: 1px solid #eef0f2; border-radius: 8px;
+          background: #fafbfc; padding: 0 10px; font-size: 13px;
+          font-family: inherit; color: #3a5877; outline: none;
         }
-        .fel-sb-busca::placeholder { color: #96a2b1; }
-        .fel-sb-busca:focus { border-color: #2a5a8c; }
+        .fel-sb-busca::placeholder { color: #8a9096; }
+        .fel-sb-busca:focus { border-color: #3f6489; }
         .fel-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
         .fel-sb-lista::-webkit-scrollbar { width: 8px; }
-        .fel-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
-        .fel-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+        .fel-sb-lista::-webkit-scrollbar-track { background: #f7f8fa; }
+        .fel-sb-lista::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
         .fel-sb-it {
           display: flex; align-items: center; gap: 10px;
           height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-          font-size: 13px; color: #12304f;
+          font-size: 13px; color: #3a5877;
         }
-        .fel-sb-it:hover, .fel-sb-it.foco { background: #f0f4f8; }
-        .fel-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+        .fel-sb-it:hover, .fel-sb-it.foco { background: #f7f8fa; }
+        .fel-sb-it.sel { background: #f7f8fa; font-weight: 700; }
         .fel-sb-it-todos { font-weight: 700; }
         .fel-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .fel-sb-ck { color: #1d4470; display: flex; }
+        .fel-sb-ck { color: #46688c; display: flex; }
         .fel-sb-chip {
           width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f4f8; color: #1d4470; font-size: 9.5px; font-weight: 700;
+          background: #f7f8fa; color: #46688c; font-size: 9.5px; font-weight: 700;
         }
         .fel-sb-rodape {
-          padding: 7px 12px; border-top: 1px solid #f0f4f8;
-          font-size: 10.5px; font-weight: 600; color: #96a2b1;
+          padding: 7px 12px; border-top: 1px solid #f7f8fa;
+          font-size: 10.5px; font-weight: 600; color: #8a9096;
         }
         @media (max-width: 1280px) { .fel-sb-celwrap { flex-basis: 32%; } }
         @media (max-width: 900px)  { .fel-sb-celwrap { flex-basis: 48%; } }
@@ -2115,35 +2115,35 @@ App.telas['desempenho-fellow'] = function () {
         @media (max-width: 1100px) { .fel-cards-grid { grid-template-columns: repeat(2, 1fr); } }
         .fel-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; position: relative; overflow: hidden; }
         .fel-card-faixa { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
-        .fel-card-verde   { background: linear-gradient(180deg, #e4ecf4 0%, #EDF5F0 100%); }
-        .fel-card-verde .fel-card-faixa { background: #102d4b; }
+        .fel-card-verde   { background: linear-gradient(180deg, #eef2f6 0%, #EDF5F0 100%); }
+        .fel-card-verde .fel-card-faixa { background: #3a5877; }
         .fel-card-roxo    { background: linear-gradient(180deg, #EEEAF6 0%, #F5F2FA 100%); }
         .fel-card-roxo .fel-card-faixa { background: #6B4587; }
         .fel-card-bege    { background: linear-gradient(180deg, #F2E8D4 0%, #F8F0DD 100%); }
-        .fel-card-bege .fel-card-faixa { background: #143352; }
-        .fel-card-destaque { background: #102d4b; color: #5a6879; }
-        .fel-card-destaque .fel-card-titulo { color: #5a6879; }
-        .fel-card-destaque .fel-card-valor { color: #143352; }
-        .fel-card-destaque .fel-card-sub { color: #5a6879; }
-        .fel-card-destaque .fel-card-sub span { color: #5a6879; }
+        .fel-card-bege .fel-card-faixa { background: #5980a6; }
+        .fel-card-destaque { background: #3a5877; color: #585d62; }
+        .fel-card-destaque .fel-card-titulo { color: #585d62; }
+        .fel-card-destaque .fel-card-valor { color: #5980a6; }
+        .fel-card-destaque .fel-card-sub { color: #585d62; }
+        .fel-card-destaque .fel-card-sub span { color: #585d62; }
 
-        .fel-card-titulo { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #0f1d2e; margin-bottom: 4px; } /* V849: título dos cards totalizadores */
-        /* V726: título dos cards totalizadores em #0f1d2e — a regra global de
+        .fel-card-titulo { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #1d1f20; margin-bottom: 4px; } /* V849: título dos cards totalizadores */
+        /* V726: título dos cards totalizadores em #1d1f20 — a regra global de
            cards (style.css, V181) pintava #0F6E56 com !important; este
            override vence por vir depois no cascade. */
-        .main .fel-card .fel-card-titulo { color: #0f1d2e !important; }
+        .main .fel-card .fel-card-titulo { color: #1d1f20 !important; }
         .fel-card-valor { font-size: 24px; font-weight: 800; line-height: 1.1; color: var(--primary); }
         .fel-card-breakdown { margin-top: 6px; font-size: 11px; color: var(--ink-soft); line-height: 1.5; }
-        /* V735: valores de subtotais/quantidades dos breakdowns em #1d4470
+        /* V735: valores de subtotais/quantidades dos breakdowns em #46688c
            (os "vs LM"/"vs LY" mantêm a condicional verde/vermelho própria) */
-        .fel-bd-item strong { color: #1d4470; font-variant-numeric: tabular-nums; }
+        .fel-bd-item strong { color: #46688c; font-variant-numeric: tabular-nums; }
         /* V967: "N Sem complemento" no card Plantões — número E texto em vermelho */
         /* (.main .fel-card … vence a regra global de style.css que pinta o strong
-           dos breakdowns em #1d4470) */
-        .main .fel-card .fel-bd-item-neg, .main .fel-card .fel-bd-item-neg strong { color: #C0392B !important; }
+           dos breakdowns em #46688c) */
+        .main .fel-card .fel-bd-item-neg, .main .fel-card .fel-bd-item-neg strong { color: #c07a66 !important; }
         .fel-card-sub { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
-        .fel-card-sub strong { color: #1d4470; }
-        .main .fel-card .fel-card-sub span[data-ocultavel] { color: #1d4470; }
+        .fel-card-sub strong { color: #46688c; }
+        .main .fel-card .fel-card-sub span[data-ocultavel] { color: #46688c; }
         .fel-card-comp { font-size: 10px; color: var(--ink-faint); margin-top: 6px; display: flex; gap: 12px; }
         .fel-comp-pos { color: var(--success, #1d9e75); font-weight: 600; }
         .fel-comp-neg { color: var(--danger, #993556); font-weight: 600; }
@@ -2201,23 +2201,23 @@ App.telas['desempenho-fellow'] = function () {
 
         .fel-linha-fds td { background: var(--bg-elevated, #FFFFFF); }
         /* V735: linhas "Sem complemento" (.fel-linha-neg) voltaram ao fundo
-           normal/zebra padrão (saiu o azul #e4ecf4 da V725); as linhas com
-           override manual (.fel-linha-manual) MANTÊM o azul #e4ecf4. */
-        .fel-linha-fds:hover td { background: #e4ecf4 !important; }
-        .fel-linha-manual td { background: #e4ecf4; }
-        .fel-linha-manual.fel-linha-fds td { background: #e4ecf4; }
+           normal/zebra padrão (saiu o azul #eef2f6 da V725); as linhas com
+           override manual (.fel-linha-manual) MANTÊM o azul #eef2f6. */
+        .fel-linha-fds:hover td { background: #eef2f6 !important; }
+        .fel-linha-manual td { background: #eef2f6; }
+        .fel-linha-manual.fel-linha-fds td { background: #eef2f6; }
         .fel-val-neg { color: var(--ink-faint) !important; font-weight: 600; }
         .fel-val-manual { color: #8A6B0F !important; font-weight: 700; }
 
         /* V725: modal "Ajuste de Matriz" (renomear títulos das colunas) */
         .fel-ajm-fundo {
-          position: fixed; inset: 0; background: rgba(15, 29, 46, .45);
+          position: fixed; inset: 0; background: rgba(29, 31, 32, .45);
           display: flex; align-items: center; justify-content: center; z-index: 5000;
         }
         .fel-ajm-box {
           background: var(--bg-elevated, #fff); border-radius: 12px; padding: 20px;
           width: 430px; max-width: calc(100vw - 32px); max-height: 84vh; overflow-y: auto;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64, .42);
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32, .42);
         }
         .fel-ajm-box h4 { margin: 0 0 6px; font-size: 15px; }
         .fel-ajm-box p { margin: 0 0 14px; font-size: 12px; color: var(--ink-soft); }
@@ -2232,7 +2232,7 @@ App.telas['desempenho-fellow'] = function () {
           padding: 0 10px; font-size: 13px; font-family: inherit; color: var(--ink);
           background: var(--bg-raised, #fff); outline: none;
         }
-        .fel-ajm-inp:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 127, 176, .16); }
+        .fel-ajm-inp:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(89, 128, 166, .16); }
         .fel-ajm-acoes { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
 
         /* V737: diálogo de OPÇÕES da extração (separação em abas) */
@@ -2243,17 +2243,17 @@ App.telas['desempenho-fellow'] = function () {
           cursor: pointer; background: white;
         }
         .fel-ext-op:hover { background: var(--bg-sunken); }
-        .fel-ext-op:has(input:checked) { background: #e4ecf4; border-color: #1d4470; }
-        .fel-ext-op input { margin-top: 2px; accent-color: #1d4470; }
+        .fel-ext-op:has(input:checked) { background: #eef2f6; border-color: #46688c; }
+        .fel-ext-op input { margin-top: 2px; accent-color: #46688c; }
         .fel-ext-op span { display: flex; flex-direction: column; gap: 1px; }
         .fel-ext-op strong { font-size: 12px; color: var(--ink); }
         .fel-ext-op small { font-size: 10px; color: var(--ink-soft); }
 
-        /* V735: termo "Sem complemento" em #1d4470 — o seletor com td vence o
+        /* V735: termo "Sem complemento" em #46688c — o seletor com td vence o
            ".fel-tabela td { color: var(--ink) }" (0,1,1) no cascade */
         .fel-sem-compl, .fel-tabela td.fel-sem-compl {
           font-style: italic;
-          color: #2a5a8c;   /* V965: era #1d4470 (V735: era var(--ink-faint)) */
+          color: #3f6489;   /* V965: era #46688c (V735: era var(--ink-faint)) */
           font-size: 11px;
           font-weight: 500;
         }
@@ -2261,7 +2261,7 @@ App.telas['desempenho-fellow'] = function () {
           display: inline-block;
           padding: 1px 6px;
           margin-left: 4px;
-          background: #2a5a8c;
+          background: #3f6489;
           color: #FFF;
           border-radius: 8px;
           font-size: 9px;
@@ -2287,7 +2287,7 @@ App.telas['desempenho-fellow'] = function () {
           background: white;
           overflow: hidden;
         }
-        .fel-edit-manual-wrap:focus-within { border-color: #2a5a8c; }
+        .fel-edit-manual-wrap:focus-within { border-color: #3f6489; }
         .fel-edit-manual-rs {
           padding: 8px 10px;
           background: var(--bg-sunken);
@@ -2334,15 +2334,15 @@ App.telas['desempenho-fellow'] = function () {
           margin-top: 8px;
           padding: 12px;
           background: var(--primary);
-          color: #e9edf1;
+          color: #f2f3f5;
           border-radius: 8px;
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
         .fel-edit-total-final .fel-edit-total-label { font-size: 12px; font-weight: 600; }
-        .fel-edit-total-final strong { font-size: 18px; color: #2a5a8c; }
-        .fel-edit-total-final strong.fel-val-manual { color: #e9edf1; }
+        .fel-edit-total-final strong { font-size: 18px; color: #3f6489; }
+        .fel-edit-total-final strong.fel-val-manual { color: #f2f3f5; }
         .fel-edit-total-final strong.fel-val-manual::after { content: ' (manual)'; font-size: 10px; opacity: 0.7; }
 
         .fel-grupo-header td {
@@ -2355,31 +2355,31 @@ App.telas['desempenho-fellow'] = function () {
           user-select: none;
         }
         .fel-grupo-header td:hover { background: #F1F4F3 !important; }
-        .fel-grupo-icone { display: inline-block; width: 18px; color: #143352; font-size: 11px; }   /* V735 */
+        .fel-grupo-icone { display: inline-block; width: 18px; color: #5980a6; font-size: 11px; }   /* V735 */
         .fel-grupo-info { font-weight: 400; color: var(--ink-soft); font-size: 11px; margin-left: 10px; }
         /* V736: o botão VOLTA à cor original (accent) — só o SÍMBOLO "+" fica
-           em #143352 (o pedido do V735 era apenas o símbolo; o ➕ emoji não
+           em #5980a6 (o pedido do V735 era apenas o símbolo; o ➕ emoji não
            aceitava cor, virou um span estilizado). */
         .fel-grupo-add {
           margin-left: 10px; padding: 2px 9px; font-family: inherit; font-size: 10.5px; font-weight: 700;
           border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent);
           cursor: pointer; vertical-align: middle; transition: background-color 120ms, color 120ms, border-color 120ms, box-shadow 120ms, transform 120ms, opacity 120ms;
         }
-        .fel-grupo-add .fel-add-mais { color: #143352; font-weight: 800; }
+        .fel-grupo-add .fel-add-mais { color: #5980a6; font-weight: 800; }
         .fel-grupo-add:hover { background: var(--accent); color: #fff; }
         .fel-grupo-add:hover .fel-add-mais { color: #fff; }
         .fel-grupo-info strong { color: var(--accent); font-weight: 700; }
 
         .fel-subtotal td {
-          background: #e4ecf4;   /* V735: era #f6f4ef */
+          background: #eef2f6;   /* V735: era #fafbfc */
           font-size: 11px;
           padding: 6px 10px;
           border-bottom: 2px solid var(--border);
         }
 
         .fel-total td {
-          background: #102d4b;
-          color: #e9edf1;
+          background: #3a5877;
+          color: #f2f3f5;
           padding: 10px 14px;
         }
 

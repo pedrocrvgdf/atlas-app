@@ -22,7 +22,7 @@
 App.telas['desempenho-lio'] = function () {
   console.log('%c[LIO v80]%c Filtros em GRID com gap 24px forçado',
     'background:#C24A1F;color:white;padding:3px 8px;border-radius:3px;font-weight:bold;font-size:13px',
-    'color:#143352;font-weight:bold');
+    'color:#5980a6;font-weight:bold');
 
   const MESES_EXTENSO = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                          'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -3856,7 +3856,7 @@ App.telas['desempenho-lio'] = function () {
         ` : `
           <td class="num mono"><strong>R$ ${fmt(totalValor)}</strong></td>
         `}
-        ${cfg.ocultarRepasse ? '' : `<td class="num mono atlas-rep"><strong>R$ ${fmt(totalRepasse)}</strong></td>`}<!-- V965: total de Repasse em #2a5a8c -->
+        ${cfg.ocultarRepasse ? '' : `<td class="num mono atlas-rep"><strong>R$ ${fmt(totalRepasse)}</strong></td>`}<!-- V965: total de Repasse em #3f6489 -->
       </tr>
     `;
   }
@@ -5605,7 +5605,7 @@ App.telas['desempenho-lio'] = function () {
         border-radius: 50%;
         background: var(--bg-elevated);
         border: 1px solid var(--border);
-        color: #2a5a8c;
+        color: #3f6489;
         font-size: 15px;
         font-weight: 700;
         cursor: pointer;
@@ -5613,19 +5613,19 @@ App.telas['desempenho-lio'] = function () {
         align-items: center; justify-content: center;
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
         line-height: 1;
-        box-shadow: 0 1px 3px rgba(20, 51, 82,0.08);
+        box-shadow: 0 1px 3px rgba(89, 128, 166,0.08);
       }
       .lio-btn-info:hover {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
-        border-color: #2a5a8c;
+        border-color: #3f6489;
         transform: scale(1.08);
-        box-shadow: 0 3px 8px rgba(42, 90, 140,0.30);
+        box-shadow: 0 3px 8px rgba(63, 100, 137,0.30);
       }
       .lio-btn-info-ativo {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
-        border-color: #2a5a8c;
+        border-color: #3f6489;
       }
 
       /* Popover das regras LIO */
@@ -5634,11 +5634,11 @@ App.telas['desempenho-lio'] = function () {
         margin: 8px 0 10px;
         background: var(--bg-elevated);
         border: 1px solid var(--border);
-        border-left: 4px solid #2a5a8c;
+        border-left: 4px solid #3f6489;
         border-radius: 8px;
         padding: 14px 18px 12px;
         max-width: 720px;
-        box-shadow: 0 4px 14px rgba(11, 35, 64,0.10);
+        box-shadow: 0 4px 14px rgba(29, 31, 32,0.10);
         animation: lioPopIn 200ms ease-out;
       }
       @keyframes lioPopIn {
@@ -5653,7 +5653,7 @@ App.telas['desempenho-lio'] = function () {
         font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: #2a5a8c;
+        color: #3f6489;
       }
       .lio-popover-regras-close {
         background: transparent;
@@ -5688,13 +5688,13 @@ App.telas['desempenho-lio'] = function () {
             display: flex; align-items: stretch;
             margin-top: 10px; padding: 6px;
             background: #fff;
-            border: 1px solid #e4ecf4;
+            border: 1px solid #eef2f6;
             border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+            box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
             flex-wrap: wrap;
           }
           .lio-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-          .lio-sb-celwrap:not(:last-child) .lio-sb-cel { border-right: 1px solid #f0f4f8; }
+          .lio-sb-celwrap:not(:last-child) .lio-sb-cel { border-right: 1px solid #f7f8fa; }
           .lio-sb-cel {
             flex: 1; min-width: 0;
             display: flex; align-items: center; gap: 9px;
@@ -5703,69 +5703,69 @@ App.telas['desempenho-lio'] = function () {
             font-family: inherit; text-align: left;
             transition: background-color 120ms;
           }
-          .lio-sb-cel:hover, .lio-sb-cel.ativo, .lio-sb-cel.aberta { background: #f6f4ef; }
-          .lio-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+          .lio-sb-cel:hover, .lio-sb-cel.ativo, .lio-sb-cel.aberta { background: #fafbfc; }
+          .lio-sb-cel:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
           .lio-sb-tile {
             width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center;
-            background: #f0f5f9; color: #5a6879;
+            background: #f0f5f9; color: #585d62;
           }
-          .lio-sb-cel.ativo .lio-sb-tile, .lio-sb-cel.aberta .lio-sb-tile { background: #e4ecf4; color: #1d4470; }
+          .lio-sb-cel.ativo .lio-sb-tile, .lio-sb-cel.aberta .lio-sb-tile { background: #eef2f6; color: #46688c; }
           .lio-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
           .lio-sb-rot {
             font-size: 10px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: .09em; color: #5a6879; white-space: nowrap;
+            letter-spacing: .09em; color: #585d62; white-space: nowrap;
           }
           .lio-sb-val {
-            font-size: 13px; font-weight: 500; color: #5a6879;
+            font-size: 13px; font-weight: 500; color: #585d62;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
           }
-          .lio-sb-cel.ativo .lio-sb-val { font-weight: 700; color: #12304f; }
-          .lio-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+          .lio-sb-cel.ativo .lio-sb-val { font-weight: 700; color: #3a5877; }
+          .lio-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
           .lio-sb-cel.aberta .lio-sb-chev { transform: rotate(180deg); }
 
           /* painel ancorado na célula, por cima dos cards */
           .lio-sb-painel {
             position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
             min-width: 100%; width: max-content; max-width: 340px;
-            background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-            box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
+            background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+            box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42);
             overflow: hidden;
           }
           .lio-sb-buscabox {
             display: flex; align-items: center; gap: 8px;
-            padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
+            padding: 11px 12px 10px; border-bottom: 1px solid #f7f8fa;
           }
           .lio-sb-buscabox .lio-sb-busca-ic { color: #6b7d8e; display: flex; }
           .lio-sb-busca {
-            flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
-            background: #f6f4ef; padding: 0 10px; font-size: 13px;
-            font-family: inherit; color: #12304f; outline: none;
+            flex: 1; height: 30px; border: 1px solid #eef0f2; border-radius: 8px;
+            background: #fafbfc; padding: 0 10px; font-size: 13px;
+            font-family: inherit; color: #3a5877; outline: none;
           }
-          .lio-sb-busca::placeholder { color: #96a2b1; }
-          .lio-sb-busca:focus { border-color: #2a5a8c; }
+          .lio-sb-busca::placeholder { color: #8a9096; }
+          .lio-sb-busca:focus { border-color: #3f6489; }
           .lio-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
           .lio-sb-lista::-webkit-scrollbar { width: 8px; }
-          .lio-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
-          .lio-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+          .lio-sb-lista::-webkit-scrollbar-track { background: #f7f8fa; }
+          .lio-sb-lista::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
           .lio-sb-it {
             display: flex; align-items: center; gap: 10px;
             height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-            font-size: 13px; color: #12304f;
+            font-size: 13px; color: #3a5877;
           }
-          .lio-sb-it:hover, .lio-sb-it.foco { background: #f0f4f8; }
-          .lio-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+          .lio-sb-it:hover, .lio-sb-it.foco { background: #f7f8fa; }
+          .lio-sb-it.sel { background: #f7f8fa; font-weight: 700; }
           .lio-sb-it-todos { font-weight: 700; }
           .lio-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .lio-sb-ck { color: #1d4470; display: flex; }
+          .lio-sb-ck { color: #46688c; display: flex; }
           .lio-sb-chip {
             width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center;
-            background: #f0f4f8; color: #1d4470; font-size: 9.5px; font-weight: 700;
+            background: #f7f8fa; color: #46688c; font-size: 9.5px; font-weight: 700;
           }
           .lio-sb-rodape {
-            padding: 7px 12px; border-top: 1px solid #f0f4f8;
-            font-size: 10.5px; font-weight: 600; color: #96a2b1;
+            padding: 7px 12px; border-top: 1px solid #f7f8fa;
+            font-size: 10.5px; font-weight: 600; color: #8a9096;
           }
           @media (max-width: 1280px) { .lio-sb-celwrap { flex-basis: 32%; } }
           @media (max-width: 900px)  { .lio-sb-celwrap { flex-basis: 48%; } }
@@ -5881,12 +5881,12 @@ App.telas['desempenho-lio'] = function () {
           calc(100% - 7px) 50%;
         background-size: 5px 5px;
         background-repeat: no-repeat;
-        box-shadow: 0 1px 3px rgba(11, 35, 64,0.10), inset 0 1px 0 rgba(255,255,255,0.4);
+        box-shadow: 0 1px 3px rgba(29, 31, 32,0.10), inset 0 1px 0 rgba(255,255,255,0.4);
         cursor: pointer;
         box-sizing: border-box;
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
       }
-      .lio-mes-select:hover { border-color: var(--accent); box-shadow: 0 2px 6px rgba(42, 90, 140,0.18); }
+      .lio-mes-select:hover { border-color: var(--accent); box-shadow: 0 2px 6px rgba(63, 100, 137,0.18); }
       .lio-mes-select:focus { outline: none; border-color: var(--primary); }
       .lio-busca-wrap {
         position: relative; display: flex; align-items: center;
@@ -6008,8 +6008,8 @@ App.telas['desempenho-lio'] = function () {
         width: 64px;
         height: 64px;
         border-radius: 50%;
-        background: rgba(42, 90, 140, 0.12);
-        color: #2a5a8c;
+        background: rgba(63, 100, 137, 0.12);
+        color: #3f6489;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -6017,8 +6017,8 @@ App.telas['desempenho-lio'] = function () {
         font-weight: 700;
       }
       .lio-confirm-icon-perigo {
-        background: rgba(42, 90, 140, 0.18);
-        color: #2a5a8c;
+        background: rgba(63, 100, 137, 0.18);
+        color: #3f6489;
       }
       .lio-confirm-titulo {
         font-size: 17px;
@@ -6041,7 +6041,7 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-confirm-mensagem em {
         font-style: normal;
-        color: #2a5a8c;
+        color: #3f6489;
         font-weight: 600;
       }
       .lio-confirm-acoes {
@@ -6072,29 +6072,29 @@ App.telas['desempenho-lio'] = function () {
         color: var(--ink);
       }
       .lio-confirm-btn-ok {
-        background: #2a5a8c;
-        border-color: #2a5a8c;
+        background: #3f6489;
+        border-color: #3f6489;
         color: white;
       }
       .lio-confirm-btn-ok:hover {
         background: #2BA8A8;
         border-color: #2BA8A8;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(42, 90, 140, 0.35);
+        box-shadow: 0 4px 12px rgba(63, 100, 137, 0.35);
       }
       .lio-confirm-btn-ok:focus-visible,
       .lio-confirm-btn-cancelar:focus-visible {
-        outline: 2px solid rgba(42, 90, 140, 0.5);
+        outline: 2px solid rgba(63, 100, 137, 0.5);
         outline-offset: 2px;
       }
       .lio-confirm-btn-perigo {
-        background: #9B3A3A;
-        border-color: #9B3A3A;
+        background: #a15646;
+        border-color: #a15646;
       }
       .lio-confirm-btn-perigo:hover {
         background: #823232;
         border-color: #823232;
-        box-shadow: 0 4px 12px rgba(155, 58, 58, 0.35);
+        box-shadow: 0 4px 12px rgba(161, 86, 70, 0.35);
       }
       @keyframes lioFadeIn {
         from { opacity: 0; }
@@ -6125,9 +6125,9 @@ App.telas['desempenho-lio'] = function () {
         z-index: 2;
       }
       .lio-ajustes-close-modal:hover {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
-        border-color: #2a5a8c;
+        border-color: #3f6489;
       }
       .lio-ajustes-body {
         flex: 1;
@@ -6158,8 +6158,8 @@ App.telas['desempenho-lio'] = function () {
       .lio-aj-nota-toggle {
         margin-top: 12px;
         padding: 9px 11px;
-        background: rgba(42, 90, 140, 0.06);
-        border: 1px solid rgba(42, 90, 140, 0.20);
+        background: rgba(63, 100, 137, 0.06);
+        border: 1px solid rgba(63, 100, 137, 0.20);
         border-radius: 8px;
         font-size: 11px;
         line-height: 1.5;
@@ -6198,10 +6198,10 @@ App.telas['desempenho-lio'] = function () {
         color: var(--ink-soft);
       }
       .lio-aj-pai-tab-ativa {
-        color: #2a5a8c;
-        background: rgba(42, 90, 140, 0.10);
-        border-color: rgba(42, 90, 140, 0.30);
-        border-bottom-color: #2a5a8c;
+        color: #3f6489;
+        background: rgba(63, 100, 137, 0.10);
+        border-color: rgba(63, 100, 137, 0.30);
+        border-bottom-color: #3f6489;
       }
 
       /* V129: placeholders das seções em construção (legacy, mantido por compat) */
@@ -6305,8 +6305,8 @@ App.telas['desempenho-lio'] = function () {
         -webkit-appearance: none; margin: 0;
       }
       .lio-conv-pct-input:focus {
-        border-color: #2a5a8c;
-        box-shadow: 0 0 0 3px rgba(42, 90, 140, 0.18);
+        border-color: #3f6489;
+        box-shadow: 0 0 0 3px rgba(63, 100, 137, 0.18);
       }
       .lio-conv-pct-suffix {
         position: absolute;
@@ -6329,7 +6329,7 @@ App.telas['desempenho-lio'] = function () {
         color: var(--ink-faint);
       }
       .lio-conv-placeholder strong {
-        color: #2a5a8c;
+        color: #3f6489;
         display: block;
         margin: 6px 0 8px;
         font-size: 13px;
@@ -6378,8 +6378,8 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-conv-busca-input:focus {
         outline: none;
-        border-color: #2a5a8c;
-        box-shadow: 0 0 0 3px rgba(42, 90, 140, 0.15);
+        border-color: #3f6489;
+        box-shadow: 0 0 0 3px rgba(63, 100, 137, 0.15);
       }
       .lio-conv-busca-clear {
         position: absolute;
@@ -6428,15 +6428,15 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-conv-busca-item:last-child { border-bottom: none; }
       .lio-conv-busca-item:hover {
-        background: rgba(42, 90, 140, 0.06);
+        background: rgba(63, 100, 137, 0.06);
       }
       .lio-conv-busca-item-flagado {
-        background: rgba(42, 90, 140, 0.04);
+        background: rgba(63, 100, 137, 0.04);
       }
       .lio-conv-busca-check {
         width: 16px;
         height: 16px;
-        accent-color: #2a5a8c;
+        accent-color: #3f6489;
         cursor: pointer;
         flex-shrink: 0;
       }
@@ -6482,7 +6482,7 @@ App.telas['desempenho-lio'] = function () {
         gap: 6px;
       }
       .lio-conv-flagados-contador {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
         padding: 2px 8px;
         border-radius: 10px;
@@ -6497,12 +6497,12 @@ App.telas['desempenho-lio'] = function () {
       .lio-conv-flagado-card {
         background: var(--bg-sunken);
         border: 1px solid var(--border);
-        border-left: 4px solid var(--success, #0A7A5A);
+        border-left: 4px solid var(--success, #4f8a5b);
         border-radius: 6px;
         overflow: hidden;
       }
       .lio-conv-flagado-sem-tabela {
-        border-left-color: var(--warning, #2a5a8c);
+        border-left-color: var(--warning, #3f6489);
       }
 
       /* V129.7: head do card flagado (clicável quando tem tabela) */
@@ -6518,11 +6518,11 @@ App.telas['desempenho-lio'] = function () {
         cursor: pointer;
       }
       .lio-conv-flagado-head[data-conv-toggle]:hover {
-        background: rgba(42, 90, 140, 0.05);
+        background: rgba(63, 100, 137, 0.05);
       }
       .lio-conv-flagado-seta {
         font-size: 11px;
-        color: #2a5a8c;
+        color: #3f6489;
         width: 14px;
         text-align: center;
         flex-shrink: 0;
@@ -6555,7 +6555,7 @@ App.telas['desempenho-lio'] = function () {
         flex-shrink: 0;
       }
       .lio-conv-flagado-importar {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
         border: none;
         padding: 7px 14px;
@@ -6570,7 +6570,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-conv-flagado-importar:hover {
         background: #2BA8A8;
         transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(42, 90, 140, 0.30);
+        box-shadow: 0 2px 8px rgba(63, 100, 137, 0.30);
       }
 
       /* V129.8: Botão "Excluir importação" — visual de texto/link */
@@ -6590,8 +6590,8 @@ App.telas['desempenho-lio'] = function () {
         border-radius: 4px;
       }
       .lio-conv-flagado-excluir-tabela:hover {
-        color: var(--danger, #9B3A3A);
-        background: rgba(155, 58, 58, 0.08);
+        color: var(--danger, #a15646);
+        background: rgba(161, 86, 70, 0.08);
       }
       .lio-conv-flagado-remover {
         background: transparent;
@@ -6610,7 +6610,7 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-conv-flagado-remover:hover {
         background: #E6B5B5;
-        color: var(--danger, #9B3A3A);
+        color: var(--danger, #a15646);
         border-color: #E6B5B5;
       }
       .lio-conv-flagados-vazio {
@@ -6642,7 +6642,7 @@ App.telas['desempenho-lio'] = function () {
         flex-wrap: wrap;
       }
       .lio-conv-drilldown-stat strong {
-        color: #2a5a8c;
+        color: #3f6489;
         font-weight: 700;
       }
       .lio-conv-drilldown-help {
@@ -6669,17 +6669,17 @@ App.telas['desempenho-lio'] = function () {
         white-space: nowrap;
       }
       .lio-conv-consolidado-btn:hover {
-        border-color: #2a5a8c;
-        color: #2a5a8c;
-        background: rgba(42, 90, 140, 0.06);
+        border-color: #3f6489;
+        color: #3f6489;
+        background: rgba(63, 100, 137, 0.06);
       }
       .lio-conv-consolidado-btn-aberto {
-        background: rgba(42, 90, 140, 0.12);
-        border-color: #2a5a8c;
-        color: #2a5a8c;
+        background: rgba(63, 100, 137, 0.12);
+        border-color: #3f6489;
+        color: #3f6489;
       }
       .lio-conv-consolidado-badge {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
         padding: 1px 7px;
         border-radius: 10px;
@@ -6692,7 +6692,7 @@ App.telas['desempenho-lio'] = function () {
 
       /* V129.11: Painel expansível do consolidado */
       .lio-conv-consolidado-painel {
-        background: linear-gradient(180deg, rgba(42, 90, 140, 0.04) 0%, var(--bg) 100%);
+        background: linear-gradient(180deg, rgba(63, 100, 137, 0.04) 0%, var(--bg) 100%);
         border-bottom: 1px solid var(--border);
         padding: 14px 18px;
       }
@@ -6729,7 +6729,7 @@ App.telas['desempenho-lio'] = function () {
         align-items: center;
         gap: 5px;
         background: white;
-        border: 1px solid rgba(42, 90, 140, 0.30);
+        border: 1px solid rgba(63, 100, 137, 0.30);
         color: var(--ink);
         padding: 4px 4px 4px 10px;
         border-radius: 6px;
@@ -6739,8 +6739,8 @@ App.telas['desempenho-lio'] = function () {
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
       }
       .lio-conv-consolidado-chip:hover {
-        border-color: #2a5a8c;
-        background: rgba(42, 90, 140, 0.05);
+        border-color: #3f6489;
+        background: rgba(63, 100, 137, 0.05);
       }
       .lio-conv-consolidado-chip-texto {
         color: var(--ink);
@@ -6768,8 +6768,8 @@ App.telas['desempenho-lio'] = function () {
         font-weight: 700;
       }
       .lio-conv-consolidado-chip-remover:hover {
-        background: rgba(155, 58, 58, 0.15);
-        color: var(--danger, #9B3A3A);
+        background: rgba(161, 86, 70, 0.15);
+        color: var(--danger, #a15646);
         opacity: 1;
       }
       .lio-conv-tabela-wrap {
@@ -6809,7 +6809,7 @@ App.telas['desempenho-lio'] = function () {
         vertical-align: middle;
       }
       .lio-conv-tabela tbody tr:hover {
-        background: rgba(42, 90, 140, 0.03);
+        background: rgba(63, 100, 137, 0.03);
       }
       .lio-conv-tabela-row-inativo {
         opacity: 0.45;
@@ -6845,20 +6845,20 @@ App.telas['desempenho-lio'] = function () {
         display: inline-flex;
         align-items: center;
         gap: 3px;
-        background: rgba(42, 90, 140, 0.08);
+        background: rgba(63, 100, 137, 0.08);
         color: var(--primary);
         padding: 3px 3px 3px 8px;
         border-radius: 4px;
         font-size: 11px;
         font-weight: 600;
         letter-spacing: 0.02em;
-        border: 1px solid rgba(42, 90, 140, 0.25);
+        border: 1px solid rgba(63, 100, 137, 0.25);
         white-space: nowrap;
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
       }
       .lio-conv-chip-termo:hover {
-        background: rgba(42, 90, 140, 0.15);
-        border-color: rgba(42, 90, 140, 0.45);
+        background: rgba(63, 100, 137, 0.15);
+        border-color: rgba(63, 100, 137, 0.45);
       }
       .lio-conv-chip-texto {
         cursor: text;
@@ -6881,8 +6881,8 @@ App.telas['desempenho-lio'] = function () {
         transition: background-color 120ms, color 120ms, border-color 120ms, box-shadow 120ms, transform 120ms, opacity 120ms;
       }
       .lio-conv-chip-remover:hover {
-        background: rgba(155, 58, 58, 0.15);
-        color: var(--danger, #9B3A3A);
+        background: rgba(161, 86, 70, 0.15);
+        color: var(--danger, #a15646);
         opacity: 1;
       }
       .lio-conv-chip-edit-input {
@@ -6891,7 +6891,7 @@ App.telas['desempenho-lio'] = function () {
         font-weight: 600;
         font-family: inherit;
         background: white;
-        border: 1px solid #2a5a8c;
+        border: 1px solid #3f6489;
         border-radius: 4px;
         outline: none;
         color: var(--ink);
@@ -6899,7 +6899,7 @@ App.telas['desempenho-lio'] = function () {
         letter-spacing: 0.02em;
         min-width: 100px;
         max-width: 180px;
-        box-shadow: 0 0 0 2px rgba(42, 90, 140, 0.15);
+        box-shadow: 0 0 0 2px rgba(63, 100, 137, 0.15);
       }
       .lio-conv-chip-add {
         background: transparent;
@@ -6915,10 +6915,10 @@ App.telas['desempenho-lio'] = function () {
         white-space: nowrap;
       }
       .lio-conv-chip-add:hover {
-        border-color: #2a5a8c;
+        border-color: #3f6489;
         border-style: solid;
-        color: #2a5a8c;
-        background: rgba(42, 90, 140, 0.06);
+        color: #3f6489;
+        background: rgba(63, 100, 137, 0.06);
       }
       .lio-conv-padrao-novo-input {
         padding: 3px 9px;
@@ -6926,14 +6926,14 @@ App.telas['desempenho-lio'] = function () {
         font-weight: 600;
         font-family: inherit;
         background: white;
-        border: 1px solid #2a5a8c;
+        border: 1px solid #3f6489;
         border-radius: 4px;
         outline: none;
         color: var(--ink);
         text-transform: uppercase;
         letter-spacing: 0.02em;
         min-width: 140px;
-        box-shadow: 0 0 0 2px rgba(42, 90, 140, 0.15);
+        box-shadow: 0 0 0 2px rgba(63, 100, 137, 0.15);
       }
       .lio-conv-padrao-novo-input::placeholder {
         color: var(--ink-faint);
@@ -6949,7 +6949,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-conv-opme-check {
         width: 16px;
         height: 16px;
-        accent-color: #2a5a8c;
+        accent-color: #3f6489;
         cursor: pointer;
         vertical-align: middle;
       }
@@ -6971,8 +6971,8 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-conv-opme-valor:focus {
         outline: none;
-        border-color: #2a5a8c;
-        box-shadow: 0 0 0 2px rgba(42, 90, 140, 0.15);
+        border-color: #3f6489;
+        box-shadow: 0 0 0 2px rgba(63, 100, 137, 0.15);
       }      .lio-aj-secao {
         display: flex;
         flex-direction: column;
@@ -7073,7 +7073,7 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-aj-pct-input:focus {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(42, 90, 140, 0.18);
+        box-shadow: 0 0 0 3px rgba(63, 100, 137, 0.18);
       }
       .lio-aj-pct-suffix {
         position: absolute;
@@ -7245,7 +7245,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-aj-todos:hover {
         border-color: var(--accent);
         color: var(--accent);
-        background: rgba(42, 90, 140, 0.06);
+        background: rgba(63, 100, 137, 0.06);
       }
       .lio-aj-todos-global {
         width: 160px;               /* largura FIXA — não preenche grid */
@@ -7332,7 +7332,7 @@ App.telas['desempenho-lio'] = function () {
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
       }
       .lio-kpi:hover {
-        box-shadow: 0 6px 16px rgba(11, 35, 64,0.14);
+        box-shadow: 0 6px 16px rgba(29, 31, 32,0.14);
         transform: translateY(-2px);
       }
       .lio-kpi-faixa {
@@ -7344,7 +7344,7 @@ App.telas['desempenho-lio'] = function () {
         text-transform: uppercase;
         letter-spacing: 0.06em;
         margin-bottom: 4px;
-        color: #0f1d2e; /* V849: título dos cards totalizadores (variante destaque mantém a própria) */
+        color: #1d1f20; /* V849: título dos cards totalizadores (variante destaque mantém a própria) */
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -7379,7 +7379,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-kpi-destaque-num {
         font-size: 15px;
         font-weight: 800;
-        color: #2a5a8c;   /* V965: era #1d4470 (V646: era #C24A1F) */
+        color: #3f6489;   /* V965: era #46688c (V646: era #C24A1F) */
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -7400,20 +7400,20 @@ App.telas['desempenho-lio'] = function () {
       }
       /* V646: os RÓTULOS dos cards recebiam #0F6E56 de uma regra GLOBAL de
          padronização (style.css, com !important). No fichário LIO o pedido de
-         layout é #071a30 — override escopado, injetado depois do style.css. */
-      .main .lio-kpi :is([class*="-label"], [class*="-titulo"], [class*="-lbl"], .label) { color: #071a30 !important; }
-      .lio-kpi-verde .lio-kpi-faixa  { background: #071a30; }   /* V646 (era #143352) */
-      .lio-kpi-verde .lio-kpi-label  { color: #071a30; }
-      .lio-kpi-verde .lio-kpi-valor  { color: #071a30; }
+         layout é #3a5877 — override escopado, injetado depois do style.css. */
+      .main .lio-kpi :is([class*="-label"], [class*="-titulo"], [class*="-lbl"], .label) { color: #3a5877 !important; }
+      .lio-kpi-verde .lio-kpi-faixa  { background: #3a5877; }   /* V646 (era #5980a6) */
+      .lio-kpi-verde .lio-kpi-label  { color: #3a5877; }
+      .lio-kpi-verde .lio-kpi-valor  { color: #3a5877; }
       .lio-kpi-verde .lio-kpi-sub    { color: #2C5953; }
 
       .lio-kpi-bege    {
-        background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%);
-        border-color: #9FE6C9;
+        background: linear-gradient(135deg, #f2f3f5 0%, #eef2f6 100%);
+        border-color: #cfe3d1;
       }
-      .lio-kpi-bege .lio-kpi-faixa  { background: #071a30; }   /* V646 (era #143352) */
-      .lio-kpi-bege .lio-kpi-label  { color: #071a30; }
-      .lio-kpi-bege .lio-kpi-valor  { color: #071a30; }
+      .lio-kpi-bege .lio-kpi-faixa  { background: #3a5877; }   /* V646 (era #5980a6) */
+      .lio-kpi-bege .lio-kpi-label  { color: #3a5877; }
+      .lio-kpi-bege .lio-kpi-valor  { color: #3a5877; }
       .lio-kpi-bege .lio-kpi-sub    { color: #7A5A1A; }
 
       .lio-kpi-roxo    {
@@ -7426,14 +7426,14 @@ App.telas['desempenho-lio'] = function () {
       .lio-kpi-roxo .lio-kpi-sub    { color: #5A3675; }
 
       .lio-kpi-card-destaque {
-        background: linear-gradient(135deg, #143352 0%, #0b2340 100%);
-        border-color: #143352;
-        box-shadow: 0 4px 12px rgba(20, 51, 82,.2);
+        background: linear-gradient(135deg, #5980a6 0%, #3a5877 100%);
+        border-color: #5980a6;
+        box-shadow: 0 4px 12px rgba(89, 128, 166,.2);
       }
       .lio-kpi-card-destaque .lio-kpi-faixa { display: none; }
-      .lio-kpi-card-destaque .lio-kpi-label { color: #5a6879; }
-      .lio-kpi-card-destaque .lio-kpi-valor { color: #0f1d2e; }   /* V709 (era #071a30) */
-      .lio-kpi-card-destaque .lio-kpi-subtot .mono { color: #2a5a8c; font-weight: 700; }   /* V709 · V965: era #1d4470 */
+      .lio-kpi-card-destaque .lio-kpi-label { color: #585d62; }
+      .lio-kpi-card-destaque .lio-kpi-valor { color: #1d1f20; }   /* V709 (era #3a5877) */
+      .lio-kpi-card-destaque .lio-kpi-subtot .mono { color: #3f6489; font-weight: 700; }   /* V709 · V965: era #46688c */
       /* V709: com os 3 subtotais o conteúdo passa dos 100px fixos — o flex
          esmagava rótulo e valor a ~1px. O destaque cresce; nada encolhe. */
       .lio-kpi-card-destaque { height: auto; min-height: 100px; }
@@ -7448,13 +7448,13 @@ App.telas['desempenho-lio'] = function () {
          VG usa entre o valor principal e o detalhamento) */
       .lio-kpi-card-destaque .lio-kpi-subtotais {
         margin-top: 3px; gap: 1px;
-        border-top: 1px solid var(--border, #dfe4ea);
+        border-top: 1px solid var(--border, #eef0f2);
         padding-top: 3px;
         width: 100%;
       }
       .lio-kpi-card-destaque .lio-kpi-subtot { font-size: 10px; line-height: 1.15; }
       .lio-kpi-card-destaque .lio-kpi-subtot-rot { font-size: 8.5px; }
-      .lio-kpi-card-destaque .lio-kpi-sub   { color: #c5d5e5; }
+      .lio-kpi-card-destaque .lio-kpi-sub   { color: #e4eaf1; }
 
       .lio-kpi-alert {
         box-shadow: 0 0 0 2px rgba(255, 213, 79, 0.4) !important;
@@ -7502,13 +7502,13 @@ App.telas['desempenho-lio'] = function () {
         outline: none;
         box-sizing: border-box;
         font-family: inherit;
-        box-shadow: 0 1px 3px rgba(11, 35, 64,0.08), inset 0 1px 0 rgba(255,255,255,0.5);
+        box-shadow: 0 1px 3px rgba(29, 31, 32,0.08), inset 0 1px 0 rgba(255,255,255,0.5);
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
       }
       .lio-filt-input:hover { border-color: var(--accent); }
       .lio-filt-input:focus {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(42, 90, 140,0.18), inset 0 1px 0 rgba(255,255,255,0.5);
+        box-shadow: 0 0 0 3px rgba(63, 100, 137,0.18), inset 0 1px 0 rgba(255,255,255,0.5);
       }
 
       /* ═══════════════════════════════════════════════════════════════════
@@ -7545,7 +7545,7 @@ App.telas['desempenho-lio'] = function () {
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
       }
       .lio-combo-arrow:hover {
-        background: rgba(42, 90, 140,0.12);
+        background: rgba(63, 100, 137,0.12);
       }
       .lio-combo-arrow-aberto {
         transform: translateY(-50%) rotate(180deg);
@@ -7589,8 +7589,8 @@ App.telas['desempenho-lio'] = function () {
         background: var(--bg-elevated);
         border: 1px solid var(--border);
         border-radius: 8px;
-        box-shadow: 0 10px 28px rgba(11, 35, 64,0.18),
-                    0 2px 6px rgba(11, 35, 64,0.08);
+        box-shadow: 0 10px 28px rgba(29, 31, 32,0.18),
+                    0 2px 6px rgba(29, 31, 32,0.08);
         max-height: 280px;
         overflow-y: auto;
         font-size: 12px;
@@ -7614,12 +7614,12 @@ App.telas['desempenho-lio'] = function () {
         color: var(--primary);
       }
       .lio-combo-opt-selecionado {
-        background: rgba(42, 90, 140, 0.14);
+        background: rgba(63, 100, 137, 0.14);
         color: var(--accent);
         font-weight: 700;
       }
       .lio-combo-opt-selecionado:hover {
-        background: rgba(42, 90, 140, 0.22);
+        background: rgba(63, 100, 137, 0.22);
       }
       .lio-combo-vazio {
         padding: 12px 10px;
@@ -7668,7 +7668,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-th-filter-btn {
         border: none;
         background: transparent;
-        color: #e4ecf4;
+        color: #eef2f6;
         cursor: pointer;
         font-size: 11px;
         font-weight: 700;
@@ -7696,7 +7696,7 @@ App.telas['desempenho-lio'] = function () {
         background: var(--bg-elevated);
         border: 1px solid var(--border);
         border-radius: 8px;
-        box-shadow: 0 6px 20px rgba(11, 35, 64, 0.15);
+        box-shadow: 0 6px 20px rgba(29, 31, 32, 0.15);
         z-index: 100;
         display: flex;
         flex-direction: column;
@@ -7833,7 +7833,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-aj-sub-aba-ativa {
         background: var(--bg-sunken);
         color: var(--primary);
-        box-shadow: 0 1px 2px rgba(11, 35, 64,0.08);
+        box-shadow: 0 1px 2px rgba(29, 31, 32,0.08);
       }
       .lio-aj-sub-aba-meta {
         font-size: 9.5px;
@@ -7909,15 +7909,15 @@ App.telas['desempenho-lio'] = function () {
         white-space: nowrap;
       }
       .lio-aj-chip-qtd {
-        background: rgba(20, 51, 82, 0.06);
+        background: rgba(89, 128, 166, 0.06);
         color: var(--primary);
-        border-color: rgba(20, 51, 82, 0.18);
+        border-color: rgba(89, 128, 166, 0.18);
       }
       .lio-aj-chip-qtd strong { font-weight: 800; }
       .lio-aj-chip-valor {
-        background: rgba(42, 90, 140, 0.10);
-        color: #143352;
-        border-color: rgba(42, 90, 140, 0.28);
+        background: rgba(63, 100, 137, 0.10);
+        color: #5980a6;
+        border-color: rgba(63, 100, 137, 0.28);
         font-weight: 700;
       }
       .lio-aj-macro-body {
@@ -7998,7 +7998,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-aj-todos:hover {
         border-color: var(--accent);
         color: var(--accent);
-        background: rgba(42, 90, 140, 0.06);
+        background: rgba(63, 100, 137, 0.06);
       }
       .lio-aj-todos-global {
         width: 160px;
@@ -8048,20 +8048,20 @@ App.telas['desempenho-lio'] = function () {
         min-height: 40px;
         max-width: 260px;
         overflow: hidden;
-        box-shadow: 0 1px 2px rgba(11, 35, 64,0.04);
+        box-shadow: 0 1px 2px rgba(29, 31, 32,0.04);
       }
       .lio-aba:hover:not(.lio-aba-ativa) {
         background: var(--bg-sunken) !important;
         color: var(--ink);
         border-color: var(--accent) !important;
         transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(11, 35, 64,0.08);
+        box-shadow: 0 3px 8px rgba(29, 31, 32,0.08);
       }
       .lio-aba-ativa {
         background: var(--primary) !important;
         color: white !important;
         border-color: var(--primary) !important;
-        box-shadow: 0 3px 10px rgba(20, 51, 82, 0.28), 0 1px 3px rgba(20, 51, 82, 0.20) !important;
+        box-shadow: 0 3px 10px rgba(89, 128, 166, 0.28), 0 1px 3px rgba(89, 128, 166, 0.20) !important;
       }
       /* Remove a faixa dourada do estilo Chrome */
       .lio-aba-ativa::before { display: none; }
@@ -8075,8 +8075,8 @@ App.telas['desempenho-lio'] = function () {
         opacity: 0.7;
         transition: background-color 180ms, color 180ms, border-color 180ms, box-shadow 180ms, transform 180ms, opacity 180ms;
       }
-      .lio-aba-bullet-conv { background: #143352; }
-      .lio-aba-bullet-part { background: #2a5a8c; }
+      .lio-aba-bullet-conv { background: #5980a6; }
+      .lio-aba-bullet-part { background: #3f6489; }
       .lio-aba-bullet-adic { background: #1FA67A; }
       .lio-aba-ativa .lio-aba-bullet {
         background: var(--accent) !important;
@@ -8127,10 +8127,10 @@ App.telas['desempenho-lio'] = function () {
       .lio-adic-consol-sw { position: relative; display: inline-flex; align-items: center; justify-content: center;
         white-space: nowrap; height: 34px; padding: 0 16px; border-radius: 6px;
         font-size: 13px; font-weight: 600; letter-spacing: .01em;
-        background: #0f1d2e; color: #fff; border: none; cursor: pointer; user-select: none;
+        background: #1d1f20; color: #fff; border: none; cursor: pointer; user-select: none;
         transition: background-color .15s ease, box-shadow .15s ease; }
-      .lio-adic-consol-sw:hover { background: rgba(15, 29, 46, .9); }
-      .lio-adic-consol-sw:focus-within { box-shadow: 0 0 0 2px var(--bg-elevated, #fff), 0 0 0 4px var(--accent-vivid, #4f7fb0); }
+      .lio-adic-consol-sw:hover { background: rgba(29, 31, 32, .9); }
+      .lio-adic-consol-sw:focus-within { box-shadow: 0 0 0 2px var(--bg-elevated, #fff), 0 0 0 4px var(--accent-vivid, #5980a6); }
       .lio-adic-consol-sw.ligado { background: #0E7A57; }
       .lio-adic-consol-sw.ligado:hover { background: rgba(14, 122, 87, .9); }
       .lio-adic-consol-sw input { position: absolute; opacity: 0; pointer-events: none; margin: 0; }
@@ -8146,7 +8146,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-adic-add-nome { position: relative; flex: 1 1 320px; }
       .lio-adic-add-nome > input, .lio-adic-add > input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; }
       .lio-adic-add > input { flex: 0 1 200px; width: auto; }
-      .lio-adic-sug { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40; background: var(--bg-raised, #fff); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 22px rgba(11, 35, 64,0.14); max-height: 240px; overflow-y: auto; }
+      .lio-adic-sug { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40; background: var(--bg-raised, #fff); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 22px rgba(29, 31, 32,0.14); max-height: 240px; overflow-y: auto; }
       .lio-adic-sug-item { padding: 7px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
       .lio-adic-sug-item:last-child { border-bottom: none; }
       .lio-adic-sug-item:hover { background: var(--bg-sunken, #eef2f1); }
@@ -8163,7 +8163,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-adic-item-inativa .lio-adic-item-nome { text-decoration: line-through; }
       .lio-adic-mini { border: 1px solid var(--border); background: var(--bg-raised, #fff); border-radius: 7px; padding: 2px 8px; cursor: pointer; font-size: 11.5px; }
       .lio-adic-mini:hover { background: var(--bg-sunken, #eef2f1); }
-      .lio-adic-mini-rm { color: var(--danger, #9B3A3A); }
+      .lio-adic-mini-rm { color: var(--danger, #a15646); }
       .lio-adic-vazio { margin: 0; font-size: 12px; color: var(--ink-faint); }
       .lio-adic-aviso { margin: 0; font-size: 12px; color: #8a5a00; background: #fff6e3; border: 1px solid #ecd9a8; border-radius: 8px; padding: 8px 10px; }
       .lio-adic-resumo { display: flex; gap: 22px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-soft); padding: 4px 2px; }
@@ -8188,9 +8188,9 @@ App.telas['desempenho-lio'] = function () {
 
       /* ── V708 ─────────────────────────────────────────────────────── */
       .lio-adic-aj-hint { font-weight: 400; opacity: .78; }
-      .lio-adic-data-paga { background: #DFF2EA; color: #0A7A5A; border-radius: 99px;
+      .lio-adic-data-paga { background: #e9f1e9; color: #4f8a5b; border-radius: 99px;
         padding: 3px 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-      .lio-adic-data-fundo { position: fixed; inset: 0; background: rgba(15, 29, 46, .45);
+      .lio-adic-data-fundo { position: fixed; inset: 0; background: rgba(29, 31, 32, .45);
         z-index: 320; display: flex; align-items: center; justify-content: center; }
       .lio-adic-data-box { background: var(--bg-elevated); border-radius: 12px; padding: 20px;
         width: min(420px, 92vw); box-shadow: var(--shadow-lg); }
@@ -8213,7 +8213,7 @@ App.telas['desempenho-lio'] = function () {
       /* border-collapse: separate — com collapse, o sticky th perde a borda ao
          rolar; o sublinhado do header vira box-shadow, que acompanha o sticky */
       .lio-adic-tabela { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
-      .lio-adic-tabela th { position: sticky; top: 0; z-index: 5; background: var(--primary, #143352); color: #fff; text-align: left; padding: 9px 10px; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.22); }
+      .lio-adic-tabela th { position: sticky; top: 0; z-index: 5; background: var(--primary, #5980a6); color: #fff; text-align: left; padding: 9px 10px; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.22); }
       .lio-adic-tabela td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; background: var(--bg-raised, #fff); }
       .lio-adic-tabela tbody tr:nth-child(even) td { background: var(--bg-sunken, #f6f9f8); }
       .lio-adic-tabela tbody tr:hover td { background: var(--accent-soft, #e3efeb); }
@@ -8247,13 +8247,13 @@ App.telas['desempenho-lio'] = function () {
         position: relative;
         z-index: 1;
       }
-      .lio-aba-bullet-conv { background: #143352; }
-      .lio-aba-bullet-part { background: #2a5a8c; }
+      .lio-aba-bullet-conv { background: #5980a6; }
+      .lio-aba-bullet-part { background: #3f6489; }
       .lio-aba-bullet-adic { background: #1FA67A; }
       .lio-aba-ativa .lio-aba-bullet {
         opacity: 1;
         transform: scale(1.15);
-        box-shadow: 0 0 0 3px rgba(42, 90, 140, 0.20);
+        box-shadow: 0 0 0 3px rgba(63, 100, 137, 0.20);
       }
 
       .lio-aba-label {
@@ -8278,7 +8278,7 @@ App.telas['desempenho-lio'] = function () {
         background: var(--accent);
         color: white;
         border-color: var(--accent);
-        box-shadow: 0 1px 3px rgba(42, 90, 140, 0.40);
+        box-shadow: 0 1px 3px rgba(63, 100, 137, 0.40);
       }
 
       /* O painel da tabela "conecta" às abas — sem border-top no canto */
@@ -8307,7 +8307,7 @@ App.telas['desempenho-lio'] = function () {
         border-top: none;
         border-radius: 0 0 10px 10px;
         overflow: hidden;
-        box-shadow: 0 4px 14px rgba(11, 35, 64,0.08);
+        box-shadow: 0 4px 14px rgba(29, 31, 32,0.08);
       }
       .lio-painel-head {
         padding: 10px 14px;
@@ -8370,9 +8370,9 @@ App.telas['desempenho-lio'] = function () {
       /* V129.21: Badge "SEM CADASTRO" + toggle do 2,5% indicante */
       .lio-badge-sem-opme {
         display: inline-block;
-        background: rgba(155, 58, 58, 0.10);
-        color: var(--danger, #9B3A3A);
-        border: 1px solid rgba(155, 58, 58, 0.25);
+        background: rgba(161, 86, 70, 0.10);
+        color: var(--danger, #a15646);
+        border: 1px solid rgba(161, 86, 70, 0.25);
         font-size: 9px;
         font-weight: 700;
         padding: 2px 6px;
@@ -8389,7 +8389,7 @@ App.telas['desempenho-lio'] = function () {
         margin-top: 3px;
         font-size: 10px;
         font-weight: 600;
-        color: #1d4470;
+        color: #46688c;
         line-height: 1.25;
         white-space: normal;
       }
@@ -8403,9 +8403,9 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-termo-chip {
         display: inline-block;
-        background: rgba(42, 90, 140, 0.10);
-        color: #1d4470;
-        border: 1px solid rgba(42, 90, 140, 0.25);
+        background: rgba(63, 100, 137, 0.10);
+        color: #46688c;
+        border: 1px solid rgba(63, 100, 137, 0.25);
         border-radius: 3px;
         padding: 1px 5px;
         font-size: 9px;
@@ -8428,12 +8428,12 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-aj-toggle-indicante input {
         width: 16px; height: 16px;
-        accent-color: #2a5a8c;
+        accent-color: #3f6489;
         flex-shrink: 0;
         cursor: pointer;
       }
       .lio-aj-toggle-indicante:hover {
-        border-color: #2a5a8c;
+        border-color: #3f6489;
       }
 
       /* Linha de teste — destaque lilás/roxo pra diferenciar dos dados reais */
@@ -8476,15 +8476,15 @@ App.telas['desempenho-lio'] = function () {
         color: var(--ink-soft);
       }
       .lio-teste-editar:hover { background: #7C5CBF; color: white; border-color: #7C5CBF; }
-      .lio-teste-remover:hover { background: #9B3A3A; color: white; border-color: #9B3A3A; }
+      .lio-teste-remover:hover { background: #a15646; color: white; border-color: #a15646; }
 
       /* V129.26: Duplicidade Convênio × Particular */
       .lio-tabela tbody tr.lio-linha-duplicada > td {
-        background: rgba(42, 90, 140, 0.07) !important;
+        background: rgba(63, 100, 137, 0.07) !important;
       }
       .lio-tabela tbody tr.lio-linha-desabilitada > td {
         opacity: 0.55;
-        background: rgba(155, 58, 58, 0.06) !important;
+        background: rgba(161, 86, 70, 0.06) !important;
       }
       .lio-tabela tbody tr.lio-linha-desabilitada .lio-dup-toggle,
       .lio-tabela tbody tr.lio-linha-desabilitada .lio-dup-badge,
@@ -8502,9 +8502,9 @@ App.telas['desempenho-lio'] = function () {
       .lio-admissao-badges { display: flex; gap: 4px; flex-wrap: wrap; }
       .lio-dup-badge {
         display: inline-block;
-        background: rgba(42, 90, 140, 0.18);
-        color: #143352;
-        border: 1px solid rgba(42, 90, 140, 0.40);
+        background: rgba(63, 100, 137, 0.18);
+        color: #5980a6;
+        border: 1px solid rgba(63, 100, 137, 0.40);
         font-size: 9px;
         font-weight: 800;
         padding: 2px 6px;
@@ -8530,17 +8530,17 @@ App.telas['desempenho-lio'] = function () {
         text-transform: uppercase;
       }
       .lio-dup-toggle-on {
-        background: rgba(10, 122, 90, 0.12);
-        color: var(--success, #0A7A5A);
-        border-color: rgba(10, 122, 90, 0.30);
+        background: rgba(79, 138, 91, 0.12);
+        color: var(--success, #4f8a5b);
+        border-color: rgba(79, 138, 91, 0.30);
       }
-      .lio-dup-toggle-on:hover { background: rgba(10, 122, 90, 0.20); }
+      .lio-dup-toggle-on:hover { background: rgba(79, 138, 91, 0.20); }
       .lio-dup-toggle-off {
-        background: rgba(155, 58, 58, 0.10);
-        color: var(--danger, #9B3A3A);
-        border-color: rgba(155, 58, 58, 0.30);
+        background: rgba(161, 86, 70, 0.10);
+        color: var(--danger, #a15646);
+        border-color: rgba(161, 86, 70, 0.30);
       }
-      .lio-dup-toggle-off:hover { background: rgba(155, 58, 58, 0.18); }
+      .lio-dup-toggle-off:hover { background: rgba(161, 86, 70, 0.18); }
       .lio-dup-info {
         font-size: 9px;
         color: var(--ink-faint);
@@ -8675,9 +8675,9 @@ App.telas['desempenho-lio'] = function () {
         min-width: 300px;
         max-width: 360px;
         background: var(--bg-elevated, #FFF);
-        border: 1px solid var(--border, #dfe4ea);
+        border: 1px solid var(--border, #eef0f2);
         border-radius: 12px;
-        box-shadow: 0 14px 36px rgba(16, 45, 75, 0.22), 0 3px 8px rgba(16, 45, 75, 0.10);
+        box-shadow: 0 14px 36px rgba(29, 31, 32, 0.22), 0 3px 8px rgba(29, 31, 32, 0.10);
         padding: 6px;
         animation: lioPopIn 180ms ease-out;
       }
@@ -8710,7 +8710,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-menu-item-ico {
         width: 30px; height: 30px;
         display: flex; align-items: center; justify-content: center;
-        background: rgba(42, 90, 140,0.10);
+        background: rgba(63, 100, 137,0.10);
         color: var(--accent);
         border-radius: 6px;
         font-size: 14px;
@@ -8734,20 +8734,20 @@ App.telas['desempenho-lio'] = function () {
       .lio-menu-item-aviso strong { color: var(--ink-faint); }
       .lio-menu-item-aviso small { color: #C24A1F; font-weight: 700; }
       .lio-menu-item-verde .lio-menu-item-ico {
-        background: rgba(20, 51, 82, 0.12);
-        color: #143352;
+        background: rgba(89, 128, 166, 0.12);
+        color: #5980a6;
       }
       .lio-menu-item-vermelho .lio-menu-item-ico {
         background: rgba(194, 74, 31, 0.10);
         color: #C24A1F;
       }
       .lio-menu-item-conv .lio-menu-item-ico {
-        background: rgba(20, 51, 82, 0.12);
-        color: #143352;
+        background: rgba(89, 128, 166, 0.12);
+        color: #5980a6;
       }
       .lio-menu-item-part .lio-menu-item-ico {
-        background: rgba(42, 90, 140, 0.14);
-        color: #143352;
+        background: rgba(63, 100, 137, 0.14);
+        color: #5980a6;
       }
       .lio-menu-sep {
         height: 1px;
@@ -8763,7 +8763,7 @@ App.telas['desempenho-lio'] = function () {
         border-radius: 8px;
         padding: 3px;
         gap: 2px;
-        box-shadow: inset 0 1px 2px rgba(11, 35, 64,0.06);
+        box-shadow: inset 0 1px 2px rgba(29, 31, 32,0.06);
       }
       .lio-matriz-opt {
         display: inline-flex;
@@ -8784,7 +8784,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-matriz-opt-ativa {
         background: var(--primary);
         color: white;
-        box-shadow: 0 1px 3px rgba(11, 35, 64,0.20);
+        box-shadow: 0 1px 3px rgba(29, 31, 32,0.20);
       }
       .lio-matriz-opt-ativa:hover { background: var(--primary); color: white; }
       .lio-matriz-opt-ativa.lio-matriz-opt-sem {
@@ -8816,7 +8816,7 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-linha-sem-regra:hover td {
         opacity: 0.8;
-        background: rgba(42, 90, 140,0.04);
+        background: rgba(63, 100, 137,0.04);
       }
       .lio-badge-sem-regra {
         display: inline-block;
@@ -8880,7 +8880,7 @@ App.telas['desempenho-lio'] = function () {
         font-size: 12px;
       }
       .lio-tabela thead th {
-        background: #071a30;
+        background: #3a5877;
         /* V709: mesma ALTURA do cabeçalho da aba ADICIONAL — só o
            dimensionamento mudou (título+origem+filtros+resize continuam) */
         padding: 4px 8px 5px;
@@ -8889,7 +8889,7 @@ App.telas['desempenho-lio'] = function () {
         text-transform: uppercase;
         letter-spacing: 0.05em;
         color: #FFFFFF;
-        border-bottom: 2px solid #0b2340;
+        border-bottom: 2px solid #3a5877;
         position: sticky;
         top: 0;
         z-index: 5;                       /* V709: esteira — linhas passam POR BAIXO */
@@ -8917,7 +8917,7 @@ App.telas['desempenho-lio'] = function () {
         margin-top: 1px;           /* V709: compactado */
         font-size: 9px;
         font-weight: 500;
-        color: #e4ecf4;
+        color: #eef2f6;
         text-transform: none;
         letter-spacing: 0.02em;
         opacity: 1;
@@ -8942,7 +8942,7 @@ App.telas['desempenho-lio'] = function () {
         user-select: none;
       }
       .lio-th-origem-trocavel:hover {
-        background: rgba(79, 127, 176, 0.12);
+        background: rgba(89, 128, 166, 0.12);
         border-color: rgba(255, 255, 255, 0.55);
         color: #FFFFFF;
         font-style: normal;
@@ -8956,7 +8956,7 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-th-origem-trocavel:hover .lio-th-origem-chevron {
         opacity: 1;
-        color: #2a5a8c;
+        color: #3f6489;
       }
       .lio-th-origem-menu {
         position: fixed;
@@ -9005,34 +9005,34 @@ App.telas['desempenho-lio'] = function () {
         font-weight: 500;
       }
       .lio-th-origem-menu-opt:hover {
-        background: rgba(42, 90, 140, 0.10);
-        color: #2a5a8c;
+        background: rgba(63, 100, 137, 0.10);
+        color: #3f6489;
       }
       .lio-th-origem-menu-opt-ativa {
-        background: rgba(42, 90, 140, 0.08);
-        color: #1d4470;
+        background: rgba(63, 100, 137, 0.08);
+        color: #46688c;
         font-weight: 700;
       }
 
       /* V129.16: Coluna T (teste) — fundo diferenciado */
       .lio-th-teste {
-        background: rgba(42, 90, 140, 0.06) !important;
+        background: rgba(63, 100, 137, 0.06) !important;
         text-align: center;
       }
       .lio-th-teste .lio-th-titulo {
         justify-content: center;
-        color: #2a5a8c;
+        color: #3f6489;
         font-size: 14px;
         font-weight: 800;
       }
       .lio-th-teste .lio-th-origem {
         text-align: center;
-        color: #2a5a8c;
+        color: #3f6489;
         opacity: 0.7;
       }
       .lio-col-teste {
         text-align: center;
-        background: rgba(42, 90, 140, 0.03);
+        background: rgba(63, 100, 137, 0.03);
       }
       .lio-t-badge {
         display: inline-block;
@@ -9044,19 +9044,19 @@ App.telas['desempenho-lio'] = function () {
         font-family: var(--font-mono);
       }
       .lio-t-ok {
-        background: rgba(10, 122, 90, 0.12);
-        color: var(--success, #0A7A5A);
-        border: 1px solid rgba(10, 122, 90, 0.25);
+        background: rgba(79, 138, 91, 0.12);
+        color: var(--success, #4f8a5b);
+        border: 1px solid rgba(79, 138, 91, 0.25);
       }
       .lio-t-alias {
-        background: rgba(42, 90, 140, 0.12);
-        color: #1d4470;
-        border: 1px solid rgba(42, 90, 140, 0.30);
+        background: rgba(63, 100, 137, 0.12);
+        color: #46688c;
+        border: 1px solid rgba(63, 100, 137, 0.30);
       }
       .lio-t-fail {
-        background: rgba(155, 58, 58, 0.10);
-        color: var(--danger, #9B3A3A);
-        border: 1px solid rgba(155, 58, 58, 0.25);
+        background: rgba(161, 86, 70, 0.10);
+        color: var(--danger, #a15646);
+        border: 1px solid rgba(161, 86, 70, 0.25);
       }
       .lio-t-neutro {
         background: var(--bg-sunken);
@@ -9093,7 +9093,7 @@ App.telas['desempenho-lio'] = function () {
         white-space: nowrap;
       }
       /* Zebra — V717: mesmas cores da aba ADICIONAL (branco + azul
-         var(--bg-sunken)); antes era um bege rgba(246, 244, 239,.45) e as abas
+         var(--bg-sunken)); antes era um bege rgba(250, 251, 252,.45) e as abas
          ficavam com cores diferentes entre si. Hover idem (accent-soft). */
       .lio-tabela tbody tr:nth-child(even) td {
         background: var(--bg-sunken, #f6f9f8);
@@ -9162,7 +9162,7 @@ App.telas['desempenho-lio'] = function () {
         top: 30%;
         bottom: 30%;
         width: 2px;
-        background: rgba(42, 90, 140, 0.35);
+        background: rgba(63, 100, 137, 0.35);
         border-radius: 2px;
         transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
       }
@@ -9202,14 +9202,14 @@ App.telas['desempenho-lio'] = function () {
         transition: background-color 120ms, color 120ms, border-color 120ms, box-shadow 120ms, transform 120ms, opacity 120ms;
       }
       .lio-btn-expand:hover {
-        background: rgba(42, 90, 140, 0.18);
+        background: rgba(63, 100, 137, 0.18);
         transform: scale(1.2);
       }
       /* Botão ≠ inline na célula de indicante — clicável pra abrir drilldown */
       .lio-btn-expand-inline {
         border: none;
-        background: rgba(42, 90, 140, 0.18);
-        color: #143352;
+        background: rgba(63, 100, 137, 0.18);
+        color: #5980a6;
         cursor: pointer;
         font-size: 10.5px;
         font-weight: 800;
@@ -9282,8 +9282,8 @@ App.telas['desempenho-lio'] = function () {
 
       .lio-badge-pct {
         display: inline-block;
-        background: rgba(42, 90, 140, 0.10);   /* V965: era rgba(20, 51, 82,.08) */
-        color: #2a5a8c;                          /* V965: era var(--primary) */
+        background: rgba(63, 100, 137, 0.10);   /* V965: era rgba(89, 128, 166,.08) */
+        color: #3f6489;                          /* V965: era var(--primary) */
         font-size: 8.5px;
         font-weight: 700;
         letter-spacing: 0.04em;
@@ -9303,7 +9303,7 @@ App.telas['desempenho-lio'] = function () {
       }
 
       /* ── Drilldown (#2) ── */
-      .lio-linha-aberta { background: rgba(42, 90, 140, 0.08) !important; }
+      .lio-linha-aberta { background: rgba(63, 100, 137, 0.08) !important; }
       .lio-linha-drilldown td {
         padding: 0 !important;
         background: var(--bg-sunken);
@@ -9332,7 +9332,7 @@ App.telas['desempenho-lio'] = function () {
         border-radius: 6px;
         padding: 12px 14px;
       }
-      .lio-drill-exec { border-left: 3px solid #143352; }
+      .lio-drill-exec { border-left: 3px solid #5980a6; }
       .lio-drill-indic { border-left: 3px solid #FFD54F; }
       .lio-drill-total { border-left: 3px solid var(--accent); }
       .lio-drill-label {
@@ -9370,7 +9370,7 @@ App.telas['desempenho-lio'] = function () {
       /**
        * V866: a TARJA PRETA era esta linha — o rodapé de totais.
        *
-       * O style.css pinta o tfoot td de #071a30 com !important
+       * O style.css pinta o tfoot td de #3a5877 com !important
        * (V181, linha de totais escura em toda a ferramenta), o que anulava o
        * fundo claro que o LIO já pedia aqui. Como esta matriz rola na
        * horizontal e os totais moram nas ÚLTIMAS colunas, com a rolagem à
@@ -9411,8 +9411,8 @@ App.telas['desempenho-lio'] = function () {
         letter-spacing: 0.05em;
       }
       /* V895: diagnóstico do vazio da aba Convênio */
-      .lio-diag-vazio { border-left: 4px solid #1d4470; }
-      .lio-diag-cadeia { margin-top: 6px; font-size: 11px; color: var(--ink-faint, #5a6879); }
+      .lio-diag-vazio { border-left: 4px solid #46688c; }
+      .lio-diag-cadeia { margin-top: 6px; font-size: 11px; color: var(--ink-faint, #585d62); }
       .lio-vazio {
         padding: 60px 30px;
         text-align: center;
@@ -9439,12 +9439,12 @@ App.telas['desempenho-lio'] = function () {
         border: 1px solid;
       }
       .lio-aviso-flag-vazio {
-        background: linear-gradient(180deg, rgba(42, 90, 140, 0.06) 0%, var(--bg-elevated) 100%);
-        border-color: rgba(42, 90, 140, 0.30);
+        background: linear-gradient(180deg, rgba(63, 100, 137, 0.06) 0%, var(--bg-elevated) 100%);
+        border-color: rgba(63, 100, 137, 0.30);
       }
       .lio-aviso-flag-orfao {
-        background: linear-gradient(180deg, rgba(42, 90, 140, 0.08) 0%, var(--bg-elevated) 100%);
-        border-color: rgba(42, 90, 140, 0.30);
+        background: linear-gradient(180deg, rgba(63, 100, 137, 0.08) 0%, var(--bg-elevated) 100%);
+        border-color: rgba(63, 100, 137, 0.30);
       }
       .lio-aviso-flag-icone {
         font-size: 26px;
@@ -9452,16 +9452,16 @@ App.telas['desempenho-lio'] = function () {
         width: 44px;
         height: 44px;
         border-radius: 50%;
-        background: rgba(42, 90, 140, 0.10);
-        color: #2a5a8c;
+        background: rgba(63, 100, 137, 0.10);
+        color: #3f6489;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
       }
       .lio-aviso-flag-orfao .lio-aviso-flag-icone {
-        background: rgba(42, 90, 140, 0.15);
-        color: #2a5a8c;
+        background: rgba(63, 100, 137, 0.15);
+        color: #3f6489;
       }
       .lio-aviso-flag-corpo {
         flex: 1;
@@ -9490,7 +9490,7 @@ App.telas['desempenho-lio'] = function () {
         border: 1px solid var(--border);
       }
       .lio-aviso-flag-btn {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
         border: none;
         padding: 9px 16px;
@@ -9504,19 +9504,19 @@ App.telas['desempenho-lio'] = function () {
         flex-shrink: 0;
       }
       /* V730: hover SEM troca de cor (pedido do usuário — "Mapear nomes"
-         mantinha #2a5a8c e virava outro tom no mouse) — fica só o leve
+         mantinha #3f6489 e virava outro tom no mouse) — fica só o leve
          levantar + sombra. */
       .lio-aviso-flag-btn:hover {
-        background: #2a5a8c;
+        background: #3f6489;
         transform: translateY(-1px);
-        box-shadow: 0 3px 10px rgba(42, 90, 140, 0.30);
+        box-shadow: 0 3px 10px rgba(63, 100, 137, 0.30);
       }
       .lio-aviso-flag-orfao .lio-aviso-flag-btn {
-        background: #2a5a8c;
+        background: #3f6489;
       }
       .lio-aviso-flag-orfao .lio-aviso-flag-btn:hover {
-        background: #2a5a8c;
-        box-shadow: 0 3px 10px rgba(42, 90, 140, 0.35);
+        background: #3f6489;
+        box-shadow: 0 3px 10px rgba(63, 100, 137, 0.35);
       }
 
       /* ═══════════════════════════════════════════════════════════════════
@@ -9554,7 +9554,7 @@ App.telas['desempenho-lio'] = function () {
         align-items: flex-start;
         justify-content: space-between;
         gap: 12px;
-        background: linear-gradient(180deg, rgba(42, 90, 140, 0.06) 0%, var(--bg-elevated) 100%);
+        background: linear-gradient(180deg, rgba(63, 100, 137, 0.06) 0%, var(--bg-elevated) 100%);
       }
       .lio-map-head-titulo {
         display: flex;
@@ -9567,8 +9567,8 @@ App.telas['desempenho-lio'] = function () {
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: rgba(42, 90, 140, 0.18);
-        color: #2a5a8c;
+        background: rgba(63, 100, 137, 0.18);
+        color: #3f6489;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -9602,9 +9602,9 @@ App.telas['desempenho-lio'] = function () {
         flex-shrink: 0;
       }
       .lio-map-fechar:hover {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
-        border-color: #2a5a8c;
+        border-color: #3f6489;
       }
 
       .lio-map-busca-wrap {
@@ -9635,8 +9635,8 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-map-busca-input:focus {
         outline: none;
-        border-color: #2a5a8c;
-        box-shadow: 0 0 0 3px rgba(42, 90, 140, 0.15);
+        border-color: #3f6489;
+        box-shadow: 0 0 0 3px rgba(63, 100, 137, 0.15);
       }
       .lio-map-busca-clear {
         position: absolute;
@@ -9680,9 +9680,9 @@ App.telas['desempenho-lio'] = function () {
         border-bottom: 1px solid var(--border);
       }
       .lio-map-flagado-tag {
-        background: rgba(42, 90, 140, 0.15);
-        color: #2a5a8c;
-        border: 1px solid rgba(42, 90, 140, 0.35);
+        background: rgba(63, 100, 137, 0.15);
+        color: #3f6489;
+        border: 1px solid rgba(63, 100, 137, 0.35);
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 12px;
@@ -9710,15 +9710,15 @@ App.telas['desempenho-lio'] = function () {
       }
       .lio-map-cand:last-child { border-bottom: none; }
       .lio-map-cand:hover {
-        background: rgba(42, 90, 140, 0.05);
+        background: rgba(63, 100, 137, 0.05);
       }
       .lio-map-cand-marcado {
-        background: rgba(42, 90, 140, 0.06);
+        background: rgba(63, 100, 137, 0.06);
       }
       .lio-map-cand-check {
         width: 16px;
         height: 16px;
-        accent-color: #2a5a8c;
+        accent-color: #3f6489;
         flex-shrink: 0;
       }
       .lio-map-cand-info {
@@ -9761,7 +9761,7 @@ App.telas['desempenho-lio'] = function () {
         font-style: italic;
       }
       .lio-map-footer-fechar {
-        background: #2a5a8c;
+        background: #3f6489;
         color: white;
         border: none;
         padding: 9px 22px;
@@ -9775,7 +9775,7 @@ App.telas['desempenho-lio'] = function () {
       .lio-map-footer-fechar:hover {
         background: #2BA8A8;
         transform: translateY(-1px);
-        box-shadow: 0 3px 10px rgba(42, 90, 140, 0.30);
+        box-shadow: 0 3px 10px rgba(63, 100, 137, 0.30);
       }
     `;
   }

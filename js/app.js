@@ -76,12 +76,12 @@ const App = {
       const ehBanco = !ehMemoria && /fatia|IndexedDB|banco/i.test(String(e.message || ''));
       document.body.innerHTML = `
         <div style="padding: 40px; max-width: 620px; margin: 80px auto; font-family: sans-serif">
-          <h2 style="color: #9B3A3A">Erro ao inicializar</h2>
+          <h2 style="color: #a15646">Erro ao inicializar</h2>
           <p>${e.message}</p>
           <div style="margin: 18px 0; display: flex; gap: 10px; flex-wrap: wrap">
-            <button id="boot-tentar" style="padding: 9px 16px; border: 1px solid #1d4470; background: #1d4470; color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px">↻ Tentar de novo</button>
+            <button id="boot-tentar" style="padding: 9px 16px; border: 1px solid #46688c; background: #46688c; color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px">↻ Tentar de novo</button>
             ${ehBanco && window.Banco && Banco.restaurarDeArquivo ? `
-            <button id="boot-restaurar" style="padding: 9px 16px; border: 1px solid #1d4470; background: #fff; color: #1d4470; border-radius: 8px; cursor: pointer; font-size: 14px">Restaurar da cópia automática (.db)</button>
+            <button id="boot-restaurar" style="padding: 9px 16px; border: 1px solid #46688c; background: #fff; color: #46688c; border-radius: 8px; cursor: pointer; font-size: 14px">Restaurar da cópia automática (.db)</button>
             <input type="file" id="boot-arquivo" accept=".db,.sqlite,.bin,application/octet-stream" style="display:none">` : ''}
           </div>
           <p id="boot-rest-msg" style="font-size: 13px; color: #666"></p>
@@ -407,11 +407,11 @@ const App = {
         if (titulo) {
           h.dataset.banner = '1';
           h.classList.add('titulo-banner');
-          // ATLAS v1.1.1: o modelo do Pedro — retângulo claro arredondado com a
-          // marca redonda, um divisor vertical e o título em caixa alta, nas
-          // cores da logo (fundo azul-100, texto e divisor marinho)
-          h.innerHTML = '<span class="tb-marca" aria-hidden="true"></span>'
-            + '<span class="tb-div" aria-hidden="true"></span><span class="tb-texto"></span>';
+          // ATLAS v1.2 (design 2A): marca do módulo — quadrado 34px arredondado na
+          // cor de acento com o ícone do módulo — ao lado do título em Barlow
+          // Condensed. O mesmo ícone do dock, para o olho ligar os dois.
+          h.innerHTML = '<span class="tb-marca" aria-hidden="true"><i class="ti '
+            + App._iconeDoModulo(App.telaAtual) + '"></i></span><span class="tb-texto"></span>';
           h.querySelector('.tb-texto').textContent = titulo;
           // botão informativo (ⓘ) some e clicar no banner abre o informativo
           const bloco = h.closest('.fic-titulo-wrap, .page-header, .fel-header, .per-header') || h.parentNode;
@@ -518,6 +518,20 @@ const App = {
     { sep: true },
     { tela: 'sistema',           titulo: 'Configurações',     icone: 'ti-settings' },
   ],
+
+  /** Ícone (Tabler) que identifica o módulo — no dock e na marca do título. */
+  _iconeDoModulo(tela) {
+    const d = (this.DOCK_ITENS || []).find(i => i.tela === tela);
+    if (d) return d.icone;
+    const extra = {
+      gerenciais: 'ti-adjustments', 'producao-medica': 'ti-layout-grid', 'controle-notas': 'ti-receipt',
+      consolidacao: 'ti-lock-check', unidades: 'ti-building', backup: 'ti-database-export',
+      administracao: 'ti-settings', 'balanco-retroativo': 'ti-flask',
+    };
+    if (extra[tela]) return extra[tela];
+    if (String(tela || '').startsWith('desempenho-')) return 'ti-chart-bar';
+    return 'ti-bolt';
+  },
 
   _dockMarkup() {
     const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -763,7 +777,7 @@ const App = {
             <h2>${titulos[tela] || tela}</h2>
           </header>
           <div class="card" style="background: #FEE; border-color: #D88; padding: 20px">
-            <h3 style="margin: 0 0 10px; color: #9B3A3A">⚠ Script da tela não carregou</h3>
+            <h3 style="margin: 0 0 10px; color: #a15646">⚠ Script da tela não carregou</h3>
             <p style="font-size: 13px; color: #4A1F1F; margin: 0 0 12px">
               O arquivo JavaScript desta tela <strong>foi carregado pelo navegador mas falhou silenciosamente</strong>
               antes de registrar a tela no app — provavelmente por um erro de sintaxe ou variável indefinida.

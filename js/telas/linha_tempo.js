@@ -28,7 +28,7 @@
   const X0 = 48;            // x do primeiro marco
   // Categorias — cor do alfinete + tint/texto do chip do modal (handoff 9D)
   const CATS = {
-    regra:     { nome: 'Mudança de regra',   cor: '#1d4470', tint: '#f0f4f8', texto: '#143352' },
+    regra:     { nome: 'Mudança de regra',   cor: '#46688c', tint: '#f7f8fa', texto: '#5980a6' },
     entrada:   { nome: 'Entrada de médico',  cor: '#1d8f5f', tint: '#e7f6ee', texto: '#166b48' },
     saida:     { nome: 'Saída de médico',    cor: '#c0563f', tint: '#fbeeea', texto: '#9c3d29' },
     contrato:  { nome: 'Contrato / convênio', cor: '#7a5cc4', tint: '#f0ecfa', texto: '#5b429c' },
@@ -52,7 +52,7 @@
     sino:       { nome: 'Sino',       d: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0' },
   };
   const SINAIS = { alta: 'Alta', baixa: 'Baixa', neutro: 'Neutro' };
-  const SINAL_COR = { alta: '#1d8f5f', baixa: '#c0563f', neutro: '#5a6879' };
+  const SINAL_COR = { alta: '#1d8f5f', baixa: '#c0563f', neutro: '#585d62' };
 
   let _sel = null;      // id do evento selecionado
   let _contId = null;
@@ -686,8 +686,8 @@
     st.id = 'tl-estilos-9d';
     st.textContent = `
       /* V590: faixa em degradê com alfinetes (handoff 9D — Claude Design) */
-      .tl-faixa { background: linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%);
-        border-radius: 14px; box-shadow: 0 1px 2px rgba(20, 51, 82,.05), 0 14px 32px -22px rgba(16, 45, 75,.5);
+      .tl-faixa { background: linear-gradient(90deg, #5980a6 0%, #46688c 34%, #3f6489 68%, #d8e4ef 100%);
+        border-radius: 14px; box-shadow: 0 1px 2px rgba(89, 128, 166,.05), 0 14px 32px -22px rgba(29, 31, 32,.5);
         padding: 14px 18px 10px; display: flex; align-items: center; gap: 18px; margin: 0 0 20px;
         position: relative; }   /* V711: ancoradouro da lupa (canto sup. direito) */
       .tl-fixo { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;
@@ -699,13 +699,13 @@
         padding: 6px 0; line-height: 1.5; }
       .tl-vazio b { color: #fff; }
       .tl-novo { flex-shrink: 0; font: 700 12.5px/1 'Inter Tight', -apple-system, sans-serif;
-        color: #143352; background: #fff; border: none; border-radius: 9px; padding: 9px 14px;
-        cursor: pointer; white-space: nowrap; box-shadow: 0 2px 6px rgba(11, 35, 64,.2);
+        color: #5980a6; background: #fff; border: none; border-radius: 9px; padding: 9px 14px;
+        cursor: pointer; white-space: nowrap; box-shadow: 0 2px 6px rgba(29, 31, 32,.2);
         transition: background-color .12s ease; }
       .tl-novo:hover { background: #eaf7fc; }
       /* V692: pino de evento com sinal ALTA — halo dourado de alerta
          (.tl-marco.tl-marco-alta: especificidade maior que a regra base) */
-      .tl-marco.tl-marco-alta { box-shadow: 0 0 0 3px rgba(184,150,90,.45), 0 2px 8px rgba(11, 35, 64,.3); }
+      .tl-marco.tl-marco-alta { box-shadow: 0 0 0 3px rgba(184,150,90,.45), 0 2px 8px rgba(29, 31, 32,.3); }
       /* V690: lupa BEM pequena acima do "+ Evento" — filtro por mês/ano */
       .tl-acao-col { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
       .tl-lupa { position: absolute; top: 8px; right: 10px; z-index: 6;   /* V711: canto sup. direito da faixa */
@@ -713,28 +713,28 @@
         background: rgba(255,255,255,.22); color: #fff; cursor: pointer;
         display: flex; align-items: center; justify-content: center; transition: background-color .12s ease; }
       .tl-lupa:hover { background: rgba(255,255,255,.4); }
-      .tl-lupa.on { background: #fff; color: #143352; box-shadow: 0 2px 6px rgba(11, 35, 64,.25); }
+      .tl-lupa.on { background: #fff; color: #5980a6; box-shadow: 0 2px 6px rgba(29, 31, 32,.25); }
       .tl-lupa-pop { position: fixed; z-index: 100060; width: 190px; background: #fff;
-        border: 1px solid #dfe4ea; border-radius: 10px; overflow: hidden;
-        box-shadow: 0 14px 36px -10px rgba(11, 35, 64,.4); }
+        border: 1px solid #eef0f2; border-radius: 10px; overflow: hidden;
+        box-shadow: 0 14px 36px -10px rgba(29, 31, 32,.4); }
       .tl-lupa-tit { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
-        color: #96a2b1; padding: 9px 12px 7px; border-bottom: 1px solid #f0f4f8; }
+        color: #8a9096; padding: 9px 12px 7px; border-bottom: 1px solid #f7f8fa; }
       /* V693: busca por título dentro do popover da lupa */
       .tl-lupa-busca { display: flex; align-items: center; gap: 7px; margin: 8px 8px 2px; padding: 0 9px; height: 32px;
-        background: #f6f4ef; border: 1px solid #dfe4ea; border-radius: 8px; color: #6b7d8e; }
+        background: #fafbfc; border: 1px solid #eef0f2; border-radius: 8px; color: #6b7d8e; }
       .tl-lupa-busca input { flex: 1; min-width: 0; border: none; background: none; font: 500 12.5px/1 inherit;
-        font-family: inherit; color: #12304f; }
+        font-family: inherit; color: #3a5877; }
       .tl-lupa-busca input:focus { outline: none; }
-      .tl-lupa-busca input::placeholder { color: #96a2b1; }
+      .tl-lupa-busca input::placeholder { color: #8a9096; }
       .tl-lupa-busca button { width: 18px; height: 18px; flex: none; border: none; border-radius: 999px;
-        background: #dfe4ea; color: #5a6879; font-size: 10px; line-height: 1; cursor: pointer; padding: 0; }
+        background: #eef0f2; color: #585d62; font-size: 10px; line-height: 1; cursor: pointer; padding: 0; }
       .tl-lupa-lista { max-height: 220px; overflow-y: auto; padding: 5px; }
       .tl-lupa-it { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
-        border: none; background: none; font: 600 12.5px/1 inherit; font-family: inherit; color: #12304f;
+        border: none; background: none; font: 600 12.5px/1 inherit; font-family: inherit; color: #3a5877;
         padding: 8px 9px; border-radius: 7px; cursor: pointer; text-align: left; }
-      .tl-lupa-it:hover { background: #f0f4f8; }
-      .tl-lupa-it.sel { background: #f0f4f8; font-weight: 700; }
-      .tl-lupa-qt { font-size: 10.5px; font-weight: 700; color: #1d4470; background: #f0f4f8;
+      .tl-lupa-it:hover { background: #f7f8fa; }
+      .tl-lupa-it.sel { background: #f7f8fa; font-weight: 700; }
+      .tl-lupa-qt { font-size: 10.5px; font-weight: 700; color: #46688c; background: #f7f8fa;
         border-radius: 999px; padding: 2px 7px; }
       .tl-lupa-it.sel .tl-lupa-qt { background: #fff; }
 
@@ -742,10 +742,10 @@
          o scroll abre na ponta recente via scrollLeft no render. Trilho slim:
          70px — o balão de hover agora é fixed e não reserva altura. */
       .tl-scroller { flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden;
-        scrollbar-width: thin; scrollbar-color: #c5d5e5 transparent; }
+        scrollbar-width: thin; scrollbar-color: #e4eaf1 transparent; }
       .tl-scroller::-webkit-scrollbar { height: 8px; }
       .tl-scroller::-webkit-scrollbar-track { background: rgba(255,255,255,.14); border-radius: 4px; }
-      .tl-scroller::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+      .tl-scroller::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
       .tl-trilho { position: relative; height: 70px; }
       .tl-linha { position: absolute; left: 8px; right: 8px; top: 34px; height: 5px;
         border-radius: 3px; background: rgba(255,255,255,.22); }
@@ -761,10 +761,10 @@
       .tl-marco { width: 24px; height: 24px; padding: 0; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
         border: 1.5px solid rgba(255,255,255,.75); border-radius: 50% 50% 50% 2px;
-        transform: rotate(-45deg); box-shadow: 0 3px 7px rgba(11, 35, 64,.3);
+        transform: rotate(-45deg); box-shadow: 0 3px 7px rgba(29, 31, 32,.3);
         position: relative; z-index: 2; transition: transform .12s ease; }
       .tl-marco:hover { transform: rotate(-45deg) scale(1.16); }
-      .tl-marco:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+      .tl-marco:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
       .tl-data { margin-top: 16px; font: 700 10.5px/1 'Inter Tight', -apple-system, sans-serif;
         white-space: nowrap; }
       /* balão de hover (substitui o title nativo) — V591: fixed, ancorado no
@@ -772,7 +772,7 @@
       .tl-balao { position: fixed; transform: translateX(-50%);
         z-index: 100001; width: 220px; display: none; flex-direction: column; gap: 2px;
         background: #fff; border-radius: 9px; padding: 8px 11px;
-        box-shadow: 0 6px 18px rgba(11, 35, 64,.32); pointer-events: none; text-align: left; }
+        box-shadow: 0 6px 18px rgba(29, 31, 32,.32); pointer-events: none; text-align: left; }
       .tl-balao.on { display: flex; }
       .tl-balao-cat { display: flex; align-items: center; gap: 6px;
         font: 700 9.5px/1.3 'Inter Tight', -apple-system, sans-serif; letter-spacing: .08em;
@@ -781,18 +781,18 @@
       /* clamp em 2 linhas: título longo não pode passar dos 108px do trilho
          (criaria scrollbar vertical na faixa durante o hover) */
       .tl-balao-tit { font: 700 12px/1.3 'Inter Tight', -apple-system, sans-serif;
-        color: #12304f; text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 2;
+        color: #3a5877; text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 2;
         -webkit-box-orient: vertical; overflow: hidden; }
 
       /* ── modal (9D) ─────────────────────────────────────────────────── */
-      .tl-ov { position: fixed; inset: 0; z-index: 100000; background: rgba(11, 35, 64,.5);
+      .tl-ov { position: fixed; inset: 0; z-index: 100000; background: rgba(29, 31, 32,.5);
         display: flex; align-items: flex-start; justify-content: center; padding: 60px 24px;
         overflow-y: auto; animation: tlFade .16s ease-out; }
       @keyframes tlFade { from { opacity: 0 } to { opacity: 1 } }
       .tl-modal { background: #fff; border-radius: 16px; width: 100%; max-width: 560px;
-        box-shadow: 0 24px 60px -20px rgba(11, 35, 64,.45); overflow: hidden;
+        box-shadow: 0 24px 60px -20px rgba(29, 31, 32,.45); overflow: hidden;
         display: flex; flex-direction: column; }
-      .tl-modal-head { padding: 20px 24px 16px; border-bottom: 1px solid #f0f4f8;
+      .tl-modal-head { padding: 20px 24px 16px; border-bottom: 1px solid #f7f8fa;
         display: flex; flex-direction: column; gap: 10px; }
       .tl-modal-head-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
       .tl-modal-head-l { display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap; }
@@ -801,80 +801,80 @@
         font: 700 11.5px/1 'Inter Tight', -apple-system, sans-serif;
         border-radius: 999px; padding: 5px 11px; }
       .tl-chip-pt { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-      .tl-modal-data { font-size: 12.5px; font-weight: 600; color: #5a6879; }
-      .tl-x { width: 30px; height: 30px; border-radius: 8px; border: none; background: #f0f4f8;
-        color: #5a6879; font-size: 17px; line-height: 1; cursor: pointer; padding: 0;
+      .tl-modal-data { font-size: 12.5px; font-weight: 600; color: #585d62; }
+      .tl-x { width: 30px; height: 30px; border-radius: 8px; border: none; background: #f7f8fa;
+        color: #585d62; font-size: 17px; line-height: 1; cursor: pointer; padding: 0;
         transition: background-color .12s ease, color .12s ease; }
-      .tl-x:hover { background: #e5edf3; color: #12304f; }
+      .tl-x:hover { background: #e5edf3; color: #3a5877; }
       .tl-lapis { display: inline-flex; align-items: center; justify-content: center;
         width: 30px; height: 30px; border: none; border-radius: 8px;
-        background: #f0f4f8; color: #5a6879; cursor: pointer;
+        background: #f7f8fa; color: #585d62; cursor: pointer;
         transition: color .12s ease, background-color .12s ease; }
-      .tl-lapis:hover { color: #1d4470; background: #f0f4f8; }
+      .tl-lapis:hover { color: #46688c; background: #f7f8fa; }
       .tl-ver-titulo { font: 700 20px/1.25 'Inter Tight', -apple-system, sans-serif;
-        letter-spacing: -.01em; color: #12304f; text-wrap: pretty; }
+        letter-spacing: -.01em; color: #3a5877; text-wrap: pretty; }
       .tl-modal-body { padding: 18px 24px; display: flex; flex-direction: column; gap: 16px; }
       .tl-cartoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      .tl-cartao { background: #f6f4ef; border: 1px solid #e8eff5; border-radius: 10px;
+      .tl-cartao { background: #fafbfc; border: 1px solid #e8eff5; border-radius: 10px;
         padding: 11px 13px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-      .tl-cartao-v { font: 700 14.5px/1.3 'Inter Tight', -apple-system, sans-serif; color: #12304f;
+      .tl-cartao-v { font: 700 14.5px/1.3 'Inter Tight', -apple-system, sans-serif; color: #3a5877;
         overflow: hidden; text-overflow: ellipsis; }
       .tl-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
       .tl-linha2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .tl-lbl { font: 700 10px/1 'Inter Tight', -apple-system, sans-serif; text-transform: uppercase;
-        letter-spacing: .1em; color: #96a2b1; }
+        letter-spacing: .1em; color: #8a9096; }
       .tl-ver-desc, .tl-in { font: inherit; font-size: 13.5px; line-height: 1.55; color: #1b2a3a;
-        background: #f6f4ef; border: 1px solid #dfe4ea; border-radius: 10px; padding: 10px 13px;
+        background: #fafbfc; border: 1px solid #eef0f2; border-radius: 10px; padding: 10px 13px;
         width: 100%; box-sizing: border-box; }
       .tl-ver-desc { resize: vertical; }
       textarea.tl-in { resize: vertical; }
-      .tl-ver-desc:focus, .tl-in:focus { outline: none; border-color: #2a5a8c;
+      .tl-ver-desc:focus, .tl-in:focus { outline: none; border-color: #3f6489;
         box-shadow: 0 0 0 3px rgba(47,143,196,.14); background: #fff; }
       /* V590: seletor de ícone do marco */
       .tl-icones { display: flex; flex-wrap: wrap; gap: 6px; }
       .tl-ico-op { width: 34px; height: 34px; display: inline-flex; align-items: center;
-        justify-content: center; border: 1px solid #dfe4ea; border-radius: 9px;
-        background: #f6f4ef; color: #5a6879; cursor: pointer; padding: 0;
+        justify-content: center; border: 1px solid #eef0f2; border-radius: 9px;
+        background: #fafbfc; color: #585d62; cursor: pointer; padding: 0;
         transition: border-color .12s ease, background-color .12s ease, color .12s ease; }
-      .tl-ico-op:hover { border-color: #2a5a8c; color: #1d4470; }
-      .tl-ico-op.on { border-color: #1d4470; background: #f0f4f8; color: #1d4470;
-        box-shadow: 0 0 0 1px #1d4470 inset; }
+      .tl-ico-op:hover { border-color: #3f6489; color: #46688c; }
+      .tl-ico-op.on { border-color: #46688c; background: #f7f8fa; color: #46688c;
+        box-shadow: 0 0 0 1px #46688c inset; }
       .tl-ico-auto { width: auto; padding: 0 10px;
         font: 700 9.5px/1 'Inter Tight', -apple-system, sans-serif; letter-spacing: .08em; }
       .tl-docs-bloco { display: flex; flex-direction: column; gap: 9px; }
       .tl-docs-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-      .tl-docs-n { font-size: 11.5px; font-weight: 600; color: #5a6879; }
+      .tl-docs-n { font-size: 11.5px; font-weight: 600; color: #585d62; }
       .tl-docs-lista { display: flex; flex-direction: column; gap: 7px; }
-      .tl-doc { display: flex; align-items: center; gap: 11px; background: #f6f4ef;
+      .tl-doc { display: flex; align-items: center; gap: 11px; background: #fafbfc;
         border: 1px solid #e8eff5; border-radius: 10px; padding: 9px 11px; }
       .tl-doc-ext { font: 700 9.5px/1 'Inter Tight', -apple-system, sans-serif; letter-spacing: .04em;
         color: #fff; background: #5b7c93; border-radius: 5px; padding: 4px 6px; flex-shrink: 0; }
       .tl-doc-nome { flex: 1; min-width: 0; text-align: left; font-size: 13px; font-weight: 600;
-        color: #12304f; background: none; border: none; padding: 0; cursor: pointer;
+        color: #3a5877; background: none; border: none; padding: 0; cursor: pointer;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .tl-doc-nome:hover { color: #1d4470; text-decoration: underline; }
-      .tl-doc-tam { font-size: 11.5px; color: #5a6879; white-space: nowrap; }
+      .tl-doc-nome:hover { color: #46688c; text-decoration: underline; }
+      .tl-doc-tam { font-size: 11.5px; color: #585d62; white-space: nowrap; }
       .tl-doc-rm { font: 700 11.5px/1 'Inter Tight', -apple-system, sans-serif;
         border: none; background: none; color: #c0563f; cursor: pointer; padding: 2px 0; }
       .tl-doc-rm:hover { color: #9c3d29; }
-      .tl-doc-vazio { font-size: 12.5px; color: #96a2b1; background: #f6f4ef;
-        border: 1px dashed #dfe4ea; border-radius: 10px; padding: 14px 13px; }
+      .tl-doc-vazio { font-size: 12.5px; color: #8a9096; background: #fafbfc;
+        border: 1px dashed #eef0f2; border-radius: 10px; padding: 14px 13px; }
       .tl-anexar { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;
-        font: 700 12.5px/1 'Inter Tight', -apple-system, sans-serif; color: #1d4470;
-        background: #f0f4f8; border: 1px solid #cbe3f2; border-radius: 10px; padding: 10px 14px;
+        font: 700 12.5px/1 'Inter Tight', -apple-system, sans-serif; color: #46688c;
+        background: #f7f8fa; border: 1px solid #cbe3f2; border-radius: 10px; padding: 10px 14px;
         cursor: pointer; transition: background-color .12s ease; }
       .tl-anexar:hover { background: #d8ebf7; }
-      .tl-modal-foot { padding: 14px 24px; border-top: 1px solid #f0f4f8;
+      .tl-modal-foot { padding: 14px 24px; border-top: 1px solid #f7f8fa;
         display: flex; align-items: center; gap: 9px; }
-      .tl-foot-info { margin-left: auto; font-size: 11.5px; color: #96a2b1; }
+      .tl-foot-info { margin-left: auto; font-size: 11.5px; color: #8a9096; }
       .tl-salvar { font: 700 12.5px/1 'Inter Tight', -apple-system, sans-serif; color: #fff;
-        background: #1d4470; border: none; border-radius: 9px; padding: 11px 18px; cursor: pointer;
+        background: #46688c; border: none; border-radius: 9px; padding: 11px 18px; cursor: pointer;
         transition: background-color .12s ease; }
-      .tl-salvar:hover { background: #143352; }
-      .tl-cancelar { font: 700 12.5px/1 'Inter Tight', -apple-system, sans-serif; color: #5a6879;
-        background: transparent; border: 1px solid #dfe4ea; border-radius: 9px; padding: 10px 16px;
+      .tl-salvar:hover { background: #5980a6; }
+      .tl-cancelar { font: 700 12.5px/1 'Inter Tight', -apple-system, sans-serif; color: #585d62;
+        background: transparent; border: 1px solid #eef0f2; border-radius: 9px; padding: 10px 16px;
         cursor: pointer; transition: border-color .12s ease, color .12s ease; }
-      .tl-cancelar:hover { border-color: #c5d5e5; color: #12304f; }
+      .tl-cancelar:hover { border-color: #e4eaf1; color: #3a5877; }
       .tl-excluir { font: 700 11.5px/1 'Inter Tight', -apple-system, sans-serif; color: #c0563f;
         background: transparent; border: none; cursor: pointer; padding: 10px 6px; }
       .tl-excluir:hover { color: #9c3d29; text-decoration: underline; }

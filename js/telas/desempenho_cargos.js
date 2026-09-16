@@ -552,7 +552,7 @@ App.telas['desempenho-cargos'] = function () {
                     : '<span class="regra-fixa">Valor fixo</span>'
                   }
                 </td>
-                <td class="num mono ${(l.exc && l.exc.tipo_calculo !== 'VALOR_FIXO' && l.valorExc === null) ? '' : 'atlas-rep'}"><!-- V965: valor mensal em #2a5a8c (aviso "Sem produção LC" fica cinza) -->
+                <td class="num mono ${(l.exc && l.exc.tipo_calculo !== 'VALOR_FIXO' && l.valorExc === null) ? '' : 'atlas-rep'}"><!-- V965: valor mensal em #3f6489 (aviso "Sem produção LC" fica cinza) -->
                   ${renderValorMensal(l)}
                 </td>
               </tr>
@@ -1349,7 +1349,7 @@ App.telas['desempenho-cargos'] = function () {
           grid-template-columns: 1fr 1fr 1fr;
           gap: 14px;
           padding: 12px;
-          background: rgba(42, 90, 140, 0.06);
+          background: rgba(63, 100, 137, 0.06);
           border-radius: 8px;
         }
         .excecao-info-label {
@@ -1386,39 +1386,39 @@ App.telas['desempenho-cargos'] = function () {
           margin: 10px 0 14px;
           padding: 6px;
           background: #fff;
-          border: 1px solid #e4ecf4;
+          border: 1px solid #eef2f6;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+          box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
         }
         .cargos-sb-celwrap { position: relative; min-width: 150px; display: flex; flex: 0 0 200px; }
-        .cargos-sb-celwrap:not(:last-of-type) .cargos-sb-cel { border-right: 1px solid #f0f4f8; }
+        .cargos-sb-celwrap:not(:last-of-type) .cargos-sb-cel { border-right: 1px solid #f7f8fa; }
         .cargos-sb-cel {
           flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px;
           padding: 9px 12px; border: none; border-radius: 9px;
           background: transparent; cursor: pointer; font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .cargos-sb-cel:hover, .cargos-sb-cel.ativo, .cargos-sb-cel.aberta { background: #f6f4ef; }
+        .cargos-sb-cel:hover, .cargos-sb-cel.ativo, .cargos-sb-cel.aberta { background: #fafbfc; }
         .cargos-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #e4ecf4; color: #1d4470;
+          background: #eef2f6; color: #46688c;
         }
         .cargos-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
-        .cargos-sb-rot { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: #5a6879; white-space: nowrap; }
-        .cargos-sb-val { font-size: 13px; font-weight: 700; color: #12304f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .cargos-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .cargos-sb-rot { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: #585d62; white-space: nowrap; }
+        .cargos-sb-val { font-size: 13px; font-weight: 700; color: #3a5877; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cargos-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .cargos-sb-cel.aberta .cargos-sb-chev { transform: rotate(180deg); }
         .cargos-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 300px;
-          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42); overflow: hidden;
+          background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42); overflow: hidden;
         }
         .cargos-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
-        .cargos-sb-it { display: flex; align-items: center; height: 36px; padding: 0 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #12304f; }
-        .cargos-sb-it:hover { background: #f0f4f8; }
-        .cargos-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+        .cargos-sb-it { display: flex; align-items: center; height: 36px; padding: 0 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #3a5877; }
+        .cargos-sb-it:hover { background: #f7f8fa; }
+        .cargos-sb-it.sel { background: #f7f8fa; font-weight: 700; }
         .cargos-sb .cargos-filtros-help { align-self: center; margin-left: auto; padding: 0 12px; }
         .cargos-filtros-label {
           font-size: 11px;
@@ -1455,20 +1455,20 @@ App.telas['desempenho-cargos'] = function () {
 
         /* Bloco de cálculo da exceção (% × Produção LC = Repasse) */
         .excecao-calculo {
-          background: linear-gradient(135deg, #143352 0%, #0b2340 100%);
-          color: #f6f4ef;
+          background: linear-gradient(135deg, #5980a6 0%, #3a5877 100%);
+          color: #fafbfc;
           padding: 10px 12px;
           border-radius: 8px;
-          border: 1px solid #143352;
+          border: 1px solid #5980a6;
         }
         .excecao-calculo .excecao-info-label {
-          color: #2a5a8c;
+          color: #3f6489;
           margin-bottom: 4px;
         }
         .excecao-calculo-valor {
           font-size: 16px !important;
           font-weight: 800 !important;
-          color: #FFFFFF !important;   /* V864 (era #9FE6C9) — sobre o fundo escuro do bloco */
+          color: #FFFFFF !important;   /* V864 (era #cfe3d1) — sobre o fundo escuro do bloco */
           line-height: 1.1;
           margin-bottom: 4px;
         }
@@ -1479,7 +1479,7 @@ App.telas['desempenho-cargos'] = function () {
         }
         .excecao-info-aviso {
           background: #FFF8E1;
-          border: 1px dashed #FFFFFF;   /* V864 (era #9FE6C9) */
+          border: 1px dashed #FFFFFF;   /* V864 (era #cfe3d1) */
           padding: 8px 10px;
           border-radius: 8px;
         }
@@ -1491,7 +1491,7 @@ App.telas['desempenho-cargos'] = function () {
         }
 
         .linha-excecao {
-          background: rgba(42, 90, 140, 0.04);
+          background: rgba(63, 100, 137, 0.04);
         }
         .regra-fixa {
           font-size: 11px;

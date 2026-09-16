@@ -31,7 +31,7 @@ App.telas['backup'] = function () {
     const ult = arq.ultimaGravacao ? arq.ultimaGravacao.toLocaleString('pt-BR') : 'ainda nesta sessão';
     const erroHtml = arq.erro === 'permissao'
       ? `<div style="margin-top:8px; font-size:12.5px; color:#8A6840"><strong>⚠ Permissão pendente</strong> — o navegador precisa reautorizar o acesso ao arquivo nesta sessão. Clique em <strong>Reautorizar</strong>.</div>`
-      : (arq.erro ? `<div style="margin-top:8px; font-size:12.5px; color:#9B3A3A"><strong>⚠</strong> ${arq.erro}</div>` : '');
+      : (arq.erro ? `<div style="margin-top:8px; font-size:12.5px; color:#a15646"><strong>⚠</strong> ${arq.erro}</div>` : '');
     return `<p style="margin: 8px 0 0; font-size: 13px; color: var(--ink-soft)">
       Vinculado a <strong>${arq.nome}</strong> · última gravação: <strong>${ult}</strong>.
       A ferramenta grava nele automaticamente (alguns segundos após cada alteração).</p>${erroHtml}`;
@@ -61,8 +61,8 @@ App.telas['backup'] = function () {
         </div>
       </div>
 
-      <div class="card" style="margin-bottom: 16px; border-color: #1d4470">
-        <h3 class="card-title">Arquivo automático <span style="font-size: 10px; font-weight: 800; letter-spacing: .06em; color: #fff; background: #1d4470; border-radius: 999px; padding: 3px 8px; vertical-align: middle">RECOMENDADO</span></h3>
+      <div class="card" style="margin-bottom: 16px; border-color: #46688c">
+        <h3 class="card-title">Arquivo automático <span style="font-size: 10px; font-weight: 800; letter-spacing: .06em; color: #fff; background: #46688c; border-radius: 999px; padding: 3px 8px; vertical-align: middle">RECOMENDADO</span></h3>
         <!-- V593: sem subtítulo — só o título, a pedido do usuário -->
         <div id="bk-arq-status">${arqStatusHtml()}</div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px">
@@ -72,7 +72,7 @@ App.telas['backup'] = function () {
             ${arq.vinculado ? `
               <button class="btn" id="bk-arq-gravar">Gravar agora</button>
               ${arq.erro === 'permissao' ? `<button class="btn" id="bk-arq-reautorizar" style="border-color:#B8965A; color:#8A6840">Reautorizar</button>` : ''}
-              <button class="btn" id="bk-arq-desvincular" style="color: #9B3A3A">Desvincular</button>` : ''}` : ''}
+              <button class="btn" id="bk-arq-desvincular" style="color: #a15646">Desvincular</button>` : ''}` : ''}
         </div>
       </div>
 

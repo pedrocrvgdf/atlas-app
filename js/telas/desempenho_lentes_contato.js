@@ -117,7 +117,7 @@ App.telas['desempenho-lentes-contato'] = function () {
           <div class="page-content">
             <header class="page-header"><h2>Lentes de Contato</h2></header>
             <div class="card" style="background: #FEE; border-color: #D88; padding: 18px">
-              <h3 style="margin: 0 0 8px; color: #9B3A3A">⚠ Erro ao renderizar</h3>
+              <h3 style="margin: 0 0 8px; color: #a15646">⚠ Erro ao renderizar</h3>
               <pre style="font-size: 11px; white-space: pre-wrap; background: white; padding: 12px; border-radius: 8px">${escapeHTML(e.message)}\n\n${escapeHTML(e.stack || '')}</pre>
             </div>
           </div>
@@ -964,7 +964,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         default: return '';
       }
     })();
-    const rep = c.id === 'repassado' ? ' atlas-rep' : '';   // V962: valor de repasse em #1d4470
+    const rep = c.id === 'repassado' ? ' atlas-rep' : '';   // V962: valor de repasse em #46688c
     return `<td class="${c.num ? 'num' : ''} mono${rep}"><strong>${v}</strong></td>`;
   }
 
@@ -1004,7 +1004,7 @@ App.telas['desempenho-lentes-contato'] = function () {
     const classes = ['mono'];
     if (c.num) classes.push('num');
     let estilo = '';
-    if (c.id === 'repassado') classes.push('atlas-rep');   // V962: valor de repasse em #1d4470
+    if (c.id === 'repassado') classes.push('atlas-rep');   // V962: valor de repasse em #46688c
     if (c.id === 'pctRepasse') estilo = 'color: var(--ink-soft); font-weight: 600';
     return `<td class="${classes.join(' ')}" style="${estilo}">${conteudo}</td>`;
   }
@@ -1018,7 +1018,7 @@ App.telas['desempenho-lentes-contato'] = function () {
     const ocultar = window.__lc.ocultarRepasse;
     return `
       <tr class="lc-linha-drilldown">
-        <td colspan="${colspan}" style="padding: 14px 18px 18px 60px; background: #f6f4ef">
+        <td colspan="${colspan}" style="padding: 14px 18px 18px 60px; background: #fafbfc">
           <div class="lc-drilldown-grid">
 
             <div class="lc-drilldown-card lc-dd-exec">
@@ -1518,7 +1518,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         <div>Detalhamento por médico</div>
       </div>
       <div class="card" style="background: #FFF8E1; border-color: #E0C97A; padding: 18px">
-        <h3 style="margin: 0 0 10px; color: #143352; font-family: var(--font-display); font-weight: 500">⚠ Diagnóstico: tabela vazia</h3>
+        <h3 style="margin: 0 0 10px; color: #5980a6; font-family: var(--font-display); font-weight: 500">⚠ Diagnóstico: tabela vazia</h3>
         <p style="font-size: 13px; color: var(--ink); margin: 0 0 14px; line-height: 1.5">${causa}</p>
         ${dica ? `<div style="background: white; padding: 12px 14px; border-radius: 8px; font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 14px"><strong>💡 Como resolver:</strong> ${dica}</div>` : ''}
         ${naoExiste.length > 0 ? `
@@ -1546,7 +1546,7 @@ App.telas['desempenho-lentes-contato'] = function () {
           <div class="lc-aj-titulo">Percentuais</div>
           <div class="lc-aj-pct-cards">
             <div class="lc-aj-pct-card">
-              <div class="lc-aj-pct-faixa" style="background: linear-gradient(180deg, #143352, #2a5a8c)"></div>
+              <div class="lc-aj-pct-faixa" style="background: linear-gradient(180deg, #5980a6, #3f6489)"></div>
               <div>
                 <div class="lc-aj-pct-label">Executante</div>
                 <div class="lc-aj-pct-valor-wrap">
@@ -1556,7 +1556,7 @@ App.telas['desempenho-lentes-contato'] = function () {
               </div>
             </div>
             <div class="lc-aj-pct-card">
-              <div class="lc-aj-pct-faixa" style="background: linear-gradient(180deg, #2a5a8c, #9FE6C9)"></div>
+              <div class="lc-aj-pct-faixa" style="background: linear-gradient(180deg, #3f6489, #cfe3d1)"></div>
               <div>
                 <div class="lc-aj-pct-label">Indicante</div>
                 <div class="lc-aj-pct-valor-wrap">
@@ -2299,7 +2299,7 @@ App.telas['desempenho-lentes-contato'] = function () {
           border-radius: 50%;
           background: var(--bg-elevated);
           border: 1px solid var(--border);
-          color: #2a5a8c;
+          color: #3f6489;
           font-size: 15px;
           font-weight: 700;
           cursor: pointer;
@@ -2309,9 +2309,9 @@ App.telas['desempenho-lentes-contato'] = function () {
           line-height: 1;
         }
         .lc-btn-info:hover {
-          background: #2a5a8c;
+          background: #3f6489;
           color: white;
-          border-color: #2a5a8c;
+          border-color: #3f6489;
           transform: scale(1.08);
         }
 
@@ -2336,13 +2336,13 @@ App.telas['desempenho-lentes-contato'] = function () {
           display: flex; align-items: stretch;
           padding: 6px;
           background: #fff;
-          border: 1px solid #e4ecf4;
+          border: 1px solid #eef2f6;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+          box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
           flex-wrap: wrap;
         }
         .lc-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-        .lc-sb-celwrap:not(:last-child) .lc-sb-cel { border-right: 1px solid #f0f4f8; }
+        .lc-sb-celwrap:not(:last-child) .lc-sb-cel { border-right: 1px solid #f7f8fa; }
         .lc-sb-cel {
           flex: 1; min-width: 0;
           display: flex; align-items: center; gap: 9px;
@@ -2351,64 +2351,64 @@ App.telas['desempenho-lentes-contato'] = function () {
           font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .lc-sb-cel:hover, .lc-sb-cel.ativo, .lc-sb-cel.aberta { background: #f6f4ef; }
-        .lc-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+        .lc-sb-cel:hover, .lc-sb-cel.ativo, .lc-sb-cel.aberta { background: #fafbfc; }
+        .lc-sb-cel:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
         .lc-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f5f9; color: #5a6879;
+          background: #f0f5f9; color: #585d62;
         }
-        .lc-sb-cel.ativo .lc-sb-tile, .lc-sb-cel.aberta .lc-sb-tile { background: #e4ecf4; color: #1d4470; }
+        .lc-sb-cel.ativo .lc-sb-tile, .lc-sb-cel.aberta .lc-sb-tile { background: #eef2f6; color: #46688c; }
         .lc-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
         .lc-sb-rot {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .09em; color: #5a6879; white-space: nowrap;
+          letter-spacing: .09em; color: #585d62; white-space: nowrap;
         }
         .lc-sb-val {
-          font-size: 13px; font-weight: 500; color: #5a6879;
+          font-size: 13px; font-weight: 500; color: #585d62;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .lc-sb-cel.ativo .lc-sb-val { font-weight: 700; color: #12304f; }
-        .lc-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .lc-sb-cel.ativo .lc-sb-val { font-weight: 700; color: #3a5877; }
+        .lc-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .lc-sb-cel.aberta .lc-sb-chev { transform: rotate(180deg); }
 
         /* painel ancorado na célula, por cima dos cards */
         .lc-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 340px;
-          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
+          background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42);
           overflow: hidden;
         }
         .lc-sb-buscabox {
           display: flex; align-items: center; gap: 8px;
-          padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
+          padding: 11px 12px 10px; border-bottom: 1px solid #f7f8fa;
         }
         .lc-sb-buscabox .lc-sb-busca-ic { color: #6b7d8e; display: flex; }
         .lc-sb-busca {
-          flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
-          background: #f6f4ef; padding: 0 10px; font-size: 13px;
-          font-family: inherit; color: #12304f; outline: none;
+          flex: 1; height: 30px; border: 1px solid #eef0f2; border-radius: 8px;
+          background: #fafbfc; padding: 0 10px; font-size: 13px;
+          font-family: inherit; color: #3a5877; outline: none;
         }
-        .lc-sb-busca::placeholder { color: #96a2b1; }
-        .lc-sb-busca:focus { border-color: #2a5a8c; }
+        .lc-sb-busca::placeholder { color: #8a9096; }
+        .lc-sb-busca:focus { border-color: #3f6489; }
         .lc-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
         .lc-sb-lista::-webkit-scrollbar { width: 8px; }
-        .lc-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
-        .lc-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+        .lc-sb-lista::-webkit-scrollbar-track { background: #f7f8fa; }
+        .lc-sb-lista::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
         .lc-sb-it {
           display: flex; align-items: center; gap: 10px;
           height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-          font-size: 13px; color: #12304f;
+          font-size: 13px; color: #3a5877;
         }
-        .lc-sb-it:hover, .lc-sb-it.foco { background: #f0f4f8; }
-        .lc-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+        .lc-sb-it:hover, .lc-sb-it.foco { background: #f7f8fa; }
+        .lc-sb-it.sel { background: #f7f8fa; font-weight: 700; }
         .lc-sb-it-todos { font-weight: 700; }
         .lc-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .lc-sb-ck { color: #1d4470; display: flex; }
+        .lc-sb-ck { color: #46688c; display: flex; }
         .lc-sb-rodape {
-          padding: 7px 12px; border-top: 1px solid #f0f4f8;
-          font-size: 10.5px; font-weight: 600; color: #96a2b1;
+          padding: 7px 12px; border-top: 1px solid #f7f8fa;
+          font-size: 10.5px; font-weight: 600; color: #8a9096;
         }
         @media (max-width: 1280px) { .lc-sb-celwrap { flex-basis: 32%; } }
         @media (max-width: 900px)  { .lc-sb-celwrap { flex-basis: 48%; } }
@@ -2429,16 +2429,16 @@ App.telas['desempenho-lentes-contato'] = function () {
 
         /* Card de detalhe da admissão filtrada */
         .lc-detalhe-adm {
-          background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%);
-          border: 1px solid #9FE6C9;
-          border-left: 4px solid #2a5a8c;
+          background: linear-gradient(135deg, #f2f3f5 0%, #eef2f6 100%);
+          border: 1px solid #cfe3d1;
+          border-left: 4px solid #3f6489;
           border-radius: 10px;
           padding: 14px 18px;
           margin-bottom: 10px;
         }
         .lc-detalhe-adm-multi {
           background: #FFF8E1;
-          border-left-color: #143352;
+          border-left-color: #5980a6;
           font-size: 12px;
           color: #4A3E1F;
           display: flex; align-items: center; gap: 10px;
@@ -2451,7 +2451,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         .lc-detalhe-titulo {
           font-size: 11px;
           font-weight: 700;
-          color: #143352;
+          color: #5980a6;
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
@@ -2460,7 +2460,7 @@ App.telas['desempenho-lentes-contato'] = function () {
           grid-template-columns: 160px 1fr 130px;
           gap: 16px;
           padding-bottom: 12px;
-          border-bottom: 1px solid #9FE6C9;
+          border-bottom: 1px solid #cfe3d1;
           margin-bottom: 12px;
         }
         @media (max-width: 700px) {
@@ -2469,7 +2469,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         .lc-detalhe-campo { min-width: 0; }
         .lc-detalhe-label {
           font-size: 9px;
-          color: #143352;
+          color: #5980a6;
           text-transform: uppercase;
           letter-spacing: 0.05em;
           font-weight: 600;
@@ -2486,7 +2486,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         .lc-detalhe-produtos-label {
           font-size: 10px;
           font-weight: 700;
-          color: #102d4b;
+          color: #3a5877;
           text-transform: uppercase;
           letter-spacing: 0.06em;
           margin-bottom: 6px;
@@ -2496,7 +2496,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         }
         .lc-detalhe-produtos-contagem {
           font-size: 10px;
-          color: #143352;
+          color: #5980a6;
           font-weight: 500;
           text-transform: none;
           letter-spacing: 0;
@@ -2524,7 +2524,7 @@ App.telas['desempenho-lentes-contato'] = function () {
           line-height: 1.4;
         }
         .lc-detalhe-produto-traco {
-          color: #2a5a8c;
+          color: #3f6489;
           font-weight: 700;
           flex-shrink: 0;
         }
@@ -2545,14 +2545,14 @@ App.telas['desempenho-lentes-contato'] = function () {
           justify-content: space-between;
           align-items: center;
           padding: 8px 14px;
-          background: #143352;
-          color: #f6f4ef;
+          background: #5980a6;
+          color: #fafbfc;
           border-radius: 8px;
           font-weight: 700;
           font-size: 12px;
         }
         .lc-detalhe-total .mono {
-          color: #9FE6C9;
+          color: #cfe3d1;
           font-size: 14px;
         }
         /* ainda usado pela busca de médico no popover Mostrar/Ocultar */
@@ -2562,7 +2562,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         }
         .lc-filtro-medicos-badge {
           display: inline-flex; align-items: center; gap: 6px;
-          background: #e4ecf4; border: 1px solid var(--accent);
+          background: #eef2f6; border: 1px solid var(--accent);
           padding: 4px 10px; border-radius: 16px; font-size: 11px;
           margin-bottom: 12px;
         }
@@ -2586,7 +2586,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         .lc-card-titulo {
           font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
           font-weight: 700; margin-bottom: 10px; min-height: 12px;
-          color: #0f1d2e; /* V849: título dos cards totalizadores (variantes coloridas mantêm a própria) */
+          color: #1d1f20; /* V849: título dos cards totalizadores (variantes coloridas mantêm a própria) */
         }
         /* Padronização: TODOS os valores usam mesmo tamanho */
         .lc-card-valor {
@@ -2601,8 +2601,8 @@ App.telas['desempenho-lentes-contato'] = function () {
         .lc-card-comp-lbl { color: var(--ink-soft); font-weight: 600; }
         /* V920: sem fundo branco nos % (pedido do usuário — Vol vs LM / Vol vs LY) */
         .lc-card-comp-badge { font-weight: 700; background: transparent; padding: 1px 6px; border-radius: 4px; }
-        .lc-card-comp-up    { color: #0A7A5A; }
-        .lc-card-comp-down  { color: #9B3A3A; }
+        .lc-card-comp-up    { color: #4f8a5b; }
+        .lc-card-comp-down  { color: #a15646; }
         .lc-card-comp-igual { color: var(--ink-soft); font-weight: 700; }
         .lc-card-comp-vazio { color: var(--ink-faint); }
 
@@ -2674,7 +2674,7 @@ App.telas['desempenho-lentes-contato'] = function () {
         }
         .lc-adm-sv-item:hover {
           border-color: var(--accent);
-          background: #e4ecf4;
+          background: #eef2f6;
         }
         .lc-adm-sv-cod {
           font-size: 11px;
@@ -2690,9 +2690,9 @@ App.telas['desempenho-lentes-contato'] = function () {
         }
 
         .lc-card-verde    { background: linear-gradient(135deg, #E8F1EE 0%, #D4E4DF 100%); border-color: #A8C8C0; }
-        .lc-card-verde .lc-card-faixa  { background: #143352; }
-        .lc-card-verde .lc-card-titulo { color: #143352; }
-        .lc-card-verde .lc-card-valor  { color: #143352; }
+        .lc-card-verde .lc-card-faixa  { background: #5980a6; }
+        .lc-card-verde .lc-card-titulo { color: #5980a6; }
+        .lc-card-verde .lc-card-valor  { color: #5980a6; }
         .lc-card-roxo     { background: linear-gradient(135deg, #ECE5F2 0%, #DAC8E4 100%); border-color: #C0A8D0; }
         .lc-card-roxo .lc-card-faixa  { background: #6B4587; }
         .lc-card-roxo .lc-card-titulo { color: #6B4587; }
@@ -2701,19 +2701,19 @@ App.telas['desempenho-lentes-contato'] = function () {
         .lc-card-azul .lc-card-faixa  { background: #2C5C8A; }
         .lc-card-azul .lc-card-titulo { color: #2C5C8A; }
         .lc-card-azul .lc-card-valor  { color: #2C5C8A; }
-        .lc-card-bege     { background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%); border-color: #9FE6C9; }
-        .lc-card-bege .lc-card-faixa  { background: #143352; }
-        .lc-card-bege .lc-card-titulo { color: #143352; }
-        .lc-card-bege .lc-card-valor  { color: #143352; }
-        .lc-card-destaque { background: linear-gradient(135deg, #143352 0%, #0b2340 100%); border-color: #143352; box-shadow: 0 4px 12px rgba(20, 51, 82,.2); }
+        .lc-card-bege     { background: linear-gradient(135deg, #f2f3f5 0%, #eef2f6 100%); border-color: #cfe3d1; }
+        .lc-card-bege .lc-card-faixa  { background: #5980a6; }
+        .lc-card-bege .lc-card-titulo { color: #5980a6; }
+        .lc-card-bege .lc-card-valor  { color: #5980a6; }
+        .lc-card-destaque { background: linear-gradient(135deg, #5980a6 0%, #3a5877 100%); border-color: #5980a6; box-shadow: 0 4px 12px rgba(89, 128, 166,.2); }
         .lc-card-destaque .lc-card-faixa  { display: none; }
-        .lc-card-destaque .lc-card-titulo { color: #5a6879; }
-        .lc-card-destaque .lc-card-valor  { color: #143352; }
-        .lc-card-destaque .lc-card-comp-lbl   { color: #c5d5e5; }
+        .lc-card-destaque .lc-card-titulo { color: #585d62; }
+        .lc-card-destaque .lc-card-valor  { color: #5980a6; }
+        .lc-card-destaque .lc-card-comp-lbl   { color: #e4eaf1; }
         /* V887: o badge do card destaque perdeu o verde #D8EAD3 — ele usa o
            mesmo fundo branco dos outros cards do módulo. */
         .lc-card-destaque .lc-card-comp-vazio,
-        .lc-card-destaque .lc-card-comp-igual { color: #c5d5e5; }
+        .lc-card-destaque .lc-card-comp-igual { color: #e4eaf1; }
 
         /* MATRIZ */
         /* MATRIZ */
@@ -2736,16 +2736,16 @@ App.telas['desempenho-lentes-contato'] = function () {
         body[data-tela="desempenho-lentes-contato"] .app-shell { overflow-x: clip; }
         body[data-tela="desempenho-lentes-contato"] .import-dock-wrap { position: relative; top: auto; z-index: 3; }
         .lc-tabela thead th { position: sticky; top: 0; z-index: 6; }
-        /* V961: linha totalizadora em #e4ecf4 (sobrepõe a tarja escura global do tfoot) */
+        /* V961: linha totalizadora em #eef2f6 (sobrepõe a tarja escura global do tfoot) */
         .main .lc-tabela tfoot td, .main .lc-tabela tfoot tr:hover td {
-          background: #e4ecf4 !important; color: #0f1d2e !important;
-          border-color: #dfe4ea !important; border-top: 2px solid #dfe4ea !important;
+          background: #eef2f6 !important; color: #1d1f20 !important;
+          border-color: #eef0f2 !important; border-top: 2px solid #eef0f2 !important;
         }
-        .main .lc-tabela tfoot td * { color: #0f1d2e !important; }
+        .main .lc-tabela tfoot td * { color: #1d1f20 !important; }
         .lc-tabela tbody tr.lc-linha-medico { transition: background 100ms; }
         /* V887: a linha aberta acompanha o novo fundo do drilldown — as duas
            formam um bloco só; deixar o creme aqui brigaria com o azul. */
-        .lc-tabela tbody tr.lc-linha-expandida { background: #f6f4ef; }
+        .lc-tabela tbody tr.lc-linha-expandida { background: #fafbfc; }
         .lc-toggle {
           text-align: center; font-weight: 700; font-size: 13px;
           color: var(--primary); cursor: pointer; user-select: none;
@@ -2774,8 +2774,8 @@ App.telas['desempenho-lentes-contato'] = function () {
           height: 14px;
           color: white;
         }
-        .lc-tag-exe { background: #102d4b; }
-        .lc-tag-ind { background: #102d4b; }
+        .lc-tag-exe { background: #3a5877; }
+        .lc-tag-ind { background: #3a5877; }
         .lc-linha-drilldown td { border-top: none !important; }
         .lc-drilldown-grid {
           display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
@@ -2785,8 +2785,8 @@ App.telas['desempenho-lentes-contato'] = function () {
           background: white; padding: 10px 12px; border-radius: 8px;
           border: 1px solid var(--border);
         }
-        .lc-dd-exec  { border-left: 3px solid #143352; }
-        .lc-dd-indic { border-left: 3px solid #143352; }
+        .lc-dd-exec  { border-left: 3px solid #5980a6; }
+        .lc-dd-indic { border-left: 3px solid #5980a6; }
         .lc-dd-total { border-left: 3px solid var(--primary); }
         .lc-drilldown-label {
           font-size: 9px; color: var(--ink-soft); text-transform: uppercase;
@@ -2888,8 +2888,8 @@ App.telas['desempenho-lentes-contato'] = function () {
           border-radius: 3px; letter-spacing: 0.06em;
           color: white;
         }
-        .lc-tag-exe-doc { background: #102d4b; }
-        .lc-tag-ind-doc { background: #102d4b; }
+        .lc-tag-exe-doc { background: #3a5877; }
+        .lc-tag-ind-doc { background: #3a5877; }
         .lc-popover-header {
           padding: 14px 18px; border-bottom: 1px solid var(--border);
           display: flex; justify-content: space-between; align-items: center;
@@ -2963,8 +2963,8 @@ App.telas['desempenho-lentes-contato'] = function () {
         }
         .lc-col-row:hover { background: var(--bg-sunken); }
         .lc-col-row-fixa { opacity: 0.7; }
-        .lc-col-row-custom { background: #e4ecf4; }
-        .lc-col-row-custom:hover { background: #e4ecf4; }
+        .lc-col-row-custom { background: #eef2f6; }
+        .lc-col-row-custom:hover { background: #eef2f6; }
         .lc-col-chk { flex-shrink: 0; cursor: pointer; }
         .lc-col-name {
           flex: 1;

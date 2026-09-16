@@ -3711,13 +3711,13 @@ const AuditoriaApp = (function () {
       display: flex; align-items: stretch;
       padding: 6px;
       background: #fff;
-      border: 1px solid #e4ecf4;
+      border: 1px solid #eef2f6;
       border-radius: 12px;
-      box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+      box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
       flex-wrap: wrap;
     }
     .aud-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-    .aud-sb-celwrap:not(:last-child) .aud-sb-cel { border-right: 1px solid #f0f4f8; }
+    .aud-sb-celwrap:not(:last-child) .aud-sb-cel { border-right: 1px solid #f7f8fa; }
     .aud-sb-cel {
       flex: 1; min-width: 0;
       display: flex; align-items: center; gap: 9px;
@@ -3726,48 +3726,48 @@ const AuditoriaApp = (function () {
       font-family: inherit; text-align: left;
       transition: background-color 120ms;
     }
-    .aud-sb-cel:hover, .aud-sb-cel.ativo, .aud-sb-cel.aberta { background: #f6f4ef; }
-    .aud-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+    .aud-sb-cel:hover, .aud-sb-cel.ativo, .aud-sb-cel.aberta { background: #fafbfc; }
+    .aud-sb-cel:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
     .aud-sb-tile {
       width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      background: #f0f5f9; color: #5a6879;
+      background: #f0f5f9; color: #585d62;
     }
-    .aud-sb-cel.ativo .aud-sb-tile, .aud-sb-cel.aberta .aud-sb-tile { background: #e4ecf4; color: #1d4470; }
+    .aud-sb-cel.ativo .aud-sb-tile, .aud-sb-cel.aberta .aud-sb-tile { background: #eef2f6; color: #46688c; }
     .aud-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
     .aud-sb-rot {
       font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .09em; color: #5a6879; white-space: nowrap;
+      letter-spacing: .09em; color: #585d62; white-space: nowrap;
     }
     .aud-sb-val {
-      font-size: 13px; font-weight: 500; color: #5a6879;
+      font-size: 13px; font-weight: 500; color: #585d62;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .aud-sb-cel.ativo .aud-sb-val { font-weight: 700; color: #12304f; }
-    .aud-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+    .aud-sb-cel.ativo .aud-sb-val { font-weight: 700; color: #3a5877; }
+    .aud-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
     .aud-sb-cel.aberta .aud-sb-chev { transform: rotate(180deg); }
     /* painel ancorado na célula, por cima dos cards */
     .aud-sb-painel {
       position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
       min-width: 100%; width: max-content; max-width: 340px;
-      background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-      box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
+      background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+      box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42);
       overflow: hidden;
     }
     .aud-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
     .aud-sb-lista::-webkit-scrollbar { width: 8px; }
-    .aud-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
-    .aud-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+    .aud-sb-lista::-webkit-scrollbar-track { background: #f7f8fa; }
+    .aud-sb-lista::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
     .aud-sb-it {
       display: flex; align-items: center; gap: 10px;
       height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-      font-size: 13px; color: #12304f;
+      font-size: 13px; color: #3a5877;
     }
-    .aud-sb-it:hover, .aud-sb-it.foco { background: #f0f4f8; }
-    .aud-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+    .aud-sb-it:hover, .aud-sb-it.foco { background: #f7f8fa; }
+    .aud-sb-it.sel { background: #f7f8fa; font-weight: 700; }
     .aud-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .aud-sb-ck { color: #1d4470; display: flex; }
-    .aud-sb-vazio { padding: 12px; font-size: 12.5px; color: #96a2b1; font-style: italic; }
+    .aud-sb-ck { color: #46688c; display: flex; }
+    .aud-sb-vazio { padding: 12px; font-size: 12.5px; color: #8a9096; font-style: italic; }
 
     .aud-select {
       padding: 9px 32px 9px 12px; border: 1.5px solid var(--border); border-radius: 10px;
@@ -3777,7 +3777,7 @@ const AuditoriaApp = (function () {
       background-repeat: no-repeat; background-position: right 10px center;
     }
     .aud-select-sm { min-width: 150px; padding: 8px 30px 8px 11px; font-size: 12.5px; }
-    .aud-select:focus { outline: none; border-color: #244222; box-shadow: 0 0 0 3px rgba(20, 51, 82,0.15); }
+    .aud-select:focus { outline: none; border-color: #244222; box-shadow: 0 0 0 3px rgba(89, 128, 166,0.15); }
 
     .aud-secoes { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1.5px solid var(--border); padding-bottom: 0; }
     .aud-secao-btn {
@@ -3785,8 +3785,8 @@ const AuditoriaApp = (function () {
       font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); cursor: pointer;
       transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms; margin-bottom: -1.5px;
     }
-    .aud-secao-btn:hover { color: #1d4470; }
-    .aud-secao-btn.ativa { color: #1F6E6E; border-bottom-color: #2a5a8c; }
+    .aud-secao-btn:hover { color: #46688c; }
+    .aud-secao-btn.ativa { color: #1F6E6E; border-bottom-color: #3f6489; }
     /* V132.14: Validador */
     .aud-val-bloco { margin-bottom: 24px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-elevated); }
     .aud-val-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--bg-sunken); }
@@ -3794,8 +3794,8 @@ const AuditoriaApp = (function () {
     .aud-val-resumo { display: flex; gap: 8px; flex-wrap: wrap; }
     .aud-val-chip { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: var(--bg-elevated); border: 1px solid var(--border); color: var(--ink-soft); }
     .aud-val-chip.ok { color: #2B7A5B; border-color: rgba(43,122,91,0.35); background: rgba(43,122,91,0.08); }
-    .aud-val-chip.alerta { color: #9B3A3A; border-color: rgba(155,58,58,0.35); background: rgba(155,58,58,0.08); }
-    .aud-val-chip.dobra { color: #8A5A1A; border-color: rgba(42, 90, 140,0.5); background: rgba(42, 90, 140,0.12); }
+    .aud-val-chip.alerta { color: #a15646; border-color: rgba(161, 86, 70,0.35); background: rgba(161, 86, 70,0.08); }
+    .aud-val-chip.dobra { color: #8A5A1A; border-color: rgba(63, 100, 137,0.5); background: rgba(63, 100, 137,0.12); }
     .aud-val-chip.neutra { color: var(--ink-faint); }
     .aud-val-nota { padding: 10px 18px 0; font-size: 12px; color: var(--ink-faint); line-height: 1.5; margin: 0; }
     .aud-val-tab-wrap { padding: 0 18px 16px; overflow: auto; max-height: 340px; }
@@ -3808,7 +3808,7 @@ const AuditoriaApp = (function () {
     .aud-val-num { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
     .aud-val-center { text-align: center; }
     .aud-val-vazio { color: var(--ink-faint); font-style: italic; }
-    .aud-val-dobra { background: rgba(42, 90, 140,0.08); }
+    .aud-val-dobra { background: rgba(63, 100, 137,0.08); }
     .aud-val-dobra td { color: #6E4E12; }
     .aud-val-jamult { background: rgba(120,120,120,0.05); }
     .aud-val-jamult-tag { font-size: 11px; font-weight: 700; color: var(--ink-faint); padding: 2px 8px; border: 1px solid var(--border); border-radius: 20px; white-space: nowrap; }
@@ -3816,17 +3816,17 @@ const AuditoriaApp = (function () {
     .aud-val-mais { padding: 8px; text-align: center; font-size: 11px; color: var(--ink-faint); }
 
     .aud-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
-    .aud-aviso-prod { padding: 11px 16px; margin-bottom: 16px; background: rgba(42, 90, 140,0.08); border: 1px solid rgba(42, 90, 140,0.35); border-radius: 10px; font-size: 12.5px; color: #2B7A7A; line-height: 1.5; }
+    .aud-aviso-prod { padding: 11px 16px; margin-bottom: 16px; background: rgba(63, 100, 137,0.08); border: 1px solid rgba(63, 100, 137,0.35); border-radius: 10px; font-size: 12.5px; color: #2B7A7A; line-height: 1.5; }
     .aud-kpi {
       background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px;
       padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; min-height: 78px;
     }
-    .aud-kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #0f1d2e; } /* V849: título dos cards totalizadores */
+    .aud-kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1d1f20; } /* V849: título dos cards totalizadores */
     .aud-kpi-valor { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--ink); }
     .aud-kpi-rs { color: #1F6E6E; }
     .aud-kpi-sub { font-size: 11px; color: var(--ink-soft); }
     .aud-kpi-atlas { border-color: #C7CDD2; background: #F4F6F7; }
-    .aud-kpi-atlas .aud-kpi-valor { color: #5a6879; }
+    .aud-kpi-atlas .aud-kpi-valor { color: #585d62; }
     .aud-kpi-notif { border-color: #D9A441; background: #FEF8E9; }
     .aud-kpi-notif .aud-kpi-valor { color: #B07A12; }
 
@@ -3857,7 +3857,7 @@ const AuditoriaApp = (function () {
       padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit;
       font-size: 13px; color: var(--ink); background: var(--bg-elevated); min-width: 200px;
     }
-    .aud-input:focus { outline: none; border-color: #2a5a8c; box-shadow: 0 0 0 3px rgba(42, 90, 140,0.12); }
+    .aud-input:focus { outline: none; border-color: #3f6489; box-shadow: 0 0 0 3px rgba(63, 100, 137,0.12); }
 
     .aud-tabela-wrap { border: 1px solid var(--border); border-radius: 12px; overflow: auto; background: var(--bg-elevated); }
     .aud-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -3867,7 +3867,7 @@ const AuditoriaApp = (function () {
       color: var(--ink-faint); border-bottom: 1px solid var(--border); white-space: nowrap; z-index: 1;
     }
     .aud-tabela tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--ink); vertical-align: top; }
-    .aud-tabela tbody tr:hover { background: rgba(42, 90, 140,0.04); }
+    .aud-tabela tbody tr:hover { background: rgba(63, 100, 137,0.04); }
     /* V920: alça OPCIONAL de ajuste de largura nos títulos da matriz */
     .aud-tabela thead th { overflow: hidden; }
     .aud-th-grip {
@@ -3885,7 +3885,7 @@ const AuditoriaApp = (function () {
 
     .aud-tag { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; }
     .aud-tag-ok     { background: #E3F2EC; color: #2B7A5B; }
-    .aud-tag-atlas  { background: #E5E8EB; color: #5a6879; }
+    .aud-tag-atlas  { background: #E5E8EB; color: #585d62; }
     /* V132.18: badges de fonte pagadora */
     .aud-fonte { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
     /* V947: .aud-fonte-* saiu — a tag é a global .atlas-fonte */
@@ -3897,10 +3897,10 @@ const AuditoriaApp = (function () {
     .aud-col-data { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
     .aud-btn-palavras {
       margin-top: 8px; padding: 7px 12px; border: 1px solid var(--linha, #E5E0D5);
-      background: var(--papel, #fff); color: var(--ink, #071a30); border-radius: 8px;
+      background: var(--papel, #fff); color: var(--ink, #3a5877); border-radius: 8px;
       font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
-    .aud-btn-palavras:hover { background: #e9edf1; border-color: #2a5a8c; }
+    .aud-btn-palavras:hover { background: #f2f3f5; border-color: #3f6489; }
     .aud-modal-overlay {
       position: fixed; inset: 0; background: rgba(34,36,34,0.55);
       display: flex; align-items: center; justify-content: center; z-index: 1000;
@@ -3921,7 +3921,7 @@ const AuditoriaApp = (function () {
     .aud-modal-acoes { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
     /* V938: modal Ajuste Unidades */
     .aud-modal.aud-modal-unid { width: min(1440px, 98vw); max-height: 94vh; padding: 0; display: flex; flex-direction: column; overflow: hidden; }   /* V942: tela maior */
-    .aud-unid-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 18px 22px 14px; background: #0f1d2e; color: #fff; }
+    .aud-unid-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 18px 22px 14px; background: #1d1f20; color: #fff; }
     .aud-unid-head h3 { margin: 0; font-size: 16px; color: #fff; }
     .aud-unid-head p { margin: 6px 0 0; font-size: 12.5px; color: #9FC3D6; max-width: 76ch; line-height: 1.4; }
     .aud-unid-head p strong { color: #fff; }
@@ -3931,48 +3931,48 @@ const AuditoriaApp = (function () {
     .aud-unid-tab thead th { position: sticky; top: 0; z-index: 2; background: var(--papel, #fff); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); padding: 10px 14px; border-bottom: 2px solid var(--linha, #E5E0D5); text-align: left; }
     .aud-unid-tab th.aud-unid-f, .aud-unid-tab td.aud-unid-f { text-align: center; width: 120px; }
     .aud-unid-tab td { padding: 0 14px; height: 42px; border-bottom: 1px solid #EDF2F0; vertical-align: middle; }
-    .aud-unid-n1 td { background: #f0f4f8; font-weight: 800; height: 50px; }
+    .aud-unid-n1 td { background: #f7f8fa; font-weight: 800; height: 50px; }
     .aud-unid-n2 td { font-weight: 700; height: 48px; }
     .aud-unid-n2 td:first-child { padding-left: 38px; }
     .aud-unid-n3 td:first-child { padding-left: 66px; font-weight: 500; }
     .aud-unid-n3:nth-child(odd) td { background: #FAFCFD; }
     .aud-unid-nome { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .aud-unid-seta { width: 18px; height: 18px; border: none; background: transparent; color: #1d4470; font: inherit; font-size: 11px; cursor: pointer; padding: 0; }
+    .aud-unid-seta { width: 18px; height: 18px; border: none; background: transparent; color: #46688c; font: inherit; font-size: 11px; cursor: pointer; padding: 0; }
     .aud-unid-qtd { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); font-weight: 500; }
-    .aud-unid-tag { font-size: 10px; font-weight: 800; letter-spacing: .05em; padding: 2px 7px; border-radius: 999px; background: #f0f4f8; color: #1d4470; }
-    .aud-unid-cb { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid #1d4470; border-radius: 5px; background: #fff; cursor: pointer; position: relative; vertical-align: middle; margin: 0; }
-    .aud-unid-cb:checked { background: #1d4470; }
+    .aud-unid-tag { font-size: 10px; font-weight: 800; letter-spacing: .05em; padding: 2px 7px; border-radius: 999px; background: #f7f8fa; color: #46688c; }
+    .aud-unid-cb { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid #46688c; border-radius: 5px; background: #fff; cursor: pointer; position: relative; vertical-align: middle; margin: 0; }
+    .aud-unid-cb:checked { background: #46688c; }
     /* V972: o check centrado de verdade. Era left:5px/top:1px — o "L" girado
        ficava ~1,3px à direita e ~1,9px abaixo do centro do quadrado. Agora o
        elemento nasce no centro (50%/50%) e sobe 2,1px, que é o quanto a caixa
        visível do "✓" (só as bordas direita+inferior giradas) fica abaixo do
        centro do próprio elemento. */
     .aud-unid-cb:checked::after { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: translate(-50%, calc(-50% - 2.1px)) rotate(45deg); }
-    .aud-unid-cb:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+    .aud-unid-cb:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
     .aud-unid-cnt { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-soft); line-height: 1; margin-top: 3px; font-weight: 500; }
     .aud-unid-cnt.parcial { color: #8A5A1F; font-weight: 700; }
     .aud-unid-catsel { font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--linha, #E5E0D5); background: var(--papel, #fff); color: var(--ink); }
     .aud-unid-acoes { padding: 12px 22px; margin-top: 0; border-top: 1px solid var(--linha, #E5E0D5); background: #F8FBFC; align-items: center; }
     /* V939: verificador "Testar uma linha" */
     .aud-unid-teste { border-bottom: 1px solid var(--linha, #E5E0D5); background: #F8FBFC; position: relative; z-index: 5; }
-    .aud-unid-teste-tog { width: 100%; text-align: left; border: none; background: transparent; font: inherit; font-size: 13px; font-weight: 800; color: #0f1d2e; padding: 10px 22px; cursor: pointer; display: flex; gap: 10px; align-items: center; }
-    .aud-unid-teste-tog:hover { background: #f0f4f8; }
+    .aud-unid-teste-tog { width: 100%; text-align: left; border: none; background: transparent; font: inherit; font-size: 13px; font-weight: 800; color: #1d1f20; padding: 10px 22px; cursor: pointer; display: flex; gap: 10px; align-items: center; }
+    .aud-unid-teste-tog:hover { background: #f7f8fa; }
     .aud-unid-esteira { display: flex; gap: 10px; flex-wrap: wrap; padding: 4px 22px 12px; }
     .aud-unid-tp { position: relative; flex: 1 1 200px; min-width: 0; }
     .aud-unid-tp.off { opacity: .55; }
     .aud-unid-tc-btn { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--linha, #E5E0D5); border-radius: 10px; background: var(--papel, #fff); font: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer; text-align: left; min-width: 0; }
     .aud-unid-tc-btn:disabled { cursor: default; }
-    .aud-unid-tp.aberto .aud-unid-tc-btn, .aud-unid-tc-btn:not(:disabled):hover { border-color: #1d4470; background: #f6f4ef; }
-    .aud-unid-tc-rot { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #1d4470; white-space: nowrap; }
+    .aud-unid-tp.aberto .aud-unid-tc-btn, .aud-unid-tc-btn:not(:disabled):hover { border-color: #46688c; background: #fafbfc; }
+    .aud-unid-tc-rot { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #46688c; white-space: nowrap; }
     .aud-unid-tc-val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); }
-    .aud-unid-tc-val.tem { color: #0f1d2e; font-weight: 700; }
-    .aud-unid-tc-chev { color: #1d4470; font-size: 11px; }
-    .aud-unid-tc-pop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 260px; z-index: 20; background: var(--papel, #fff); border: 1px solid #dfe4ea; border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42); }
+    .aud-unid-tc-val.tem { color: #1d1f20; font-weight: 700; }
+    .aud-unid-tc-chev { color: #46688c; font-size: 11px; }
+    .aud-unid-tc-pop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 260px; z-index: 20; background: var(--papel, #fff); border: 1px solid #eef0f2; border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42); }
     .aud-unid-tp-busca { width: 100%; box-sizing: border-box; font: inherit; font-size: 12.5px; padding: 6px 9px; border: 1px solid var(--linha, #E5E0D5); border-radius: 8px; margin-bottom: 6px; background: #fff; color: var(--ink); }
     .aud-unid-tp-lista { max-height: 240px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
     .aud-unid-tp-it { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 7px; cursor: pointer; font-size: 12.5px; }
-    .aud-unid-tp-it:hover { background: #f6f4ef; }
-    .aud-unid-tp-it.sel { background: #f0f4f8; font-weight: 700; }
+    .aud-unid-tp-it:hover { background: #fafbfc; }
+    .aud-unid-tp-it.sel { background: #f7f8fa; font-weight: 700; }
     .aud-unid-tp-it small { display: block; font-size: 10.5px; color: var(--ink-soft); font-weight: 500; }
     .aud-unid-tp-cb { flex: none; width: 17px; height: 17px; }
     .aud-unid-tp-cb:checked::after { left: 4px; top: 0; width: 5px; height: 9px; }
@@ -3985,12 +3985,12 @@ const AuditoriaApp = (function () {
     .aud-unid-ver-badge { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; }
     .aud-unid-ver.paga .aud-unid-ver-badge { background: #DDF5EA; color: #0E7A57; }
     .aud-unid-ver.nao .aud-unid-ver-badge { background: #FDE8E6; color: #B4453A; }   /* V945: vermelho claro */
-    .aud-unid-ver-valor { font-family: var(--font-mono); font-size: 18px; font-weight: 800; color: #0f1d2e; }
+    .aud-unid-ver-valor { font-family: var(--font-mono); font-size: 18px; font-weight: 800; color: #1d1f20; }
     .aud-unid-ver.paga .aud-unid-ver-valor { color: #0E7A57; }
     .aud-unid-ver-valor small { font-family: var(--font-body, inherit); font-size: 11.5px; font-weight: 600; color: var(--ink-soft); }
     .aud-unid-ver-origem { margin-left: auto; font-size: 11.5px; color: var(--ink-soft); }
     .aud-unid-ver-det { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
-    .aud-unid-ver-trilha { font-size: 12px; color: #0f1d2e; margin-top: 6px; }
+    .aud-unid-ver-trilha { font-size: 12px; color: #1d1f20; margin-top: 6px; }
     .aud-unid-ver-prova { margin-top: 10px; }
     .aud-unid-prova-wrap { border: 1px solid #EDF2F0; border-radius: 8px; }
     .aud-unid-prova-wrap.esteira { max-height: 318px; overflow: auto; }   /* V942: ~10 linhas + cabeçalho; o resto rola */
@@ -4009,10 +4009,10 @@ const AuditoriaApp = (function () {
     .aud-val-sit-nao { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
     .aud-tag-notif  { background: #FBE6BE; color: #9A6A12; }
     .aud-tag-neutra { background: var(--bg-sunken); color: var(--ink-faint); }
-    .aud-tag-glosa  { background: #9B3A3A; color: #fff; }
+    .aud-tag-glosa  { background: #a15646; color: #fff; }
     .aud-tag-dup    { background: #6B4FA0; color: #fff; }
-    .aud-tag-warn   { background: #9FE6C9; color: #102d4b; }
-    .aud-renomeado { font-size: 10px; color: #1d4470; font-weight: 600; margin-left: 4px; }
+    .aud-tag-warn   { background: #cfe3d1; color: #3a5877; }
+    .aud-renomeado { font-size: 10px; color: #46688c; font-weight: 600; margin-left: 4px; }
     .aud-faltante { color: var(--ink-faint); font-style: italic; }
     .aud-trunc { text-align: center; padding: 10px; font-size: 12px; color: var(--ink-faint); font-style: italic; }
     .aud-vazio { text-align: center; padding: 30px; color: var(--ink-faint); font-style: italic; }
@@ -4038,8 +4038,8 @@ const AuditoriaApp = (function () {
     .hon-tab-wrap { border: 1px solid var(--bg-sunken); border-radius: 10px; overflow: auto; max-height: 60vh; }
     .hon-tab { width: 100%; border-collapse: collapse; font-size: 12px; }
     .hon-tab thead th { position: sticky; top: 0; background: #F7F3E9; color: var(--ink-soft); text-align: left; font-weight: 500; padding: 9px 10px; border-bottom: 1px solid var(--border); z-index: 1; }
-    .hon-tab tbody td { padding: 6px 10px; border-top: 1px solid #e9edf1; color: var(--ink); vertical-align: middle; }
-    .hon-tab tbody tr.hon-row-edit { background: var(--primary-soft, #e4ecf4); }
+    .hon-tab tbody td { padding: 6px 10px; border-top: 1px solid #f2f3f5; color: var(--ink); vertical-align: middle; }
+    .hon-tab tbody tr.hon-row-edit { background: var(--primary-soft, #eef2f6); }
     .hon-adm { font-family: var(--font-mono); white-space: nowrap; }
     .hon-proc { max-width: 240px; }
     .hon-in { width: 100%; box-sizing: border-box; height: 32px; padding: 0 9px; border: 1px solid var(--border); border-radius: 7px; font: inherit; font-size: 12px; background: var(--bg-elevated); color: var(--ink); }
@@ -4083,37 +4083,37 @@ const AuditoriaApp = (function () {
       position: relative; display: flex; align-items: center; background: var(--bg-elevated);
       border: 1px solid var(--border); border-radius: 8px; height: 38px; transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
     }
-    .calc-fil-input-wrap:hover { border-color: rgba(42, 90, 140,0.45); }
-    .calc-fil-input-wrap:focus-within { border-color: #2a5a8c; box-shadow: 0 0 0 3px rgba(42, 90, 140,0.15); }
-    .calc-fil-input-wrap.calc-fil-ativo { background: rgba(42, 90, 140,0.06); border-color: rgba(42, 90, 140,0.45); }
+    .calc-fil-input-wrap:hover { border-color: rgba(63, 100, 137,0.45); }
+    .calc-fil-input-wrap:focus-within { border-color: #3f6489; box-shadow: 0 0 0 3px rgba(63, 100, 137,0.15); }
+    .calc-fil-input-wrap.calc-fil-ativo { background: rgba(63, 100, 137,0.06); border-color: rgba(63, 100, 137,0.45); }
     .calc-fil-icone { padding: 0 8px 0 12px; color: var(--ink-faint); font-size: 12px; pointer-events: none; }
     .calc-fil-input { flex: 1; min-width: 0; padding: 0 4px 0 0; border: none; background: transparent; font-family: inherit; font-size: 12.5px; color: var(--ink); height: 100%; }
     .calc-fil-input:focus { outline: none; }
     .calc-fil-x, .calc-fil-x-wrap {
       display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 4px;
-      border: none; background: rgba(155,58,58,0.10); color: #9B3A3A; border-radius: 50%;
+      border: none; background: rgba(161, 86, 70,0.10); color: #a15646; border-radius: 50%;
       font-size: 14px; font-weight: 700; line-height: 1; cursor: pointer; padding: 0; transition: background-color 120ms, color 120ms, border-color 120ms, box-shadow 120ms, transform 120ms, opacity 120ms;
     }
-    .calc-fil-x:hover, .calc-fil-x-wrap:hover { background: #9B3A3A; color: white; transform: scale(1.1); }
+    .calc-fil-x:hover, .calc-fil-x-wrap:hover { background: #a15646; color: white; transform: scale(1.1); }
     .calc-fil-caret-btn {
       display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 100%; padding: 0; margin-right: 2px;
       background: transparent; border: none; cursor: pointer; color: var(--ink-faint); transition: color 150ms;
     }
-    .calc-fil-caret-btn:hover { color: #1d4470; }
-    .calc-fil-combo-aberto .calc-fil-caret-btn { color: #1d4470; }
+    .calc-fil-caret-btn:hover { color: #46688c; }
+    .calc-fil-combo-aberto .calc-fil-caret-btn { color: #46688c; }
     .calc-fil-input-wrap .calc-fil-caret { transition: transform 200ms ease; }
     .calc-fil-combo-aberto.calc-fil-input-wrap .calc-fil-caret { transform: rotate(180deg); }
     .calc-fil-opt-mais { padding: 8px 10px; font-size: 11px; color: var(--ink-faint); font-style: italic; background: var(--bg-sunken); border-radius: 6px; margin-top: 4px; text-align: center; }
     .calc-fil-opt-texto { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .calc-fil-combo { position: relative; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px; transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms; }
-    .calc-fil-combo:hover { border-color: rgba(42, 90, 140,0.45); }
-    .calc-fil-combo.calc-fil-ativo { background: rgba(42, 90, 140,0.06); border-color: rgba(42, 90, 140,0.45); }
-    .calc-fil-combo.calc-fil-combo-aberto { border-color: #2a5a8c; box-shadow: 0 0 0 3px rgba(42, 90, 140,0.15); }
+    .calc-fil-combo:hover { border-color: rgba(63, 100, 137,0.45); }
+    .calc-fil-combo.calc-fil-ativo { background: rgba(63, 100, 137,0.06); border-color: rgba(63, 100, 137,0.45); }
+    .calc-fil-combo.calc-fil-combo-aberto { border-color: #3f6489; box-shadow: 0 0 0 3px rgba(63, 100, 137,0.15); }
     .calc-fil-display { width: 100%; height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px 0 12px; background: transparent; border: none; font-family: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer; text-align: left; }
     .calc-fil-display:focus { outline: none; }
     .calc-fil-valor { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .calc-fil-caret { color: var(--ink-faint); font-size: 11px; margin-left: 6px; transition: transform 200ms ease; }
-    .calc-fil-combo-aberto .calc-fil-caret { transform: rotate(180deg); color: #1d4470; }
+    .calc-fil-combo-aberto .calc-fil-caret { transform: rotate(180deg); color: #46688c; }
     /* V920: a janela cresce pro NOME CABER NUMA LINHA SÓ (sem quebra) —
        largura mínima = o campo; máxima generosa; nunca menor que o campo */
     .calc-fil-opcoes {
@@ -4125,9 +4125,9 @@ const AuditoriaApp = (function () {
     }
     @keyframes aud-fil-fadein { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
     .calc-fil-opt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 12.5px; color: var(--ink); cursor: pointer; border-radius: 6px; transition: background 120ms; }
-    .calc-fil-opt:hover { background: rgba(42, 90, 140,0.08); }
-    .calc-fil-opt-ativa { background: rgba(42, 90, 140,0.12); color: #1d4470; font-weight: 600; }
-    .calc-fil-opt-check { display: inline-block; width: 14px; color: #2a5a8c; font-weight: 700; }
+    .calc-fil-opt:hover { background: rgba(63, 100, 137,0.08); }
+    .calc-fil-opt-ativa { background: rgba(63, 100, 137,0.12); color: #46688c; font-weight: 600; }
+    .calc-fil-opt-check { display: inline-block; width: 14px; color: #3f6489; font-weight: 700; }
   `;
 
   // V132.38: expõe a matriz auditada de uma competência pro módulo Relatórios.

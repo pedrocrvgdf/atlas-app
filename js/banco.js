@@ -1526,8 +1526,8 @@ const Banco = {
           el = document.createElement('div');
           el.id = 'atlas-selo-salvando';
           el.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:100060;' +
-            'background:#0f1d2e;color:#fff;font:600 12px/1 Inter Tight,-apple-system,sans-serif;' +
-            'padding:10px 14px;border-radius:10px;box-shadow:0 6px 18px rgba(11, 35, 64,.35);pointer-events:none';
+            'background:#1d1f20;color:#fff;font:600 12px/1 Inter Tight,-apple-system,sans-serif;' +
+            'padding:10px 14px;border-radius:10px;box-shadow:0 6px 18px rgba(29, 31, 32,.35);pointer-events:none';
           el.textContent = '💾 Salvando o banco — a tela pode pausar alguns segundos…';
           document.body.appendChild(el);
         }

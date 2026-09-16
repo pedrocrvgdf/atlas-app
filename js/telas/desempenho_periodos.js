@@ -811,7 +811,7 @@ App.telas['desempenho-periodos'] = function () {
         if (c.id === 'sem4')           return `<td class="num mono" ${attr}>${l.sem4 || '—'}</td>`;
         if (c.id === 'sem5')           return `<td class="num mono" ${attr}>${l.sem5 || '—'}</td>`;
         if (c.id === 'total_periodos') return `<td class="num mono" ${attr} style="font-weight: 700">${l.total_periodos}</td>`;
-        if (c.id === 'total_valor')    return `<td class="num mono atlas-rep" ${attr}>R$ ${fmt(l.total_valor, 2)}</td>`;   /* V962: valor de repasse em #1d4470 */
+        if (c.id === 'total_valor')    return `<td class="num mono atlas-rep" ${attr}>R$ ${fmt(l.total_valor, 2)}</td>`;   /* V962: valor de repasse em #46688c */
         return '<td></td>';
       }).join('');
       // Coluna de ações — escondida em linhas mascaradas para não vazar id
@@ -848,7 +848,7 @@ App.telas['desempenho-periodos'] = function () {
        * ao outro de forma confiável.
        *
        * Cor (V950): glifo BRANCO sobre pastilha #0B1D33 (o marinho do menu).
-       * Antes era dourado #B8965A sobre #0f1d2e.
+       * Antes era dourado #B8965A sobre #1d1f20.
        */
       const svgMais = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
         stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`;
@@ -1490,7 +1490,7 @@ App.telas['desempenho-periodos'] = function () {
   /**
    * V860: extração no PADRÃO DO FELLOW — menu no botão flutuante com dois
    * relatórios (Sintética / Analítica), diálogo de separação em abas e saída
-   * ESTILIZADA via ExcelJS (cabeçalho #1d4470, subtotais em negrito, moeda).
+   * ESTILIZADA via ExcelJS (cabeçalho #46688c, subtotais em negrito, moeda).
    * A lib XLSX vendorizada é SheetJS CE e não grava negrito/fundo — por isso a
    * ExcelJS, exatamente como o Fellow faz desde a V735.
    *
@@ -1777,15 +1777,15 @@ App.telas['desempenho-periodos'] = function () {
         .btn-compact:hover { background: var(--bg-sunken); border-color: var(--ink-soft); }
         .btn-compact.ativo {
           background: var(--primary);
-          color: #e9edf1;
+          color: #f2f3f5;
           border-color: var(--primary);
         }
         .btn-compact-primary {
           background: var(--primary);
-          color: #e9edf1;
+          color: #f2f3f5;
           border-color: var(--primary);
         }
-        .btn-compact-primary:hover { background: #102d4b; border-color: #102d4b; color: #e9edf1; }
+        .btn-compact-primary:hover { background: #3a5877; border-color: #3a5877; color: #f2f3f5; }
 
         /* Menu de visualização (dropdown) */
         .per-menu-wrap { position: relative; z-index: 999; }
@@ -1821,7 +1821,7 @@ App.telas['desempenho-periodos'] = function () {
         }
         .per-menu-item:hover { background: var(--bg-sunken); }
         .per-menu-item.ativo {
-          background: #e4ecf4;
+          background: #eef2f6;
         }
         .per-menu-ico { font-size: 14px; line-height: 1.2; }
         .per-menu-txt { display: flex; flex-direction: column; gap: 2px; }
@@ -1850,8 +1850,8 @@ App.telas['desempenho-periodos'] = function () {
           letter-spacing: 0.02em;
         }
         .per-foco-banner {
-          background: linear-gradient(90deg, #e9edf1 0%, #e4ecf4 100%);
-          border: 1px solid #2a5a8c;
+          background: linear-gradient(90deg, #f2f3f5 0%, #eef2f6 100%);
+          border: 1px solid #3f6489;
           border-radius: 8px;
           padding: 8px 14px;
           margin-bottom: 8px;
@@ -1862,7 +1862,7 @@ App.telas['desempenho-periodos'] = function () {
           font-size: 12px;
           color: #4B3814;
         }
-        .per-foco-banner strong { color: #102d4b; }
+        .per-foco-banner strong { color: #3a5877; }
 
         /* Filtros bar — contêiner da peça 20C (.per-sb) + botão "✕ Limpar";
            a peça é IRMÃ do header e estica de ponta a ponta */
@@ -1896,13 +1896,13 @@ App.telas['desempenho-periodos'] = function () {
           display: flex; align-items: stretch;
           padding: 6px;
           background: #fff;
-          border: 1px solid #e4ecf4;
+          border: 1px solid #eef2f6;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+          box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
           flex-wrap: wrap;
         }
         .per-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-        .per-sb-celwrap:not(:last-child) .per-sb-cel { border-right: 1px solid #f0f4f8; }
+        .per-sb-celwrap:not(:last-child) .per-sb-cel { border-right: 1px solid #f7f8fa; }
         .per-sb-cel {
           flex: 1; min-width: 0;
           display: flex; align-items: center; gap: 9px;
@@ -1911,64 +1911,64 @@ App.telas['desempenho-periodos'] = function () {
           font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .per-sb-cel:hover, .per-sb-cel.ativo, .per-sb-cel.aberta { background: #f6f4ef; }
-        .per-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+        .per-sb-cel:hover, .per-sb-cel.ativo, .per-sb-cel.aberta { background: #fafbfc; }
+        .per-sb-cel:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
         .per-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f5f9; color: #5a6879;
+          background: #f0f5f9; color: #585d62;
         }
-        .per-sb-cel.ativo .per-sb-tile, .per-sb-cel.aberta .per-sb-tile { background: #e4ecf4; color: #1d4470; }
+        .per-sb-cel.ativo .per-sb-tile, .per-sb-cel.aberta .per-sb-tile { background: #eef2f6; color: #46688c; }
         .per-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
         .per-sb-rot {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .09em; color: #5a6879; white-space: nowrap;
+          letter-spacing: .09em; color: #585d62; white-space: nowrap;
         }
         .per-sb-val {
-          font-size: 13px; font-weight: 500; color: #5a6879;
+          font-size: 13px; font-weight: 500; color: #585d62;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .per-sb-cel.ativo .per-sb-val { font-weight: 700; color: #12304f; }
-        .per-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .per-sb-cel.ativo .per-sb-val { font-weight: 700; color: #3a5877; }
+        .per-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .per-sb-cel.aberta .per-sb-chev { transform: rotate(180deg); }
 
         /* painel ancorado na célula, por cima dos cards */
         .per-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 340px;
-          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
+          background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42);
           overflow: hidden;
         }
         .per-sb-buscabox {
           display: flex; align-items: center; gap: 8px;
-          padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
+          padding: 11px 12px 10px; border-bottom: 1px solid #f7f8fa;
         }
         .per-sb-buscabox .per-sb-busca-ic { color: #6b7d8e; display: flex; }
         .per-sb-busca {
-          flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
-          background: #f6f4ef; padding: 0 10px; font-size: 13px;
-          font-family: inherit; color: #12304f; outline: none;
+          flex: 1; height: 30px; border: 1px solid #eef0f2; border-radius: 8px;
+          background: #fafbfc; padding: 0 10px; font-size: 13px;
+          font-family: inherit; color: #3a5877; outline: none;
         }
-        .per-sb-busca::placeholder { color: #96a2b1; }
-        .per-sb-busca:focus { border-color: #2a5a8c; }
+        .per-sb-busca::placeholder { color: #8a9096; }
+        .per-sb-busca:focus { border-color: #3f6489; }
         .per-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
         .per-sb-lista::-webkit-scrollbar { width: 8px; }
-        .per-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
-        .per-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+        .per-sb-lista::-webkit-scrollbar-track { background: #f7f8fa; }
+        .per-sb-lista::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
         .per-sb-it {
           display: flex; align-items: center; gap: 10px;
           height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-          font-size: 13px; color: #12304f;
+          font-size: 13px; color: #3a5877;
         }
-        .per-sb-it:hover, .per-sb-it.foco { background: #f0f4f8; }
-        .per-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+        .per-sb-it:hover, .per-sb-it.foco { background: #f7f8fa; }
+        .per-sb-it.sel { background: #f7f8fa; font-weight: 700; }
         .per-sb-it-todos { font-weight: 700; }
         .per-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .per-sb-ck { color: #1d4470; display: flex; }
+        .per-sb-ck { color: #46688c; display: flex; }
         .per-sb-rodape {
-          padding: 7px 12px; border-top: 1px solid #f0f4f8;
-          font-size: 10.5px; font-weight: 600; color: #96a2b1;
+          padding: 7px 12px; border-top: 1px solid #f7f8fa;
+          font-size: 10.5px; font-weight: 600; color: #8a9096;
         }
         @media (max-width: 1280px) { .per-sb-celwrap { flex-basis: 32%; } }
         @media (max-width: 900px)  { .per-sb-celwrap { flex-basis: 48%; } }
@@ -1990,23 +1990,23 @@ App.telas['desempenho-periodos'] = function () {
           overflow: hidden;
         }
         .per-card-faixa { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
-        .per-card-verde   { background: linear-gradient(180deg, #e4ecf4 0%, #EDF5F0 100%); }
-        .per-card-verde .per-card-faixa { background: #102d4b; }
+        .per-card-verde   { background: linear-gradient(180deg, #eef2f6 0%, #EDF5F0 100%); }
+        .per-card-verde .per-card-faixa { background: #3a5877; }
         .per-card-roxo    { background: linear-gradient(180deg, #EEEAF6 0%, #F5F2FA 100%); }
         .per-card-roxo .per-card-faixa { background: #6B4587; }
         .per-card-bege    { background: linear-gradient(180deg, #F2E8D4 0%, #F8F0DD 100%); }
-        .per-card-bege .per-card-faixa { background: #143352; }
-        .per-card-destaque { background: #102d4b; color: #5a6879; }
-        .per-card-destaque .per-card-titulo { color: #5a6879; }
-        .per-card-destaque .per-card-valor { color: #143352; }
-        .per-card-destaque .per-card-sub { color: #5a6879; }
+        .per-card-bege .per-card-faixa { background: #5980a6; }
+        .per-card-destaque { background: #3a5877; color: #585d62; }
+        .per-card-destaque .per-card-titulo { color: #585d62; }
+        .per-card-destaque .per-card-valor { color: #5980a6; }
+        .per-card-destaque .per-card-sub { color: #585d62; }
 
         .per-card-titulo {
           font-size: 10px;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          color: #0f1d2e; /* V849: título dos cards totalizadores */
+          color: #1d1f20; /* V849: título dos cards totalizadores */
           margin-bottom: 4px;
         }
         .per-card-valor { font-size: 24px; font-weight: 800; line-height: 1.1; color: var(--primary); }
@@ -2054,9 +2054,9 @@ App.telas['desempenho-periodos'] = function () {
            número nasce alinhado com a coluna dele. O recuo é o mesmo das
            células normais (6px 10px), então nada desloca. */
         .per-grupo-header td {
-          background: #f0f4f8;   /* V863 (era #8FABC4) */
+          background: #f7f8fa;   /* V863 (era #8FABC4) */
           font-weight: 700;
-          color: #0f1d2e;
+          color: #1d1f20;
           font-size: 11px;
           letter-spacing: 0.04em;
           padding: 5px 10px;
@@ -2079,7 +2079,7 @@ App.telas['desempenho-periodos'] = function () {
         /* as ações na coluna própria, DEPOIS do valor consolidado */
         .per-grupo-header .per-grupo-acoes { white-space: nowrap; text-align: center; padding: 3px 8px; }
 
-        /* V861/V863: glifo #B8965A sobre pastilha #0f1d2e. O dourado direto na
+        /* V861/V863: glifo #B8965A sobre pastilha #1d1f20. O dourado direto na
            faixa não se sustenta em contraste (1,16:1 no azul antigo, 2,49:1 no
            claro de agora); sobre o marinho ele vai a 5,5:1. Botões menores
            (18px) para caberem na coluna de ações sem alargá-la. */
@@ -2179,7 +2179,7 @@ App.telas['desempenho-periodos'] = function () {
            faixa mantém o azul fixo; as linhas de drill down continuam com o
            hover normal da tabela (pedido do usuário) */
         .per-tabela tbody tr.per-grupo-header:hover { background: transparent; }
-        .per-grupo-header:hover td { background: #f0f4f8; }
+        .per-grupo-header:hover td { background: #f7f8fa; }
         .per-grupo-icone {
           margin-right: 6px;
           display: inline-block;
@@ -2222,7 +2222,7 @@ App.telas['desempenho-periodos'] = function () {
         .per-ext-box {
           background: var(--bg-elevated, #fff); border-radius: 12px; padding: 20px;
           width: 380px; max-width: calc(100vw - 32px); max-height: 84vh; overflow-y: auto;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64, .42);
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32, .42);
         }
         .per-ext-box h4 { margin: 0 0 6px; font-size: 15px; }
         .per-ext-box p { margin: 0 0 14px; font-size: 12px; color: var(--ink-soft); }
@@ -2233,8 +2233,8 @@ App.telas['desempenho-periodos'] = function () {
           cursor: pointer; background: white;
         }
         .per-ext-op:hover { background: var(--bg-sunken); }
-        .per-ext-op:has(input:checked) { background: #e4ecf4; border-color: #1d4470; }
-        .per-ext-op input { margin-top: 2px; accent-color: #1d4470; }
+        .per-ext-op:has(input:checked) { background: #eef2f6; border-color: #46688c; }
+        .per-ext-op input { margin-top: 2px; accent-color: #46688c; }
         .per-ext-op span { display: flex; flex-direction: column; gap: 1px; }
         .per-ext-op strong { font-size: 12px; color: var(--ink); }
         .per-ext-op small { font-size: 10px; color: var(--ink-soft); }

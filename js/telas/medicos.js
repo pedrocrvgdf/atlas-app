@@ -119,7 +119,7 @@ App.telas['medicos'] = function () {
           }
           .medico-stat-card.is-ativo {
             border-color: var(--primary);
-            background: #f6f4ef;
+            background: #fafbfc;
             box-shadow: inset 0 0 0 1px var(--primary);
           }
           .medico-stat-card::before {
@@ -130,11 +130,11 @@ App.telas['medicos'] = function () {
           }
           .medico-stat-card.is-ativo::before { width: 5px; }
           .medico-stat-total::before    { background: var(--primary); }
-          .medico-stat-interno::before  { background: #143352; }
-          .medico-stat-hibrido::before  { background: #143352; }
+          .medico-stat-interno::before  { background: #5980a6; }
+          .medico-stat-hibrido::before  { background: #5980a6; }
           .medico-stat-externo::before  { background: #8A4B1F; }
-          .medico-stat-fellow::before   { background: #2a5a8c; }
-          .medico-stat-aviso::before    { background: #9B3A3A; }
+          .medico-stat-fellow::before   { background: #3f6489; }
+          .medico-stat-aviso::before    { background: #a15646; }
           .medico-stat-label {
             font-size: 10px;
             text-transform: uppercase;
@@ -232,7 +232,7 @@ App.telas['medicos'] = function () {
       }
       .esp-btn.ativo {
         background: var(--primary);
-        color: #f6f4ef;
+        color: #fafbfc;
         border-color: var(--primary);
       }
       .esp-btn .qtd {
@@ -258,7 +258,7 @@ App.telas['medicos'] = function () {
       .lista-medicos-table thead th {
         padding: 12px 14px;
         text-align: left;
-        color: #f6f4ef;
+        color: #fafbfc;
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -392,13 +392,13 @@ App.telas['medicos'] = function () {
   // consistente entre sessões.
 
   const PALETA_ESPECIALIDADES = [
-    { bg: '#E8EDE9', fg: '#143352', bd: '#C2D2C9' },  // verde profundo
-    { bg: '#e4ecf4', fg: '#143352', bd: '#9FE6C9' },  // dourado/âmbar
+    { bg: '#E8EDE9', fg: '#5980a6', bd: '#C2D2C9' },  // verde profundo
+    { bg: '#eef2f6', fg: '#5980a6', bd: '#cfe3d1' },  // dourado/âmbar
     { bg: '#E0E8F0', fg: '#2A4A6E', bd: '#B5C5D8' },  // azul aço
     { bg: '#F0E0E0', fg: '#7A2C2C', bd: '#D8B5B5' },  // vermelho terra
     { bg: '#EAE3F0', fg: '#5A3A78', bd: '#C8B8D8' },  // roxo suave
     { bg: '#FBE8D6', fg: '#8A4B1F', bd: '#E8C5A0' },  // laranja queimado
-    { bg: '#e4ecf4', fg: '#143352', bd: '#9FD9C7' },  // verde água
+    { bg: '#eef2f6', fg: '#5980a6', bd: '#9FD9C7' },  // verde água
     { bg: '#F5E0E8', fg: '#7A2C58', bd: '#DDB5C8' },  // rosa antigo
     { bg: '#E6E0D4', fg: '#5A4A2C', bd: '#C8BCA5' },  // bege/oliva
     { bg: '#D8E3E8', fg: '#2C5462', bd: '#A8C0CA' },  // teal escuro
@@ -1178,7 +1178,7 @@ function abrirModal({ titulo, conteudo, acoes, onAcao, apos, aoFechar }) {
   const overlay = document.createElement('div');
   overlay.id = 'app-modal-overlay';
   overlay.style.cssText = `
-    position: fixed; inset: 0; background: rgba(15, 29, 46, 0.5);
+    position: fixed; inset: 0; background: rgba(29, 31, 32, 0.5);
     display: flex; align-items: center; justify-content: center;
     z-index: 5000; padding: 20px; 
     animation: fade-in-up 200ms;
@@ -1317,10 +1317,10 @@ async function abrirEdicaoMedico(medicoId) {
             </label>
           </div>
           <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border)">
-            <label style="display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #0A7A5A; border-radius: var(--radius-md); cursor: pointer; background: #F0F7EE">
+            <label style="display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #4f8a5b; border-radius: var(--radius-md); cursor: pointer; background: #F0F7EE">
               <input type="checkbox" data-cargo="SOCIO" ${cargosVinculados.has('SOCIO') ? 'checked' : ''} style="margin: 0">
               <span style="font-size: 13px">
-                <span style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; background: #D8EAD3; color: #0A7A5A; border: 1.5px solid #0A7A5A; border-radius: 50%; font-size: 8px; font-weight: 800; line-height: 1; vertical-align: middle; margin-right: 4px">S</span>
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; background: #D8EAD3; color: #4f8a5b; border: 1.5px solid #4f8a5b; border-radius: 50%; font-size: 8px; font-weight: 800; line-height: 1; vertical-align: middle; margin-right: 4px">S</span>
                 Sócio <strong style="font-size: 10px; color: var(--ink-faint)">(informativo, não gera pagamento)</strong>
               </span>
             </label>

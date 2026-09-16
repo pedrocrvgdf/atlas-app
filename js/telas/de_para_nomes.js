@@ -69,7 +69,7 @@ App.telas['de-para-nomes'] = function () {
         <div class="page-content">
           <header class="page-header"><h2>De-Para de Nomes</h2></header>
           <div class="card" style="background: #FEE; border-color: #D88; padding: 18px">
-            <h3 style="color: #9B3A3A; margin: 0 0 8px">⚠ Erro ao carregar</h3>
+            <h3 style="color: #a15646; margin: 0 0 8px">⚠ Erro ao carregar</h3>
             <pre style="font-size: 11px; white-space: pre-wrap">${e.message}\n\n${e.stack}</pre>
           </div>
         </div>
@@ -693,7 +693,7 @@ App.telas['de-para-nomes'] = function () {
           <div style="font-weight: 600">${escapeHTML(l.nome)}</div>
           ${badgeStatus ? `<div style="margin-top: 3px">${badgeStatus}</div>` : ''}
           ${ehJuscelino ? `
-            <div style="font-size: 10px; color: #143352; margin-top: 3px">
+            <div style="font-size: 10px; color: #5980a6; margin-top: 3px">
               ⚠ Parece nome de pessoa pública — possível erro no sistema do hospital
             </div>
           ` : ''}
@@ -745,7 +745,7 @@ App.telas['de-para-nomes'] = function () {
         <option value="__NOVO__">+ Cadastrar como novo médico</option>
         <option value="__IGNORAR__">— Ignorar (não vincular) —</option>
         ${l.sugestao ? `
-          <option value="${l.sugestao.id}" ${l.status === 'pendente' ? 'selected' : ''} style="font-weight: 600; background: #e4ecf4">
+          <option value="${l.sugestao.id}" ${l.status === 'pendente' ? 'selected' : ''} style="font-weight: 600; background: #eef2f6">
             ✨ ${escapeHTML(l.sugestao.nome_oficial)} (sugestão)
           </option>
         ` : ''}
@@ -756,7 +756,7 @@ App.telas['de-para-nomes'] = function () {
 
   function renderBotaoAcao(l) {
     if (l.status === 'direto') {
-      return '<span style="color: #0A7A5A; font-size: 11px; font-weight: 600">—</span>';
+      return '<span style="color: #4f8a5b; font-size: 11px; font-weight: 600">—</span>';
     }
     if (l.status === 'sinonimo') {
       return `<button class="btn-mini btn-perigo dp-btn-desvincular" data-nome="${escapeAttr(l.nome)}">Desvincular</button>`;
@@ -1172,8 +1172,8 @@ App.telas['de-para-nomes'] = function () {
           padding: 12px 14px;
         }
         .dp-stat-total   { border-left-color: var(--primary); }
-        .dp-stat-ok      { border-left-color: #0A7A5A; }
-        .dp-stat-alerta  { background: #FCEFEF; border-color: #E8B6B6; border-left-color: #9B3A3A; }
+        .dp-stat-ok      { border-left-color: #4f8a5b; }
+        .dp-stat-alerta  { background: #FCEFEF; border-color: #E8B6B6; border-left-color: #a15646; }
         .dp-stat-sugestao{ border-left-color: var(--accent); }
         .dp-stat-label {
           font-size: 10px;
@@ -1189,8 +1189,8 @@ App.telas['de-para-nomes'] = function () {
           color: var(--ink);
           line-height: 1;
         }
-        .dp-stat-alerta .dp-stat-valor   { color: #9B3A3A; }
-        .dp-stat-ok      .dp-stat-valor  { color: #0A7A5A; }
+        .dp-stat-alerta .dp-stat-valor   { color: #a15646; }
+        .dp-stat-ok      .dp-stat-valor  { color: #4f8a5b; }
         .dp-stat-sugestao .dp-stat-valor { color: var(--accent); }
 
         .dp-filtros {
@@ -1200,7 +1200,7 @@ App.telas['de-para-nomes'] = function () {
           align-items: center;
         }
 
-        .dp-tabela tr.dp-linha-sugestao { background: #e4ecf4; }
+        .dp-tabela tr.dp-linha-sugestao { background: #eef2f6; }
         .dp-tabela tr.dp-linha-ok       { background: rgba(216, 234, 211, 0.3); }
         .dp-tabela tr.dp-linha-ignorado { background: rgba(0, 0, 0, 0.025); }
         .dp-tabela tr.dp-linha-ignorado td { color: var(--ink-faint); }
@@ -1216,7 +1216,7 @@ App.telas['de-para-nomes'] = function () {
         }
         .dp-select-sugestao {
           border-color: var(--accent);
-          background: #e4ecf4;
+          background: #eef2f6;
           font-weight: 600;
         }
 
@@ -1224,7 +1224,7 @@ App.telas['de-para-nomes'] = function () {
           font-size: 12px;
           color: var(--ink-soft);
         }
-        .dp-status-direto strong { color: #0A7A5A; }
+        .dp-status-direto strong { color: #4f8a5b; }
         .dp-status-ignorado {
           color: var(--ink-faint);
           font-style: italic;
@@ -1238,8 +1238,8 @@ App.telas['de-para-nomes'] = function () {
         .dp-badge-ok {
           display: inline-block;
           padding: 1px 6px;
-          background: #e4ecf4;
-          color: #143352;
+          background: #eef2f6;
+          color: #5980a6;
           border: 1px solid #9FD9C7;
           border-radius: 4px;
           font-size: 9px;
@@ -1249,7 +1249,7 @@ App.telas['de-para-nomes'] = function () {
           display: inline-block;
           padding: 1px 6px;
           background: #E8EDE9;
-          color: #143352;
+          color: #5980a6;
           border: 1px solid #C2D2C9;
           border-radius: 4px;
           font-size: 9px;
@@ -1280,7 +1280,7 @@ App.telas['de-para-nomes'] = function () {
           color: white;
           border-color: var(--primary);
         }
-        .dp-btn-aceitar:hover { background: var(--primary-hover, #0b2340); }
+        .dp-btn-aceitar:hover { background: var(--primary-hover, #3a5877); }
         .dp-btn-vincular {
           background: var(--bg-elevated);
           color: var(--ink-soft);
@@ -1298,7 +1298,7 @@ App.telas['de-para-nomes'] = function () {
           cursor: pointer;
           color: var(--ink-soft);
         }
-        .btn-mini.btn-perigo { color: #9B3A3A; }
+        .btn-mini.btn-perigo { color: #a15646; }
         .btn-mini:hover { background: var(--bg-sunken); }
 
         .dp-rodape {

@@ -615,7 +615,7 @@
               <div class="cons-res-linha"><span class="cons-res-lbl">Admissão</span><strong>${esc(br.admissao)}</strong></div>
               <div class="cons-res-linha"><span class="cons-res-lbl">Repassado</span><strong>R$ ${fmt(br.valor)}</strong> <span class="cons-muted">(${br.linhas} linha[s] no QVIS)</span></div>
               <div class="cons-res-linha"><span class="cons-res-lbl">Status</span>${br.congelada
-                ? `<span class="cons-stag" style="background:#0A7A5A">CONGELADA · ${esc(br.codigo)}</span>`
+                ? `<span class="cons-stag" style="background:#4f8a5b">CONGELADA · ${esc(br.codigo)}</span>`
                 : `<span class="cons-stag" style="background:#B8864A">NÃO CONSOLIDADA</span>`}</div>
             </div>` : `
             <div class="cons-resultado cons-res-vazio">Nenhuma admissão "<strong>${esc(br.termo)}</strong>" no QVIS deste mês.</div>`) : ''}
@@ -823,15 +823,15 @@
       .cons-tl-wrap { position:relative; margin-bottom:var(--space-4); z-index:40; }
       /* V690: altura flexível — o conteúdo da esteira (pino + mês + scrollbar
          horizontal) não cabia nos 54px fixos e nascia um SCROLL VERTICAL */
-      .cons-tl { background:linear-gradient(90deg, #102d4b 0%, #143352 34%, #1d4470 68%, #2a5a8c 100%);
+      .cons-tl { background:linear-gradient(90deg, #3a5877 0%, #5980a6 34%, #46688c 68%, #3f6489 100%);
         border-radius:12px; padding:10px 16px 8px; min-height:54px; box-sizing:border-box;
         display:flex; align-items:center; gap:16px;
-        box-shadow:0 1px 2px rgba(20, 51, 82,.05), 0 12px 28px -22px rgba(16, 45, 75,.5); }
+        box-shadow:0 1px 2px rgba(89, 128, 166,.05), 0 12px 28px -22px rgba(29, 31, 32,.5); }
       .cons-tl-resumo { display:flex; flex-direction:column; gap:1px; flex-shrink:0; padding-right:16px; border-right:1px solid rgba(255,255,255,.28); }
       .cons-tl-kicker { font-size:9.5px; font-weight:700; letter-spacing:0.13em; text-transform:uppercase; color:#e2f6fd; white-space:nowrap; }
       .cons-tl-num { font-size:13.5px; font-weight:700; color:#fff; white-space:nowrap; font-variant-numeric:tabular-nums; }
-      .cons-tl-acao { flex-shrink:0; font-family:inherit; font-size:12px; font-weight:700; color:#143352; background:#fff;
-        border:none; border-radius:8px; padding:8px 13px; cursor:pointer; white-space:nowrap; box-shadow:0 2px 6px rgba(11, 35, 64,.2); }
+      .cons-tl-acao { flex-shrink:0; font-family:inherit; font-size:12px; font-weight:700; color:#5980a6; background:#fff;
+        border:none; border-radius:8px; padding:8px 13px; cursor:pointer; white-space:nowrap; box-shadow:0 2px 6px rgba(29, 31, 32,.2); }
       .cons-tl-acao:hover:not(:disabled) { background:#eaf7fc; }
       .cons-tl-acao:disabled { opacity:0.65; cursor:default; }
       /* V616: a esteira começa no lado ESQUERDO (igual à linha do tempo da
@@ -847,43 +847,43 @@
       .cons-tl-prog { position:absolute; left:8px; top:15px; height:4px; border-radius:2px; background:rgba(255,255,255,.85); }
       .cons-tl-marco { position:absolute; top:4px; display:flex; flex-direction:column; align-items:center; transform:translateX(-50%); }
       .cons-tl-pino { width:24px; height:24px; border-radius:7px; padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
-        background:#fff; box-shadow:0 3px 7px rgba(11, 35, 64,.3); position:relative; z-index:2; transition:transform var(--t-fast); }
+        background:#fff; box-shadow:0 3px 7px rgba(29, 31, 32,.3); position:relative; z-index:2; transition:transform var(--t-fast); }
       .cons-tl-pino:hover { transform:scale(1.16); }
       .cons-tl-pino.st-consolidado { border:1.5px solid #fff; }
       .cons-tl-pino.st-aberta { border:1.5px solid #5b7c93; }
       .cons-tl-data { margin-top:7px; font-size:11px; font-weight:700; white-space:nowrap; color:#fff; }
       .cons-tl-balao { position:absolute; top:60px; z-index:9; width:max-content; min-width:246px; max-width:340px; box-sizing:border-box; flex-direction:column; gap:7px;
-        background:#fff; border-radius:10px; padding:11px 13px; box-shadow:0 8px 22px rgba(11, 35, 64,.34); pointer-events:none; }
+        background:#fff; border-radius:10px; padding:11px 13px; box-shadow:0 8px 22px rgba(29, 31, 32,.34); pointer-events:none; }
       .cons-tl-b-status { display:flex; align-items:center; gap:7px; font-size:9.5px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; white-space:nowrap; }
       .cons-tl-b-status > span { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-      .cons-tl-b-titulo { font-size:13px; font-weight:700; color:#12304f; white-space:nowrap; }
+      .cons-tl-b-titulo { font-size:13px; font-weight:700; color:#3a5877; white-space:nowrap; }
       .cons-tl-b-linhas { display:flex; flex-direction:column; gap:3px; }
-      .cons-tl-b-linhas span { font-size:11.5px; color:#5a6879; white-space:nowrap; font-variant-numeric:tabular-nums; }
-      .cons-tl-bd { position:fixed; inset:0; background:rgba(11, 35, 64,.5); z-index:100050; display:flex; align-items:flex-start; justify-content:center; padding:64px 24px; }
-      .cons-tl-modal { width:520px; max-width:96vw; background:#fff; border-radius:16px; box-shadow:0 24px 60px -20px rgba(11, 35, 64,.45); display:flex; flex-direction:column; }
-      .cons-tl-mod-head { padding:20px 24px 16px; border-bottom:1px solid #f0f4f8; display:flex; flex-direction:column; gap:10px; }
+      .cons-tl-b-linhas span { font-size:11.5px; color:#585d62; white-space:nowrap; font-variant-numeric:tabular-nums; }
+      .cons-tl-bd { position:fixed; inset:0; background:rgba(29, 31, 32,.5); z-index:100050; display:flex; align-items:flex-start; justify-content:center; padding:64px 24px; }
+      .cons-tl-modal { width:520px; max-width:96vw; background:#fff; border-radius:16px; box-shadow:0 24px 60px -20px rgba(29, 31, 32,.45); display:flex; flex-direction:column; }
+      .cons-tl-mod-head { padding:20px 24px 16px; border-bottom:1px solid #f7f8fa; display:flex; flex-direction:column; gap:10px; }
       .cons-tl-mod-topo { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
       .cons-tl-chip { display:flex; align-items:center; gap:7px; font-size:11.5px; font-weight:700; border-radius:999px; padding:5px 11px; }
       .cons-tl-chip-dot { width:8px; height:8px; border-radius:50%; }
-      .cons-tl-x { width:30px; height:30px; border-radius:8px; border:none; background:#f0f4f8; color:#5a6879; font-size:17px; line-height:1; cursor:pointer; }
-      .cons-tl-x:hover { background:#e5edf3; color:#12304f; }
-      .cons-tl-mod-titulo { font-size:20px; font-weight:700; color:#12304f; letter-spacing:-0.01em; }
-      .cons-tl-mod-cod { font-size:13px; color:#5a6879; }
+      .cons-tl-x { width:30px; height:30px; border-radius:8px; border:none; background:#f7f8fa; color:#585d62; font-size:17px; line-height:1; cursor:pointer; }
+      .cons-tl-x:hover { background:#e5edf3; color:#3a5877; }
+      .cons-tl-mod-titulo { font-size:20px; font-weight:700; color:#3a5877; letter-spacing:-0.01em; }
+      .cons-tl-mod-cod { font-size:13px; color:#585d62; }
       .cons-tl-mod-corpo { padding:18px 24px; display:flex; flex-direction:column; gap:16px; }
       .cons-tl-mod-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-      .cons-tl-mod-cardi { background:#f6f4ef; border:1px solid #e8eff5; border-radius:10px; padding:11px 13px; display:flex; flex-direction:column; gap:2px; }
-      .cons-tl-mod-cardi span { font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#96a2b1; }
-      .cons-tl-mod-cardi strong { font-size:15px; font-weight:700; color:#12304f; }
+      .cons-tl-mod-cardi { background:#fafbfc; border:1px solid #e8eff5; border-radius:10px; padding:11px 13px; display:flex; flex-direction:column; gap:2px; }
+      .cons-tl-mod-cardi span { font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#8a9096; }
+      .cons-tl-mod-cardi strong { font-size:15px; font-weight:700; color:#3a5877; }
       .cons-tl-aviso { display:flex; align-items:flex-start; gap:9px; border:1px solid; border-radius:10px; padding:11px 13px; }
       .cons-tl-aviso svg { flex-shrink:0; margin-top:1px; }
-      .cons-tl-aviso span { font-size:12.5px; line-height:1.5; color:#5a6879; }
-      .cons-tl-mod-pe { padding:14px 24px; border-top:1px solid #f0f4f8; display:flex; align-items:center; gap:9px; }
-      .cons-tl-btn-pri { font-family:inherit; font-size:12.5px; font-weight:700; color:#fff; background:#1d4470; border:none; border-radius:9px; padding:11px 18px; cursor:pointer; }
-      .cons-tl-btn-pri:hover { background:#143352; }
-      .cons-tl-btn-sec { font-family:inherit; font-size:12.5px; font-weight:700; color:#5a6879; background:transparent; border:1px solid #dfe4ea; border-radius:9px; padding:10px 16px; cursor:pointer; }
-      .cons-tl-btn-sec:hover { border-color:#c5d5e5; color:#12304f; }
-      .cons-tl-mod-nota { margin-left:auto; font-size:11.5px; color:#96a2b1; }
-      .cons-tl-pino:focus-visible, .cons-tl-acao:focus-visible { outline:2px solid #2a5a8c; outline-offset:2px; }
+      .cons-tl-aviso span { font-size:12.5px; line-height:1.5; color:#585d62; }
+      .cons-tl-mod-pe { padding:14px 24px; border-top:1px solid #f7f8fa; display:flex; align-items:center; gap:9px; }
+      .cons-tl-btn-pri { font-family:inherit; font-size:12.5px; font-weight:700; color:#fff; background:#46688c; border:none; border-radius:9px; padding:11px 18px; cursor:pointer; }
+      .cons-tl-btn-pri:hover { background:#5980a6; }
+      .cons-tl-btn-sec { font-family:inherit; font-size:12.5px; font-weight:700; color:#585d62; background:transparent; border:1px solid #eef0f2; border-radius:9px; padding:10px 16px; cursor:pointer; }
+      .cons-tl-btn-sec:hover { border-color:#e4eaf1; color:#3a5877; }
+      .cons-tl-mod-nota { margin-left:auto; font-size:11.5px; color:#8a9096; }
+      .cons-tl-pino:focus-visible, .cons-tl-acao:focus-visible { outline:2px solid #3f6489; outline-offset:2px; }
 
       .cons-gate { display:flex; gap:12px; align-items:center; padding:13px 16px; margin-bottom:var(--space-4); border-radius:var(--radius-lg);
         background:var(--warning-soft); border:1px solid #E6CFA0; color:#7A5B22; font-size:13px; }

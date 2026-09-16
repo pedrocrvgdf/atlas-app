@@ -303,10 +303,10 @@ function renderGraficoBarras(dados, compAtual) {
 /** Donut de distribuição por fichário */
 function renderGraficoDonut(repasse) {
   const fontes = [
-    { chave: 'laudos',         label: 'Laudos',         cor: '#143352', valor: repasse.laudos          || 0 },
-    { chave: 'periodos',       label: 'Períodos',       cor: '#2a5a8c', valor: repasse.periodos        || 0 },
+    { chave: 'laudos',         label: 'Laudos',         cor: '#5980a6', valor: repasse.laudos          || 0 },
+    { chave: 'periodos',       label: 'Períodos',       cor: '#3f6489', valor: repasse.periodos        || 0 },
     { chave: 'fellow',         label: 'Fellow',         cor: '#15a34a', valor: repasse.fellow          || 0 },
-    { chave: 'qvis_calculado', label: 'QVIS calculado', cor: '#1d4470', valor: repasse.qvis_calculado  || 0 },
+    { chave: 'qvis_calculado', label: 'QVIS calculado', cor: '#46688c', valor: repasse.qvis_calculado  || 0 },
     { chave: 'externos',       label: 'Externos',       cor: '#8A6840', valor: repasse.externos        || 0 },
     { chave: 'lio',            label: 'LIO',            cor: '#5B7A4F', valor: repasse.lio             || 0 },
     { chave: 'opme',           label: 'OPME',           cor: '#6B4F3A', valor: repasse.opme            || 0 },
@@ -1221,7 +1221,7 @@ function injetarEstilosDashboard() {
     }
     .vg-hero {
       background: #222422;
-      color: #e9edf1;
+      color: #f2f3f5;
       border-radius: var(--radius-lg);
       padding: var(--space-5);
       position: relative;
@@ -1232,14 +1232,14 @@ function injetarEstilosDashboard() {
       position: absolute;
       top: -40px; right: -40px;
       width: 200px; height: 200px;
-      background: radial-gradient(circle, rgba(42, 90, 140, 0.12) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(63, 100, 137, 0.12) 0%, transparent 70%);
       pointer-events: none;
     }
     .vg-hero-label {
       font-size: 11px;
       letter-spacing: 0.10em;
       text-transform: uppercase;
-      color: rgba(42, 90, 140, 0.80);
+      color: rgba(63, 100, 137, 0.80);
       font-weight: 600;
       margin-bottom: var(--space-2);
     }
@@ -1249,12 +1249,12 @@ function injetarEstilosDashboard() {
       font-weight: 500;
       line-height: 1;
       letter-spacing: -0.025em;
-      color: #f6f4ef;
+      color: #fafbfc;
       margin-bottom: var(--space-2);
     }
     .vg-hero-meta {
       font-size: 13px;
-      color: rgba(42, 90, 140, 0.65);
+      color: rgba(63, 100, 137, 0.65);
       margin-bottom: var(--space-3);
     }
     .vg-hero-foot {
@@ -1267,7 +1267,7 @@ function injetarEstilosDashboard() {
     }
     .vg-var-up   { color: #A8D5B1; font-weight: 600; }
     .vg-var-down { color: #E6B5B5; font-weight: 600; }
-    .vg-meta-faint { color: rgba(42, 90, 140, 0.55); font-style: italic; }
+    .vg-meta-faint { color: rgba(63, 100, 137, 0.55); font-style: italic; }
 
     /* === Linha de 2 cards (status, ranking, alertas) === */
     .vg-row-2 {
@@ -1362,7 +1362,7 @@ function injetarEstilosDashboard() {
       filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.08));
     }
     .vg-bar-group:hover .vg-bar {
-      filter: drop-shadow(0 3px 8px rgba(20, 51, 82, 0.30));
+      filter: drop-shadow(0 3px 8px rgba(89, 128, 166, 0.30));
       opacity: 0.92;
     }
 
@@ -1532,7 +1532,7 @@ function injetarEstilosDashboard() {
       position: relative;
     }
     .vg-alerta-danger {
-      background: var(--danger-soft, #F0DEDE);
+      background: var(--danger-soft, #faf5f3);
       border-left-color: var(--danger);
     }
     .vg-alerta-warning {
@@ -1544,7 +1544,7 @@ function injetarEstilosDashboard() {
       border-left-color: var(--accent);
     }
     .vg-alerta-success {
-      background: var(--success-soft, #DFF2EA);
+      background: var(--success-soft, #e9f1e9);
       border-left-color: var(--success);
     }
     .vg-alerta-titulo {

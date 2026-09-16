@@ -1389,13 +1389,13 @@
       .impfrac-modal-header {
         padding: 14px 18px;
         background: var(--primary);
-        color: #e9edf1;
+        color: #f2f3f5;
         border-radius: 10px 10px 0 0;
         display: flex; justify-content: space-between; align-items: center;
         font-weight: 700;
       }
       .impfrac-modal-fechar {
-        background: none; border: none; color: #e9edf1; cursor: pointer;
+        background: none; border: none; color: #f2f3f5; cursor: pointer;
         font-size: 16px; padding: 0 6px;
       }
       .impfrac-modal-body { padding: 18px; overflow-y: auto; }
@@ -1413,8 +1413,8 @@
       }
       .impfrac-mes-sel {
         padding: 12px 14px;
-        background: var(--bg-sunken, #e9edf1);
-        border: 1px solid var(--border, #dfe4ea);
+        background: var(--bg-sunken, #f2f3f5);
+        border: 1px solid var(--border, #eef0f2);
         border-radius: 8px;
         margin-bottom: 14px;
         display: flex;
@@ -1424,17 +1424,17 @@
       .impfrac-mes-sel label {
         font-size: 12px;
         font-weight: 700;
-        color: var(--primary, #143352);
+        color: var(--primary, #5980a6);
       }
       .impfrac-mes-sel input[type="month"] {
         align-self: flex-start;
         padding: 7px 10px;
         font-family: inherit;
         font-size: 14px;
-        border: 1.5px solid var(--primary, #143352);
+        border: 1.5px solid var(--primary, #5980a6);
         border-radius: 8px;
         background: #fff;
-        color: var(--ink, #071a30);
+        color: var(--ink, #3a5877);
         cursor: pointer;
       }
       .impfrac-mes-hint {
@@ -1464,7 +1464,7 @@
         border-left: 3px solid var(--primary);
       }
       .impfrac-stat-aviso { border-left-color: #B87A5A; }
-      .impfrac-stat-destaque { border-left-color: var(--accent); background: #e4ecf4; }
+      .impfrac-stat-destaque { border-left-color: var(--accent); background: #eef2f6; }
       .impfrac-stat-label {
         font-size: 10px;
         text-transform: uppercase;
@@ -1491,7 +1491,7 @@
         padding: 10px 14px;
         background: rgba(216, 234, 211, 0.4);
         border-radius: 6px;
-        color: #0A7A5A;
+        color: #4f8a5b;
         font-size: 13px;
       }
       .impfrac-secao-anomalia h4 { color: #993556; }

@@ -89,7 +89,7 @@ App.telas['desempenho-estrabismo'] = function () {
         <div class="page-content">
           <header class="page-header"><h2>Estrabismo</h2></header>
           <div class="card" style="background: #FEE; border-color: #D88; padding: 18px">
-            <h3 style="margin: 0 0 8px; color: #9B3A3A">⚠ Erro ao renderizar</h3>
+            <h3 style="margin: 0 0 8px; color: #a15646">⚠ Erro ao renderizar</h3>
             <pre style="font-size: 11px; white-space: pre-wrap; background: white; padding: 12px; border-radius: 8px">${escapeHTML(e.message)}\n\n${escapeHTML(e.stack || '')}</pre>
           </div>
         </div>
@@ -557,8 +557,8 @@ App.telas['desempenho-estrabismo'] = function () {
           <div class="estr-card-titulo">Admissões de Estrabismo</div>
           <div class="estr-card-valor mono">${k.admissoes}</div>
           <div class="estr-card-breakdown">
-            <div class="estr-breakdown-item"><span class="estr-bd-dot" style="background: #102d4b"></span> Convênio: <strong>${k.admConvenio}</strong></div>
-            <div class="estr-breakdown-item"><span class="estr-bd-dot" style="background: #102d4b"></span> SUS: <strong>${k.admSus}</strong></div>
+            <div class="estr-breakdown-item"><span class="estr-bd-dot" style="background: #3a5877"></span> Convênio: <strong>${k.admConvenio}</strong></div>
+            <div class="estr-breakdown-item"><span class="estr-bd-dot" style="background: #3a5877"></span> SUS: <strong>${k.admSus}</strong></div>
             <div class="estr-breakdown-item"><span class="estr-bd-dot" style="background: #6B4587"></span> Particular: <strong>${k.admParticular}</strong></div>
           </div>
           ${linhaComp(k.admissoes, kLM?.admissoes, kLY?.admissoes)}
@@ -735,7 +735,7 @@ App.telas['desempenho-estrabismo'] = function () {
         tds.push(`<td>
           <div class="estr-medico-nome">${escapeHTML(CodigoMedico.exibir(m.nome))}</div>
           ${Utilidades.badgeTipoVinculo(m.tipo_vinculo) || ''}
-          ${m.bloqueadoExc ? `<span style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;font-size:9.5px;font-weight:700;background:rgba(192,57,43,0.10);color:#C0392B;border:1px solid rgba(192,57,43,0.45);" title="Bloqueado no fichário de Exceções (Calcular → ⚙ Ajustes → Exceções) — a exceção é quem paga">🚫 bloqueado por exceção</span>` : ''}
+          ${m.bloqueadoExc ? `<span style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;font-size:9.5px;font-weight:700;background:rgba(192,57,43,0.10);color:#c07a66;border:1px solid rgba(192,57,43,0.45);" title="Bloqueado no fichário de Exceções (Calcular → ⚙ Ajustes → Exceções) — a exceção é quem paga">🚫 bloqueado por exceção</span>` : ''}
           ${(!m.bloqueadoExc && m.valorFixoMed != null) ? `<span style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;font-size:9.5px;font-weight:700;background:#FBF0DA;color:#8A5A1F;border:1px solid #E4C98E;" title="V914: regra deste médico no ⚙ Ajustes — cada admissão marcada paga este valor fixo, ignorando qtd 1/2 e convênio/SUS">★ valor fixo R$ ${Utilidades.formatarNumero(m.valorFixoMed, 2)}</span>` : ''}
         </td>`);
       } else if (c.id === 'admissoes') {
@@ -747,8 +747,8 @@ App.telas['desempenho-estrabismo'] = function () {
           <span class="${classeMarcadas}">${checkIcon}${m.qtdMarcadas}/${m.qtdAdmissoes}</span>
         </td>`);
       } else if (c.id === 'repasse') {
-        // V962: valor de repasse em #1d4470 (.atlas-rep); bloqueado por exceção segue vermelho
-        tds.push(`<td class="num mono${m.bloqueadoExc ? '' : ' atlas-rep'}" style="font-weight: 700${m.bloqueadoExc ? '; color: #C0392B' : ''}">${m.bloqueadoExc ? 'R$ 0,00' : 'R$ ' + Utilidades.formatarNumero(m.repasse, 2)}</td>`);
+        // V962: valor de repasse em #46688c (.atlas-rep); bloqueado por exceção segue vermelho
+        tds.push(`<td class="num mono${m.bloqueadoExc ? '' : ' atlas-rep'}" style="font-weight: 700${m.bloqueadoExc ? '; color: #c07a66' : ''}">${m.bloqueadoExc ? 'R$ 0,00' : 'R$ ' + Utilidades.formatarNumero(m.repasse, 2)}</td>`);
       }
     }
 
@@ -774,7 +774,7 @@ App.telas['desempenho-estrabismo'] = function () {
                 Admissões (${m.admList.length})
               </span>
             </div>
-            <div class="estr-dd-moldura"><!-- V958: contorno #dfe4ea em volta da tabela de admissões -->
+            <div class="estr-dd-moldura"><!-- V958: contorno #eef0f2 em volta da tabela de admissões -->
             <table class="estr-dd-tabela">
               <thead>
                 <tr>
@@ -1633,7 +1633,7 @@ App.telas['desempenho-estrabismo'] = function () {
           <div class="estr-aj-titulo">Valores de repasse</div>
           <div class="estr-aj-grid">
             <div class="estr-aj-card">
-              <div class="estr-aj-card-faixa" style="background: linear-gradient(180deg, #143352, #2a5a8c)"></div>
+              <div class="estr-aj-card-faixa" style="background: linear-gradient(180deg, #5980a6, #3f6489)"></div>
               <div>
                 <div class="estr-aj-card-label">Convênio · Qtd 1</div>
                 <div class="estr-aj-card-valor">
@@ -1642,7 +1642,7 @@ App.telas['desempenho-estrabismo'] = function () {
               </div>
             </div>
             <div class="estr-aj-card">
-              <div class="estr-aj-card-faixa" style="background: linear-gradient(180deg, #143352, #2a5a8c)"></div>
+              <div class="estr-aj-card-faixa" style="background: linear-gradient(180deg, #5980a6, #3f6489)"></div>
               <div>
                 <div class="estr-aj-card-label">Convênio · Qtd 2</div>
                 <div class="estr-aj-card-valor">
@@ -1651,7 +1651,7 @@ App.telas['desempenho-estrabismo'] = function () {
               </div>
             </div>
             <div class="estr-aj-card">
-              <div class="estr-aj-card-faixa" style="background: linear-gradient(180deg, #2a5a8c, #9FE6C9)"></div>
+              <div class="estr-aj-card-faixa" style="background: linear-gradient(180deg, #3f6489, #cfe3d1)"></div>
               <div>
                 <div class="estr-aj-card-label">SUS · Qtd 1</div>
                 <div class="estr-aj-card-valor">
@@ -1660,7 +1660,7 @@ App.telas['desempenho-estrabismo'] = function () {
               </div>
             </div>
             <div class="estr-aj-card">
-              <div class="estr-aj-card-faixa" style="background: linear-gradient(180deg, #2a5a8c, #9FE6C9)"></div>
+              <div class="estr-aj-card-faixa" style="background: linear-gradient(180deg, #3f6489, #cfe3d1)"></div>
               <div>
                 <div class="estr-aj-card-label">SUS · Qtd 2</div>
                 <div class="estr-aj-card-valor">
@@ -2176,11 +2176,11 @@ App.telas['desempenho-estrabismo'] = function () {
         .estr-btn-info {
           width: 28px; height: 28px; border-radius: 50%;
           background: var(--bg-elevated); border: 1px solid var(--border);
-          color: #2a5a8c; font-size: 15px; font-weight: 700;
+          color: #3f6489; font-size: 15px; font-weight: 700;
           cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
           transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms, opacity 150ms;
         }
-        .estr-btn-info:hover { background: #2a5a8c; color: white; transform: scale(1.08); }
+        .estr-btn-info:hover { background: #3f6489; color: white; transform: scale(1.08); }
         .estr-header-acoes { display: flex; gap: 8px; }
 
         /* Contêiner da peça 20C (.estr-sb) + botão "✕ Limpar filtros".
@@ -2209,13 +2209,13 @@ App.telas['desempenho-estrabismo'] = function () {
           display: flex; align-items: stretch;
           padding: 6px;
           background: #fff;
-          border: 1px solid #e4ecf4;
+          border: 1px solid #eef2f6;
           border-radius: 12px;
-          box-shadow: 0 1px 2px rgba(20, 51, 82,.04), 0 10px 26px -20px rgba(20, 51, 82,.26);
+          box-shadow: 0 1px 2px rgba(89, 128, 166,.04), 0 10px 26px -20px rgba(89, 128, 166,.26);
           flex-wrap: wrap;
         }
         .estr-sb-celwrap { position: relative; min-width: 150px; display: flex; }
-        .estr-sb-celwrap:not(:last-child) .estr-sb-cel { border-right: 1px solid #f0f4f8; }
+        .estr-sb-celwrap:not(:last-child) .estr-sb-cel { border-right: 1px solid #f7f8fa; }
         .estr-sb-cel {
           flex: 1; min-width: 0;
           display: flex; align-items: center; gap: 9px;
@@ -2224,64 +2224,64 @@ App.telas['desempenho-estrabismo'] = function () {
           font-family: inherit; text-align: left;
           transition: background-color 120ms;
         }
-        .estr-sb-cel:hover, .estr-sb-cel.ativo, .estr-sb-cel.aberta { background: #f6f4ef; }
-        .estr-sb-cel:focus-visible { outline: 2px solid #2a5a8c; outline-offset: 2px; }
+        .estr-sb-cel:hover, .estr-sb-cel.ativo, .estr-sb-cel.aberta { background: #fafbfc; }
+        .estr-sb-cel:focus-visible { outline: 2px solid #3f6489; outline-offset: 2px; }
         .estr-sb-tile {
           width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          background: #f0f5f9; color: #5a6879;
+          background: #f0f5f9; color: #585d62;
         }
-        .estr-sb-cel.ativo .estr-sb-tile, .estr-sb-cel.aberta .estr-sb-tile { background: #e4ecf4; color: #1d4470; }
+        .estr-sb-cel.ativo .estr-sb-tile, .estr-sb-cel.aberta .estr-sb-tile { background: #eef2f6; color: #46688c; }
         .estr-sb-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
         .estr-sb-rot {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .09em; color: #5a6879; white-space: nowrap;
+          letter-spacing: .09em; color: #585d62; white-space: nowrap;
         }
         .estr-sb-val {
-          font-size: 13px; font-weight: 500; color: #5a6879;
+          font-size: 13px; font-weight: 500; color: #585d62;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .estr-sb-cel.ativo .estr-sb-val { font-weight: 700; color: #12304f; }
-        .estr-sb-chev { color: #96a2b1; flex-shrink: 0; display: flex; transition: transform 140ms; }
+        .estr-sb-cel.ativo .estr-sb-val { font-weight: 700; color: #3a5877; }
+        .estr-sb-chev { color: #8a9096; flex-shrink: 0; display: flex; transition: transform 140ms; }
         .estr-sb-cel.aberta .estr-sb-chev { transform: rotate(180deg); }
 
         /* painel ancorado na célula, por cima dos cards */
         .estr-sb-painel {
           position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 40;
           min-width: 100%; width: max-content; max-width: 340px;
-          background: #fff; border: 1px solid #dfe4ea; border-radius: 12px;
-          box-shadow: 0 18px 44px -14px rgba(11, 35, 64,.42);
+          background: #fff; border: 1px solid #eef0f2; border-radius: 12px;
+          box-shadow: 0 18px 44px -14px rgba(29, 31, 32,.42);
           overflow: hidden;
         }
         .estr-sb-buscabox {
           display: flex; align-items: center; gap: 8px;
-          padding: 11px 12px 10px; border-bottom: 1px solid #f0f4f8;
+          padding: 11px 12px 10px; border-bottom: 1px solid #f7f8fa;
         }
         .estr-sb-buscabox .estr-sb-busca-ic { color: #6b7d8e; display: flex; }
         .estr-sb-busca {
-          flex: 1; height: 30px; border: 1px solid #dfe4ea; border-radius: 8px;
-          background: #f6f4ef; padding: 0 10px; font-size: 13px;
-          font-family: inherit; color: #12304f; outline: none;
+          flex: 1; height: 30px; border: 1px solid #eef0f2; border-radius: 8px;
+          background: #fafbfc; padding: 0 10px; font-size: 13px;
+          font-family: inherit; color: #3a5877; outline: none;
         }
-        .estr-sb-busca::placeholder { color: #96a2b1; }
-        .estr-sb-busca:focus { border-color: #2a5a8c; }
+        .estr-sb-busca::placeholder { color: #8a9096; }
+        .estr-sb-busca:focus { border-color: #3f6489; }
         .estr-sb-lista { max-height: 262px; overflow-y: auto; padding: 6px; }
         .estr-sb-lista::-webkit-scrollbar { width: 8px; }
-        .estr-sb-lista::-webkit-scrollbar-track { background: #f0f4f8; }
-        .estr-sb-lista::-webkit-scrollbar-thumb { background: #c5d5e5; border-radius: 4px; }
+        .estr-sb-lista::-webkit-scrollbar-track { background: #f7f8fa; }
+        .estr-sb-lista::-webkit-scrollbar-thumb { background: #e4eaf1; border-radius: 4px; }
         .estr-sb-it {
           display: flex; align-items: center; gap: 10px;
           height: 38px; padding: 0 8px; border-radius: 8px; cursor: pointer;
-          font-size: 13px; color: #12304f;
+          font-size: 13px; color: #3a5877;
         }
-        .estr-sb-it:hover, .estr-sb-it.foco { background: #f0f4f8; }
-        .estr-sb-it.sel { background: #f0f4f8; font-weight: 700; }
+        .estr-sb-it:hover, .estr-sb-it.foco { background: #f7f8fa; }
+        .estr-sb-it.sel { background: #f7f8fa; font-weight: 700; }
         .estr-sb-it-todos { font-weight: 700; }
         .estr-sb-it-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .estr-sb-ck { color: #1d4470; display: flex; }
+        .estr-sb-ck { color: #46688c; display: flex; }
         .estr-sb-rodape {
-          padding: 7px 12px; border-top: 1px solid #f0f4f8;
-          font-size: 10.5px; font-weight: 600; color: #96a2b1;
+          padding: 7px 12px; border-top: 1px solid #f7f8fa;
+          font-size: 10.5px; font-weight: 600; color: #8a9096;
         }
         @media (max-width: 1280px) { .estr-sb-celwrap { flex-basis: 32%; } }
         @media (max-width: 900px)  { .estr-sb-celwrap { flex-basis: 48%; } }
@@ -2300,7 +2300,7 @@ App.telas['desempenho-estrabismo'] = function () {
         .estr-card-titulo {
           font-size: 9px; font-weight: 700; text-transform: uppercase;
           letter-spacing: 0.06em; margin-bottom: 6px;
-          color: #0f1d2e; /* V849: título dos cards totalizadores (variantes coloridas mantêm a própria) */
+          color: #1d1f20; /* V849: título dos cards totalizadores (variantes coloridas mantêm a própria) */
         }
         .estr-card-valor { font-size: 20px; font-weight: 800; line-height: 1.1; }
         .estr-card-valor-pct { font-size: 12px; font-weight: 600; opacity: 0.7; }
@@ -2309,18 +2309,18 @@ App.telas['desempenho-estrabismo'] = function () {
           font-size: 10px; color: var(--ink-soft); line-height: 1.4;
         }
         .estr-card-verde   { background: linear-gradient(135deg, #E8F1EE, #D4E4DF); border-color: #A8C8C0; }
-        .estr-card-verde .estr-card-faixa, .estr-card-verde .estr-card-titulo, .estr-card-verde .estr-card-valor { color: #143352; }
-        .estr-card-verde .estr-card-faixa { background: #143352; }
+        .estr-card-verde .estr-card-faixa, .estr-card-verde .estr-card-titulo, .estr-card-verde .estr-card-valor { color: #5980a6; }
+        .estr-card-verde .estr-card-faixa { background: #5980a6; }
         .estr-card-roxo    { background: linear-gradient(135deg, #ECE5F2, #DAC8E4); border-color: #C0A8D0; }
         .estr-card-roxo .estr-card-faixa { background: #6B4587; }
         .estr-card-roxo .estr-card-titulo, .estr-card-roxo .estr-card-valor { color: #6B4587; }
-        .estr-card-bege    { background: linear-gradient(135deg, #e9edf1, #e4ecf4); border-color: #9FE6C9; }
-        .estr-card-bege .estr-card-faixa { background: #143352; }
-        .estr-card-bege .estr-card-titulo, .estr-card-bege .estr-card-valor { color: #143352; }
-        .estr-card-destaque { background: linear-gradient(135deg, #143352, #0b2340); border-color: #143352; box-shadow: 0 4px 12px rgba(20, 51, 82,.2); display: flex; flex-direction: column; }
-        .estr-card-destaque .estr-card-titulo { color: #5a6879; }
-        .estr-card-destaque .estr-card-valor  { color: #143352; }
-        .estr-card-destaque .estr-card-sub    { color: #c5d5e5; }
+        .estr-card-bege    { background: linear-gradient(135deg, #f2f3f5, #eef2f6); border-color: #cfe3d1; }
+        .estr-card-bege .estr-card-faixa { background: #5980a6; }
+        .estr-card-bege .estr-card-titulo, .estr-card-bege .estr-card-valor { color: #5980a6; }
+        .estr-card-destaque { background: linear-gradient(135deg, #5980a6, #3a5877); border-color: #5980a6; box-shadow: 0 4px 12px rgba(89, 128, 166,.2); display: flex; flex-direction: column; }
+        .estr-card-destaque .estr-card-titulo { color: #585d62; }
+        .estr-card-destaque .estr-card-valor  { color: #5980a6; }
+        .estr-card-destaque .estr-card-sub    { color: #e4eaf1; }
 
         /* Tabela principal */
         .estr-tabela thead th {
@@ -2336,21 +2336,21 @@ App.telas['desempenho-estrabismo'] = function () {
         }
         .estr-toggle:hover { color: var(--accent); }
         /* V732: era o creme #FBF8F0 — agora o AZUL da zebra da aba ADICIONAL
-           do LIO (#e4ecf4 = var(--bg-sunken)), padrão da ferramenta. */
-        /* V959: a linha do médico tem SEMPRE o fundo #e4ecf4 — aberta ou fechada
+           do LIO (#eef2f6 = var(--bg-sunken)), padrão da ferramenta. */
+        /* V959: a linha do médico tem SEMPRE o fundo #eef2f6 — aberta ou fechada
            (antes só a expandida .estr-linha-exp ganhava a cor) */
-        .estr-linha-medico, .estr-linha-exp { background: #e4ecf4; }
+        .estr-linha-medico, .estr-linha-exp { background: #eef2f6; }
         .estr-medico-nome { font-weight: 600; }
         .estr-linha-drilldown td { border-top: none !important; }
 
         /* Tabela do drilldown */
-        /* V958: moldura #dfe4ea em volta da tabela (o painel era só branco, sem delimitador) */
-        .estr-dd-moldura { border: 1px solid #dfe4ea; border-radius: 8px; overflow: hidden; margin-top: 8px; background: #FFFFFF; }
+        /* V958: moldura #eef0f2 em volta da tabela (o painel era só branco, sem delimitador) */
+        .estr-dd-moldura { border: 1px solid #eef0f2; border-radius: 8px; overflow: hidden; margin-top: 8px; background: #FFFFFF; }
         .estr-dd-tabela {
           width: 100%; border-collapse: collapse; font-size: 12px;
           background: white;
         }
-        .estr-dd-tabela td, .estr-dd-tabela th { border-bottom-color: #dfe4ea; }
+        .estr-dd-tabela td, .estr-dd-tabela th { border-bottom-color: #eef0f2; }
         .estr-dd-tabela thead {
           background: var(--bg-sunken);
         }
@@ -2367,16 +2367,16 @@ App.telas['desempenho-estrabismo'] = function () {
 
         /* Card de detalhe da admissão filtrada */
         .estr-detalhe-adm {
-          background: linear-gradient(135deg, #e9edf1 0%, #e4ecf4 100%);
-          border: 1px solid #9FE6C9;
-          border-left: 4px solid #2a5a8c;
+          background: linear-gradient(135deg, #f2f3f5 0%, #eef2f6 100%);
+          border: 1px solid #cfe3d1;
+          border-left: 4px solid #3f6489;
           border-radius: 10px;
           padding: 14px 18px;
           margin: 16px 0 10px 0;
         }
         .estr-detalhe-multi {
           background: #FFF8E1;
-          border-left-color: #143352;
+          border-left-color: #5980a6;
           font-size: 12px; color: #4A3E1F;
           display: flex; align-items: center; gap: 10px;
         }
@@ -2385,14 +2385,14 @@ App.telas['desempenho-estrabismo'] = function () {
           margin-bottom: 10px;
         }
         .estr-detalhe-titulo {
-          font-size: 11px; font-weight: 700; color: #143352;
+          font-size: 11px; font-weight: 700; color: #5980a6;
           text-transform: uppercase; letter-spacing: 0.05em;
         }
         .estr-detalhe-resumo {
           display: grid; grid-template-columns: 160px 1fr 130px;
           gap: 16px;
           padding-bottom: 12px;
-          border-bottom: 1px solid #9FE6C9;
+          border-bottom: 1px solid #cfe3d1;
           margin-bottom: 12px;
         }
         @media (max-width: 700px) {
@@ -2400,7 +2400,7 @@ App.telas['desempenho-estrabismo'] = function () {
         }
         .estr-detalhe-campo { min-width: 0; }
         .estr-detalhe-label {
-          font-size: 9px; color: #143352;
+          font-size: 9px; color: #5980a6;
           text-transform: uppercase; letter-spacing: 0.05em;
           font-weight: 600; margin-bottom: 3px;
         }
@@ -2409,13 +2409,13 @@ App.telas['desempenho-estrabismo'] = function () {
           line-height: 1.3; word-break: break-word;
         }
         .estr-detalhe-produtos-label {
-          font-size: 10px; font-weight: 700; color: #102d4b;
+          font-size: 10px; font-weight: 700; color: #3a5877;
           text-transform: uppercase; letter-spacing: 0.06em;
           margin-bottom: 6px;
           display: flex; justify-content: space-between; align-items: center;
         }
         .estr-detalhe-produtos-contagem {
-          font-size: 10px; color: #143352;
+          font-size: 10px; color: #5980a6;
           font-weight: 500; text-transform: none; letter-spacing: 0;
         }
         .estr-detalhe-produtos {
@@ -2429,7 +2429,7 @@ App.telas['desempenho-estrabismo'] = function () {
         }
         .estr-detalhe-produto:last-child { border-bottom: none; }
         .estr-detalhe-produto-nome { flex: 1; color: var(--ink); line-height: 1.4; }
-        .estr-detalhe-produto-traco { color: #2a5a8c; font-weight: 700; flex-shrink: 0; }
+        .estr-detalhe-produto-traco { color: #3f6489; font-weight: 700; flex-shrink: 0; }
         .estr-detalhe-produto-valor {
           color: var(--primary); font-weight: 700; font-size: 12px;
           flex-shrink: 0; min-width: 100px; text-align: right;
@@ -2441,10 +2441,10 @@ App.telas['desempenho-estrabismo'] = function () {
         .estr-detalhe-total {
           display: flex; justify-content: space-between; align-items: center;
           padding: 8px 14px;
-          background: #143352; color: #f6f4ef;
+          background: #5980a6; color: #fafbfc;
           border-radius: 8px; font-weight: 700; font-size: 12px;
         }
-        .estr-detalhe-total .mono { color: #9FE6C9; font-size: 14px; }
+        .estr-detalhe-total .mono { color: #cfe3d1; font-size: 14px; }
 
         /* Breakdown dentro dos cards (Convênio/SUS/Particular) */
         .estr-card-breakdown {
@@ -2469,17 +2469,17 @@ App.telas['desempenho-estrabismo'] = function () {
           display: flex; align-items: center; gap: 4px;
         }
         .estr-card-comp-lbl { color: var(--ink-soft); font-weight: 600; font-size: 9px; white-space: nowrap; }
-        .estr-comp-up    { color: #0A7A5A; font-weight: 700; }
-        .estr-comp-down  { color: #9B3A3A; font-weight: 700; }
+        .estr-comp-up    { color: #4f8a5b; font-weight: 700; }
+        .estr-comp-down  { color: #a15646; font-weight: 700; }
         .estr-comp-igual { color: var(--ink-soft); font-weight: 600; }
         .estr-comp-vazio { color: var(--ink-faint); }
         /* Card destaque (verde escuro) */
-        .estr-card-destaque .estr-card-comp { border-top-color: #5a6879; }
-        .estr-card-destaque .estr-card-comp-lbl { color: #c5d5e5; }
+        .estr-card-destaque .estr-card-comp { border-top-color: #585d62; }
+        .estr-card-destaque .estr-card-comp-lbl { color: #e4eaf1; }
         .estr-card-destaque .estr-comp-up    { color: #C8F5C0; }
         .estr-card-destaque .estr-comp-down  { color: #F5B5B5; }
         .estr-card-destaque .estr-comp-igual,
-        .estr-card-destaque .estr-comp-vazio { color: #c5d5e5; }
+        .estr-card-destaque .estr-comp-vazio { color: #e4eaf1; }
 
         /* Filtros de vínculo no painel Ajustes */
         .estr-vinc-grid {
@@ -2509,7 +2509,7 @@ App.telas['desempenho-estrabismo'] = function () {
         }
         .estr-row-repetida td:first-child {
           font-weight: 700;
-          color: #9B3A3A;
+          color: #a15646;
         }
         .estr-row-aviso-repetida td {
           padding: 0 !important;
@@ -2520,7 +2520,7 @@ App.telas['desempenho-estrabismo'] = function () {
           background: #FFE4E1;
           border-bottom: 1px dashed #C8302B;
           font-size: 11px;
-          color: #9B3A3A;
+          color: #a15646;
           line-height: 1.5;
         }
         .estr-aviso-icone {
@@ -2540,8 +2540,8 @@ App.telas['desempenho-estrabismo'] = function () {
           font-size: 9px; font-weight: 700; border-radius: 3px;
           letter-spacing: 0.05em; color: white;
         }
-        .estr-tipo-sus  { background: #102d4b; }
-        .estr-tipo-conv { background: #102d4b; }
+        .estr-tipo-sus  { background: #3a5877; }
+        .estr-tipo-conv { background: #3a5877; }
         .estr-tipo-part { background: #6B4587; }
         .estr-sem-marc { color: var(--ink-faint); font-style: italic; }
 
@@ -2560,7 +2560,7 @@ App.telas['desempenho-estrabismo'] = function () {
           align-items: center;
           gap: 4px;
           padding: 3px 10px;
-          background: linear-gradient(135deg, #143352, #2E8870);
+          background: linear-gradient(135deg, #5980a6, #2E8870);
           color: white;
           border-radius: 12px;
           font-size: 11px;
@@ -2695,7 +2695,7 @@ App.telas['desempenho-estrabismo'] = function () {
         }
         .estr-bloco-cat {
           background: rgba(255,255,255,0.6);
-          border: 1px solid rgba(42, 90, 140, 0.4);
+          border: 1px solid rgba(63, 100, 137, 0.4);
           border-radius: 8px;
           overflow: hidden;
         }
@@ -2706,24 +2706,24 @@ App.telas['desempenho-estrabismo'] = function () {
           text-align: left;
           font-family: inherit;
         }
-        .estr-bloco-header:hover { background: rgba(42, 90, 140, 0.1); }
+        .estr-bloco-header:hover { background: rgba(63, 100, 137, 0.1); }
         .estr-bloco-sinal {
-          font-size: 16px; font-weight: 700; color: #143352;
+          font-size: 16px; font-weight: 700; color: #5980a6;
           width: 18px; text-align: center; line-height: 1;
         }
         .estr-bloco-icone { font-size: 13px; }
         .estr-bloco-titulo {
           font-weight: 700; font-size: 11px;
           text-transform: uppercase; letter-spacing: 0.05em;
-          color: #102d4b;
+          color: #3a5877;
         }
         .estr-bloco-resumo {
           margin-left: auto; display: flex; align-items: center; gap: 12px;
         }
         .estr-bloco-count {
-          font-size: 10px; color: #143352;
+          font-size: 10px; color: #5980a6;
           padding: 2px 8px;
-          background: rgba(42, 90, 140, 0.15);
+          background: rgba(63, 100, 137, 0.15);
           border-radius: 10px;
           font-weight: 600;
         }
@@ -2733,7 +2733,7 @@ App.telas['desempenho-estrabismo'] = function () {
         .estr-bloco-linhas {
           list-style: none; margin: 0;
           padding: 6px 12px 10px;
-          border-top: 1px dashed rgba(42, 90, 140, 0.3);
+          border-top: 1px dashed rgba(63, 100, 137, 0.3);
         }
         .estr-bloco-linhas li {
           display: flex; align-items: baseline; gap: 8px;
@@ -2744,11 +2744,11 @@ App.telas['desempenho-estrabismo'] = function () {
           display: inline-block;
           font-size: 10px; color: var(--accent);
           font-weight: 700;
-          background: rgba(42, 90, 140, 0.15);
+          background: rgba(63, 100, 137, 0.15);
           padding: 0 5px; border-radius: 3px;
           margin-left: 4px;
         }
-        .estr-bloco-traco { color: #2a5a8c; font-weight: 700; flex-shrink: 0; }
+        .estr-bloco-traco { color: #3f6489; font-weight: 700; flex-shrink: 0; }
         .estr-bloco-valor {
           color: var(--primary); font-weight: 700; font-size: 12px;
           flex-shrink: 0; min-width: 100px; text-align: right;
@@ -2772,8 +2772,8 @@ App.telas['desempenho-estrabismo'] = function () {
           border: 1px solid var(--border);
         }
         .estr-ocultar-fixa {
-          background: rgba(20, 51, 82, 0.04);
-          border-color: rgba(20, 51, 82, 0.15);
+          background: rgba(89, 128, 166, 0.04);
+          border-color: rgba(89, 128, 166, 0.15);
         }
         .estr-ocultar-chk {
           display: flex; align-items: center;
@@ -2798,7 +2798,7 @@ App.telas['desempenho-estrabismo'] = function () {
           font-size: 9px; font-weight: 700;
           text-transform: uppercase; letter-spacing: 0.05em;
           color: var(--ink-faint);
-          background: rgba(20, 51, 82, 0.08);
+          background: rgba(89, 128, 166, 0.08);
           padding: 2px 7px; border-radius: 4px;
         }
         .estr-ocultar-acoes {

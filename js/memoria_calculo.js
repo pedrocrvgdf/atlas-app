@@ -433,23 +433,23 @@
     s.id = 'atlas-memoria-estilos';
     s.textContent = `
       [data-mem] { cursor: help; }
-      [data-mem].mem-cel-ativa { background: #f0f4f8 !important; box-shadow: inset 0 0 0 1px #9CCBE6; border-radius: 4px; }
+      [data-mem].mem-cel-ativa { background: #f7f8fa !important; box-shadow: inset 0 0 0 1px #9CCBE6; border-radius: 4px; }
       /* V996: o cartão ganhou origem dos dados, o que fazer e o destino do
          valor — em 400px cada frase virava 4 linhas. */
       .atlas-mem-popover { position: fixed; z-index: 4300; width: 460px; max-width: calc(100vw - 20px); max-height: min(78vh, 640px); overflow: hidden auto;
-        background: #fff; border-radius: 14px; box-shadow: 0 18px 44px rgba(15, 29, 46,.26), 0 0 0 1px #dfe4ea; font-size: 12.5px; color: #071a30;
+        background: #fff; border-radius: 14px; box-shadow: 0 18px 44px rgba(29, 31, 32,.26), 0 0 0 1px #eef0f2; font-size: 12.5px; color: #3a5877;
         opacity: 0; transform: translateY(4px); transition: opacity .12s ease, transform .12s ease; pointer-events: none; }
       .atlas-mem-popover.aberto { opacity: 1; transform: none; pointer-events: auto; }
-      .atlas-mem-popover.fixado { box-shadow: 0 18px 44px rgba(15, 29, 46,.34), 0 0 0 2px #1d4470; }
-      /* V997: o título do cartão saiu do #0f1d2e chapado para o DEGRADÊ padrão
+      .atlas-mem-popover.fixado { box-shadow: 0 18px 44px rgba(29, 31, 32,.34), 0 0 0 2px #46688c; }
+      /* V997: o título do cartão saiu do #1d1f20 chapado para o DEGRADÊ padrão
          do ATLAS (o mesmo dos cabeçalhos de matriz). */
       .mem-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 12px 14px 10px;
-        background-image: linear-gradient(90deg, #143352 0%, #1d4470 34%, #2a5a8c 68%, #8faccb 100%); color: #fff; }
+        background-image: linear-gradient(90deg, #5980a6 0%, #46688c 34%, #3f6489 68%, #d8e4ef 100%); color: #fff; }
       .mem-titulo { font-weight: 800; font-size: 13px; letter-spacing: .2px; }
       .mem-sub { font-size: 10.5px; color: #9FC3D6; margin-top: 2px; }
       /* V997: o valor do cabeçalho e o selo PAGO saíram do verde-menta
          (#7FE0C0) para o BRANCO; o valor da conta saiu do #0E7A57 para o
-         #2a5a8c, a cor de repasse da ferramenta. */
+         #3f6489, a cor de repasse da ferramenta. */
       .mem-valor { font-family: var(--font-mono, monospace); font-weight: 800; font-size: 16px; text-align: right; white-space: nowrap; color: #FFFFFF; }
       /* V999: o cabeçalho NÃO muda de cor com o status. A linha que não pagou
          trazia o valor em cinza (#C9D6DE) e o selo em âmbar (#F2C08B) — duas
@@ -459,12 +459,12 @@
       .mem-st { display: block; font-family: var(--font-body, inherit); font-size: 9.5px; font-weight: 800; letter-spacing: .6px; margin-top: 3px; }
       .mem-st-ok { color: #FFFFFF; } .mem-st-nao { color: #FFFFFF; }
       .mem-sec { padding: 8px 14px 6px; border-top: 1px solid #EDF2F0; }
-      .mem-sec-tit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #1d4470; margin-bottom: 4px; }
+      .mem-sec-tit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #46688c; margin-bottom: 4px; }
       .mem-it { display: grid; grid-template-columns: 132px 1fr; gap: 8px; padding: 3px 0; line-height: 1.35; }
-      .mem-rot { color: #5a6879; font-weight: 600; }
-      .mem-val { color: #0f1d2e; word-break: break-word; }
-      .mem-val small { color: #5a6879; font-size: 11px; }
-      .mem-val b { font-weight: 800; color: #2a5a8c; }
+      .mem-rot { color: #585d62; font-weight: 600; }
+      .mem-val { color: #1d1f20; word-break: break-word; }
+      .mem-val small { color: #585d62; font-size: 11px; }
+      .mem-val b { font-weight: 800; color: #3f6489; }
       .mem-alerta { display: inline-block; margin-top: 3px; padding: 1px 6px; border-radius: 6px; background: #FBF0DA; color: #8A5A1F; font-size: 11px; }
       /* a seção de AÇÃO é a que o usuário precisa ver primeiro quando algo não
          pagou — fundo próprio pra ela saltar no meio do cartão */
