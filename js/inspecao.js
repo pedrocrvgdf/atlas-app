@@ -3835,6 +3835,7 @@
   // ATLAS v1.3: colunas do 4º painel (relatório final importado)
   const COLS_FINAL = [
     { rot: 'Competência', get: l => l.competencia || '' },
+    { rot: 'Fonte', get: l => l.virtual ? 'Consolidado da ferramenta' : 'arquivo importado' },   // ATLAS v1.3.2
     { rot: 'Médico', get: l => CodigoMedico.exibir(l.medico || '') },
     { rot: 'Status', get: l => l.status || '' },
     { rot: 'Módulo', get: l => l.modulo || '' },
@@ -4644,7 +4645,8 @@
         const RF = window.AtlasRelatorioFinal;
         let finais = [], confronto = null;
         try {
-          finais = RF ? RF.linhasDaAdmissao(adm) : [];
+          // ATLAS v1.3.2: importadas + o Consolidado dos meses em que o relatório final é o da ferramenta
+          finais = RF ? (RF.linhasFinaisDaAdmissao ? RF.linhasFinaisDaAdmissao(adm, consolidado) : RF.linhasDaAdmissao(adm)) : [];
           confronto = RF ? RF.confrontoDaAdmissao(adm, consolidado, finais) : null;
         } catch (e) { console.warn('[inspecao] relatório final:', e); }
         const totFinal = finais.reduce((s, l) => s + (l.glosa ? 0 : (Number(l.valor) || 0)), 0);
@@ -4725,7 +4727,7 @@
           <section class="insp-painel insp-painel-final">
             <div class="insp-painel-head">
               <span class="insp-num">4</span>
-              <div><strong>Relatório final</strong><small>o que o médico de fato recebeu — relatórios importados na aba Relatório final</small></div>
+              <div><strong>Relatório final</strong><small>o que o médico de fato recebeu — arquivos importados ou, nos meses da ferramenta, o próprio Consolidado</small></div>
               <span class="insp-tot">${finais.length} linha${finais.length !== 1 ? 's' : ''} · recebido R$ ${fmtN(totFinal)}</span>
             </div>
             ${finais.length ? tabela(finais, COLS_FINAL) : vazio('Esta admissão não consta em nenhum relatório final importado.')}

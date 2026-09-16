@@ -81,6 +81,18 @@
  *   estorno         linha negativa sem par positivo          (informativo)
  *   aguardando      produzido e ainda não recebido do convênio (informativo)
  *
+ * ATLAS v1.3.2 — O RELATÓRIO FINAL DA PRÓPRIA FERRAMENTA. Desde abril/2026 o
+ * relatório que o médico recebe é o export desta ferramenta: o Consolidado do
+ * mês. A partir do mês configurado (config_sistema →
+ * RELATORIO_FINAL_FERRAMENTA_DESDE, padrão 2026-04) não é preciso importar
+ * arquivo: o Consolidado de cada mês calculado vale como "recebido" (relatório
+ * VIRTUAL, id 'f|AAAA-MM'), o que está nele conta como PAGO, e a auditoria
+ * desses meses cobra o que o sistema recebeu com regra na Base Tabela e ficou
+ * sem pagamento (regra_nao_paga). Arquivo importado do mesmo médico × mês
+ * vence o virtual. E linha do Consolidado de um mês SEM relatório (nem arquivo,
+ * nem virtual) nunca é dívida: vira 'sem_relatorio', informativa — sem o
+ * relatório daquele mês a ATLAS não pode afirmar que faltou.
+ *
  * Módulo GLOBAL: window.AtlasRelatorioFinal — montar(container) desenha a aba;
  * linhasDaAdmissao/confrontoDaAdmissao alimentam o 4º painel da Inspeção.
  * Depende de js/inspecao.js (AtlasInspecao._interno) e, para o "deveria", de
@@ -140,6 +152,7 @@
     glosa:          { rotulo: 'Glosa (vale zero)',            soma: false, tom: 'info' },
     estorno:        { rotulo: 'Estorno',                      soma: false, tom: 'info' },
     aguardando:     { rotulo: 'Aguardando convênio',          soma: false, tom: 'info' },
+    sem_relatorio:  { rotulo: 'Pago no Consolidado (sem relatório final do mês)', soma: false, tom: 'info' },
   };
   const CATS_FALTA = Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].soma);
 
@@ -611,6 +624,8 @@
     return lista;
   }
   function linhasDoRelatorio(id) {
+    const v = idVirtual(id);
+    if (v) { try { return linhasVirtuais(v.comp, v.medNorm); } catch (e) { return []; } }
     try { return Banco.query(`SELECT * FROM relatorio_final_linhas WHERE relatorio_id = ? ORDER BY id`, [id]) || []; }
     catch (e) { return []; }
   }
@@ -633,6 +648,83 @@
   }
   function temRelatorio(medNorm, comp) {
     return listar().some(r => r.medico_norm === medNorm && r.competencia === comp);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // ATLAS v1.3.2: O RELATÓRIO FINAL DA PRÓPRIA FERRAMENTA (Consolidado)
+  // ──────────────────────────────────────────────────────────────────────
+  const DESDE_CHAVE = 'RELATORIO_FINAL_FERRAMENTA_DESDE';
+  const DESDE_PADRAO = '2026-04';
+  function desdeFerramenta() {
+    try {
+      const r = Banco.queryUnica(`SELECT valor FROM config_sistema WHERE chave = ?`, [DESDE_CHAVE]);
+      const v = r && String(r.valor || '').trim();
+      return /^\d{4}-\d{2}$/.test(v) ? v : DESDE_PADRAO;
+    } catch (e) { return DESDE_PADRAO; }
+  }
+  function definirDesdeFerramenta(v) {
+    v = String(v || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(v)) return false;
+    try { Banco.executar(`INSERT OR REPLACE INTO config_sistema (chave, valor) VALUES (?, ?)`, [DESDE_CHAVE, v]); } catch (e) { return false; }
+    Banco.salvarDebounced(1500);
+    invalidar();
+    return true;
+  }
+  /** o mês é da ferramenta (o Consolidado é o relatório final) e está calculado? */
+  function mesDaFerramenta(comp) {
+    return !!comp && String(comp) >= desdeFerramenta() && temSnapshot(comp);
+  }
+  /** meses calculados a partir do "desde" — os relatórios finais virtuais */
+  function mesesDaFerramenta() {
+    try {
+      return (Banco.query(`SELECT competencia, n_linhas, total_repasse FROM repasse_snapshot WHERE competencia >= ? ORDER BY competencia DESC`, [desdeFerramenta()]) || [])
+        .map(r => ({ id: 'f|' + r.competencia, virtual: true, competencia: String(r.competencia), competencia_arquivo: String(r.competencia),
+          medico: 'todos os médicos do Consolidado', medico_norm: '', layout: 'ferramenta', arquivo: 'Consolidado da ferramenta',
+          n_linhas: r.n_linhas || 0, total: Number(r.total_repasse) || 0, importado_em: '' }));
+    } catch (e) { return []; }
+  }
+  function listarTodos() { return listar().concat(mesesDaFerramenta()); }
+  /** há relatório final (arquivo ou virtual) para este médico neste mês? */
+  function temRelatorioPara(medNorm, comp) {
+    return temRelatorio(medNorm, comp) || mesDaFerramenta(comp);
+  }
+  /** linha do Consolidado → linha "recebida" virtual (mesma forma das linhas importadas) */
+  function linhaVirtualDe(l, comp) {
+    const medico = nomeOficial(l._medicoReal || l.profissional || '');
+    const glosa = /glosa/i.test(String(l.status || ''));
+    return { competencia: comp, medico, medico_norm: normNome(medico), admissao: String(l.admissao || '').trim(), admissao_norm: normAdm(l.admissao),
+      data: normData(l.data), paciente: l.paciente || '', paciente_norm: normNome(l.paciente), papel: l.papel || '', papel_canon: papelCanon(l.papel),
+      procedimento: String(l.descricao || '').trim(), procedimento_norm: normNome(l.descricao), valor: Number(l.valor) || 0,
+      status: l.status || '', modulo: l.modulo || '', origem: l.origem || '', convenio: l.convenio || '', glosa: glosa ? 1 : 0,
+      virtual: true, arquivo: 'Consolidado da ferramenta', layout: 'ferramenta' };
+  }
+  function linhasVirtuais(comp, medNorm) {
+    const out = [];
+    for (const l of deveriaDaCompetencia(comp)) {
+      if (medNorm && medNormDeLinhaCons(l) !== medNorm) continue;
+      out.push(linhaVirtualDe(l, comp));
+    }
+    return out;
+  }
+  /** id virtual 'f|AAAA-MM' (mês inteiro) ou 'f|AAAA-MM|medNorm' */
+  function idVirtual(id) {
+    const s = String(id || '');
+    if (!s.startsWith('f|')) return null;
+    const [, comp, medNorm] = s.split('|');
+    return { comp, medNorm: medNorm || '' };
+  }
+  /** 4º painel da Inspeção: linhas importadas + as do Consolidado dos meses da ferramenta */
+  function linhasFinaisDaAdmissao(adm, consolidado) {
+    const importadas = linhasDaAdmissao(adm);
+    const pares = new Set(importadas.map(l => l.medico_norm + '|' + l.competencia));
+    const virtuais = [];
+    for (const r of consolidado || []) {
+      if (!mesDaFerramenta(r.competencia)) continue;
+      const v = linhaVirtualDe(r.linha, r.competencia);
+      if (temRelatorio(v.medico_norm, v.competencia) || pares.has(v.medico_norm + '|' + v.competencia)) continue;
+      virtuais.push(v);
+    }
+    return importadas.concat(virtuais);
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -742,7 +834,7 @@
       procedimento: String(r.procedimento || '').trim(),
       valor: r.glosa ? 0 : (Number(r.valor) || 0), glosa: !!r.glosa,
       status: r.status || '', modulo: r.modulo || '', origem: r.origem || '', convenio: r.convenio || '',
-      medico: r.medico || '',
+      medico: r.medico || '', virtual: !!r.virtual,
     };
   }
   const mesmoExame = (a, b) => (I().mesmoExame ? I().mesmoExame(a, b) : normNome(a) === normNome(b));
@@ -783,7 +875,8 @@
     const devOrd = dev.slice().sort((a, b) => b.valor - a.valor);
     const temRecebidoAlgum = recAtivas.some(r => !r.glosa && r.valor > 0.004);
     for (const d of devOrd) {
-      const cand = recAtivas.filter(r => !usados.has(r) && r.papel === d.papel && r.valor >= -0.004);
+      const cand = recAtivas.filter(r => !usados.has(r) && r.papel === d.papel && r.valor >= -0.004)
+        .sort((a, b) => (a.virtual ? 1 : 0) - (b.virtual ? 1 : 0));   // ATLAS v1.3.2: o arquivo do médico vale antes do Consolidado
       const pick = cand.find(r => mesmoExame(r.procedimento, d.procedimento) && igual(r.valor, d.valor))
         || cand.find(r => mesmoExame(r.procedimento, d.procedimento))
         || cand.find(r => igual(r.valor, d.valor) && d.valor > 0.004);
@@ -797,10 +890,14 @@
       }
       if (d.glosa) { out.push(base(d, null, 'glosa', 0)); continue; }
       if (!(d.valor > 0.004)) continue;   // linha zerada do Consolidado: nada a cobrar
+      // ATLAS v1.3.2: sem o relatório final daquele mês (nem arquivo, nem a
+      // ferramenta) não dá para afirmar que faltou — informa, não cobra
+      if (d.semRelatorio) { out.push(base(d, null, 'sem_relatorio', 0)); continue; }
       out.push(base(d, null, temRecebidoAlgum ? 'nao_pago' : 'nao_consta', d.valor));
     }
     for (const r of recAtivas) {
       if (usados.has(r)) continue;
+      if (r.virtual) continue;   // ATLAS v1.3.2: linha do próprio Consolidado sem par não é "sem lastro"
       if (r.glosa) { out.push(base(null, r, 'glosa', 0)); continue; }
       if (r.valor < -0.004) { out.push(base(null, r, 'estorno', 0)); continue; }
       if (!(r.valor > 0.004)) continue;
@@ -982,10 +1079,11 @@
   async function auditar(ids, opts) {
     opts = opts || {};
     const progresso = typeof opts.progresso === 'function' ? opts.progresso : () => {};
-    const todos = listar();
-    const sel = (ids && ids.length) ? todos.filter(r => ids.includes(r.id)) : todos.slice();
+    const todos = listarTodos();
+    const selBruta = (ids && ids.length) ? todos.filter(r => ids.includes(r.id)) : todos.slice();
     const avisos = [];
     const avisosComp = new Set();
+    const semRelatorioAviso = new Map();   // comp → Set(médico) — meses do Consolidado sem relatório final
     // o "deveria" de cada mês, montado uma vez (sob demanda)
     const devCache = new Map();
     const getDeveria = async (comp) => {
@@ -1008,6 +1106,22 @@
       devCache.set(comp, ent);
       return ent;
     };
+    // ATLAS v1.3.2: mês virtual (Consolidado da ferramenta) vira um relatório
+    // por médico; arquivo importado do mesmo médico × mês vence o virtual
+    const sel = [];
+    for (const r of selBruta) {
+      const v = idVirtual(r.id);
+      if (!v) { sel.push(r); continue; }
+      const ent = await getDeveria(v.comp);
+      for (const [medNorm, itensDev] of ent.porMed) {
+        if (!medNorm || !itensDev.length) continue;
+        const importado = listar().find(x => x.medico_norm === medNorm && x.competencia === v.comp);
+        if (importado) { if (!sel.some(x => x.id === importado.id)) sel.push(importado); continue; }
+        sel.push({ id: 'f|' + v.comp + '|' + medNorm, virtual: true, medico: itensDev[0].medico, medico_norm: medNorm,
+          competencia: v.comp, competencia_arquivo: v.comp, layout: 'ferramenta', arquivo: 'Consolidado ' + v.comp,
+          n_linhas: itensDev.length, total: itensDev.reduce((s, x) => s + (x.valor || 0), 0) });
+      }
+    }
     // por médico: todos os relatórios dele juntos
     const porMedico = new Map();
     for (const r of sel) {
@@ -1047,7 +1161,19 @@
       }
       for (const [comp, adms] of outros) {
         const ent = await getDeveria(comp);
-        for (const it of (ent.porMed.get(medNorm) || [])) if (adms.has(it.admissao_norm)) { it.dentro = false; dev.push(it); }
+        const temArquivo = temRelatorio(medNorm, comp);
+        const ehFerramenta = !temArquivo && mesDaFerramenta(comp);
+        const semRel = !temArquivo && !ehFerramenta;
+        for (const it of (ent.porMed.get(medNorm) || [])) {
+          if (!adms.has(it.admissao_norm)) continue;
+          it.dentro = false;
+          it.semRelatorio = semRel;
+          dev.push(it);
+          // ATLAS v1.3.2: no mês da ferramenta o Consolidado É o relatório
+          // final — o que está nele entra como recebido (pago)
+          if (ehFerramenta) { const rv = itemRecebido(linhaVirtualDe({ ...it, descricao: it.procedimento, profissional: it.medico, status: it.status, valor: it.glosa ? 0 : it.valor, data: it.data }, comp)); rv.relatorio_id = null; rec.push(rv); }
+          if (semRel) { if (!semRelatorioAviso.has(comp)) semRelatorioAviso.set(comp, new Set()); semRelatorioAviso.get(comp).add(g.medico); }
+        }
       }
       // confronto por admissão (qualquer mês)
       const gDev = agruparPorAdm(dev), gRec = agruparPorAdm(rec);
@@ -1103,6 +1229,9 @@
       }
       itens.push(...doMed);
     }
+    for (const [comp, meds] of semRelatorioAviso) {
+      avisos.push(`Consolidado de ${fmtComp(comp)}: admissões de ${[...meds].join(', ')} pagas nesse mês sem relatório final importado — o que está lá conta como pago, não como falta; importe o arquivo de ${fmtComp(comp)} para conferir (ou inclua o mês em "desde a ferramenta")`);
+    }
     invalidar();   // um cálculo pode ter gravado snapshot → listas por versão
     progresso({ fase: 'fim', n: sel.length });
     return { itens, porRelatorio, totais: totais(itens), avisos, geradoEm: new Date().toISOString(),
@@ -1124,30 +1253,42 @@
 
   /** 4º painel da Inspeção: confronto de UMA admissão (Consolidado × final) */
   function confrontoDaAdmissao(adm, consolidado, finais) {
+    // `finais` já traz as linhas virtuais dos meses da ferramenta (linhasFinaisDaAdmissao)
     const rec = (finais || []).map(itemRecebido);
     const devTodos = (consolidado || []).map(r => itemDeveria(r.linha, r.competencia));
-    // só confronta o que TEM relatório final importado (médico × mês)
-    const pares = new Set();
-    for (const d of devTodos) if (temRelatorio(normNome(d.medico), d.competencia)) pares.add(normNome(d.medico) + '|' + d.competencia);
-    for (const r of rec) pares.add(normNome(r.medico) + '|' + r.competencia);
-    if (!pares.size) {
-      return { tom: 'info', titulo: 'Sem relatório final importado para esta admissão',
-        texto: 'Importe, na aba Relatório final, o relatório do médico e do mês em que ela foi paga para ver o confronto.', itens: [] };
+    if (!devTodos.length && !rec.length) return { tom: 'info', titulo: 'Nada a confrontar nesta admissão', texto: '', itens: [] };
+    // ATLAS v1.3.2: mês sem relatório final (nem arquivo, nem ferramenta) → não
+    // cobra. E o confronto é por MÉDICO, em qualquer mês (como na auditoria em
+    // lote): o arquivo de junho pode trazer a admissão que a ferramenta pagou em
+    // maio — o arquivo do médico vale antes do Consolidado no pareamento.
+    const semRel = [];
+    let temPar = false;
+    for (const d of devTodos) {
+      const medN = normNome(d.medico);
+      if (temRelatorioPara(medN, d.competencia)) temPar = true;
+      else { d.semRelatorio = true; semRel.push(d); }
     }
+    if (rec.length) temPar = true;
+    const medicos = [...new Set(devTodos.map(d => normNome(d.medico)).concat(rec.map(r => normNome(r.medico))))];
     const itens = [];
-    for (const par of pares) {
-      const [medN, comp] = par.split('|');
-      const dev = devTodos.filter(d => normNome(d.medico) === medN && d.competencia === comp);
-      const re = rec.filter(r => normNome(r.medico) === medN && r.competencia === comp);
+    for (const medN of medicos) {
+      const dev = devTodos.filter(d => normNome(d.medico) === medN);
+      const re = rec.filter(r => normNome(r.medico) === medN);
       const medico = (dev[0] && dev[0].medico) || (re[0] && re[0].medico) || '';
       itens.push(...confrontarAdmissao(dev, re, { medico }));
     }
+    const pares = { size: temPar ? 1 : 0 };
     const t = totais(itens);
-    let tom = 'ok', titulo = 'Relatório final confere com o Consolidado';
+    const mesesSemRel = [...new Set(semRel.map(d => d.competencia))].sort();
+    let tom = 'ok', titulo = 'Relatório final confere com o Consolidado', texto = '';
     if (t.falta > 0.004) { tom = 'falta'; titulo = `Falta pagar ao médico R$ ${fmtN(t.falta)} nesta admissão`; }
     else if (itens.some(i => i.categoria === 'sem_lastro' || i.categoria === 'a_maior')) { tom = 'sem'; titulo = 'Recebido sem lastro no Consolidado'; }
+    else if (!pares.size && mesesSemRel.length) { tom = 'info'; titulo = `Pago no Consolidado de ${mesesSemRel.map(fmtComp).join(', ')} — sem relatório final do mês para conferir`;
+      texto = 'O que está no Consolidado conta como pago. Importe o relatório do médico desse mês (ou inclua o mês em "desde a ferramenta") para confrontar.'; }
     else if (!itens.length) { tom = 'info'; titulo = 'Nada a confrontar nesta admissão'; }
-    return { tom, titulo, texto: '', itens: itens.filter(i => i.categoria !== 'conforme' || itens.length <= 12), totais: t };
+    if (tom === 'ok' && rec.some(r => r.virtual !== undefined ? false : false)) { /* reservado */ }
+    if (tom === 'ok' && (finais || []).length && (finais || []).every(l => l.virtual)) titulo = 'Pago no Consolidado — o relatório final deste mês é o da própria ferramenta';
+    return { tom, titulo, texto, itens: itens.filter(i => i.categoria !== 'conforme' || itens.length <= 12), totais: t };
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -1331,9 +1472,13 @@
   }
 
   function idsSelecionados() {
-    const lista = listar();
+    const lista = listarTodos();
     const ids = lista.filter(r => ui.sel.has(r.id)).map(r => r.id);
-    return ids.length ? ids : filtrados().map(r => r.id);
+    if (ids.length) return ids;
+    return filtrados().map(r => r.id).concat(mesesFiltrados().map(r => r.id));
+  }
+  function mesesFiltrados() {
+    return mesesDaFerramenta().filter(r => !ui.filtroComp || r.competencia === ui.filtroComp);
   }
   function filtrados() {
     const b = normNome(ui.busca);
@@ -1356,7 +1501,7 @@
       <span class="rf-contagem">${lista.length} relatório${lista.length !== 1 ? 's' : ''} · ${meds.length} médico${meds.length !== 1 ? 's' : ''} · ${comps.length} m${comps.length !== 1 ? 'eses' : 'ês'}</span>` : '';
     const vis = filtrados();
     if (!lista.length) {
-      alvo.innerHTML = `<div class="rf-vazio">Nenhum relatório final importado ainda.<br>Importe os relatórios que os médicos receberam — um arquivo por médico e mês.</div>`;
+      alvo.innerHTML = `<div class="rf-vazio">Nenhum relatório final importado ainda.<br>Importe os relatórios manuais (de antes de ${esc(fmtComp(desdeFerramenta()))}) que os médicos receberam — um arquivo por médico e mês. Dos meses da ferramenta em diante, o Consolidado abaixo já é o relatório final.</div>`;
     } else {
       const todosSel = vis.length && vis.every(r => ui.sel.has(r.id));
       alvo.innerHTML = `
@@ -1383,9 +1528,44 @@
             </tr>`).join('')}
           </tbody></table></div>`;
     }
+    // ATLAS v1.3.2: os meses em que o relatório final é o da própria ferramenta
+    const desde = desdeFerramenta();
+    const meses = mesesFiltrados();
+    alvo.insertAdjacentHTML('beforeend', `
+      <div class="rf-ferr" id="rf-ferr">
+        <div class="rf-ferr-head">
+          <div class="rf-ferr-tit">Relatórios finais da própria ferramenta</div>
+          <div class="rf-ferr-tx">Desde <input type="month" id="rf-desde" class="rf-desde" value="${esc(desde)}"> o relatório que o médico recebe é o <b>Consolidado</b> desta ferramenta — não precisa importar arquivo. O que está no Consolidado conta como pago; a auditoria cobra o que o sistema recebeu com regra na Base Tabela e ficou sem pagamento. Arquivo importado do mesmo médico × mês vale mais que o Consolidado.</div>
+        </div>
+        ${meses.length ? `
+        <div class="rf-tab-wrap"><table class="rf-tab">
+          <thead><tr><th class="rf-chk"></th><th>Mês</th><th>Fonte</th><th class="num">Linhas do Consolidado</th><th class="num">Total repassado</th><th></th></tr></thead>
+          <tbody>${meses.map(r => `
+            <tr data-id="${esc(r.id)}" class="${ui.sel.has(r.id) ? 'sel' : ''}">
+              <td class="rf-chk"><input type="checkbox" class="rf-sel-v" data-id="${esc(r.id)}" ${ui.sel.has(r.id) ? 'checked' : ''}></td>
+              <td class="mono">${esc(r.competencia)}</td>
+              <td><span class="rf-layout rf-layout-ferramenta">Consolidado da ferramenta</span></td>
+              <td class="num mono">${r.n_linhas}</td>
+              <td class="num mono" data-ocultavel>R$ ${fmtN(r.total)}</td>
+              <td class="rf-row-acoes"><button type="button" class="rf-mini" data-ver-v="${esc(r.id)}" title="Ver as linhas do Consolidado deste mês">Ver</button></td>
+            </tr>`).join('')}
+          </tbody></table></div>` : `<div class="rf-vazio rf-vazio-mini">Nenhum mês calculado a partir de ${esc(fmtComp(desde))}. Importe o relatório do sistema e calcule (ou ajuste o mês de início).</div>`}
+      </div>`);
     const n = ui.sel.size;
     const btnN = $('rf-auditar-n');
-    if (btnN) btnN.textContent = n ? `(${n} marcado${n > 1 ? 's' : ''})` : (vis.length ? `(${vis.length} visíve${vis.length > 1 ? 'is' : 'l'})` : '');
+    const nVis = vis.length + meses.length;
+    if (btnN) btnN.textContent = n ? `(${n} marcado${n > 1 ? 's' : ''})` : (nVis ? `(${nVis} visíve${nVis > 1 ? 'is' : 'l'})` : '');
+    $('rf-desde')?.addEventListener('change', (e) => {
+      if (definirDesdeFerramenta(e.target.value)) { ui.sel = new Set([...ui.sel].filter(id => !idVirtual(id))); pintarLista(); Utilidades.toast?.(`✓ Relatório final da ferramenta desde ${fmtComp(e.target.value)}`, 'success', 3000); }
+      else Utilidades.toast?.('Informe um mês válido (AAAA-MM).', 'warning', 3000);
+    });
+    alvo.querySelectorAll('.rf-sel-v').forEach(cb => cb.addEventListener('change', () => {
+      const id = cb.dataset.id;
+      if (cb.checked) ui.sel.add(id); else ui.sel.delete(id);
+      cb.closest('tr').classList.toggle('sel', cb.checked);
+      const btn = $('rf-auditar-n'); if (btn) btn.textContent = ui.sel.size ? `(${ui.sel.size} marcado${ui.sel.size > 1 ? 's' : ''})` : '';
+    }));
+    alvo.querySelectorAll('[data-ver-v]').forEach(b => b.addEventListener('click', () => verLinhas(b.dataset.verV)));
     // eventos
     $('rf-f-med')?.addEventListener('change', (e) => { ui.filtroMed = e.target.value; pintarLista(); });
     $('rf-f-comp')?.addEventListener('change', (e) => { ui.filtroComp = e.target.value; pintarLista(); });
@@ -1410,20 +1590,20 @@
   function rotuloLayout(l) { return l === 'ferramenta' ? 'ferramenta' : l === 'manual2' ? 'manual (c/ admissão)' : l === 'manual1' ? 'manual (s/ admissão)' : (l || '—'); }
 
   function verLinhas(id) {
-    const r = listar().find(x => x.id === id);
+    const r = listarTodos().find(x => String(x.id) === String(id));
     if (!r) return;
-    const linhas = linhasDoRelatorio(id);
+    const linhas = linhasDoRelatorio(r.id);
     const ov = document.createElement('div');
     ov.className = 'rf-modal-ov';
     ov.innerHTML = `
       <div class="rf-modal rf-modal-larga" role="dialog" aria-modal="true">
-        <div class="rf-modal-head"><strong>${esc(CodigoMedico.exibir(r.medico))} · ${esc(r.competencia)}</strong>
-          <span>${esc(r.arquivo)} · ${linhas.length} linhas · recebido R$ ${fmtN(r.total)}${r.periodo_ini ? ` · pagamentos de ${dataBR(r.periodo_ini)} a ${dataBR(r.periodo_fim)}` : ''}</span>
+        <div class="rf-modal-head"><strong>${esc(r.virtual ? 'Consolidado da ferramenta' : CodigoMedico.exibir(r.medico))} · ${esc(r.competencia)}</strong>
+          <span>${esc(r.arquivo)} · ${linhas.length} linhas · ${r.virtual ? 'repassado' : 'recebido'} R$ ${fmtN(linhas.reduce((s, l) => s + (l.glosa ? 0 : (Number(l.valor) || 0)), 0))}${r.periodo_ini ? ` · pagamentos de ${dataBR(r.periodo_ini)} a ${dataBR(r.periodo_fim)}` : ''}</span>
           <button type="button" class="rf-modal-x" data-fechar>×</button></div>
         <div class="rf-tab-wrap rf-modal-scroll"><table class="rf-tab">
-          <thead><tr><th>Status</th><th>Módulo</th><th>Admissão</th><th>Data</th><th>Papel</th><th>Paciente</th><th>Origem</th><th>Convênio</th><th>Procedimento</th><th class="num">Valor</th></tr></thead>
+          <thead><tr>${r.virtual ? '<th>Médico</th>' : ''}<th>Status</th><th>Módulo</th><th>Admissão</th><th>Data</th><th>Papel</th><th>Paciente</th><th>Origem</th><th>Convênio</th><th>Procedimento</th><th class="num">Valor</th></tr></thead>
           <tbody>${linhas.map(l => `<tr class="${l.glosa ? 'rf-glosa' : ''}">
-            <td>${esc(l.status)}</td><td>${esc(l.modulo)}</td>
+            ${r.virtual ? `<td>${esc(CodigoMedico.exibir(l.medico || ''))}</td>` : ''}<td>${esc(l.status)}</td><td>${esc(l.modulo)}</td>
             <td class="mono"><button type="button" class="rf-link" data-adm="${esc(l.admissao)}">${esc(l.admissao || '—')}</button></td>
             <td class="mono">${esc(dataBR(l.data))}</td><td>${esc(l.papel)}</td><td>${esc(I().nomePaciente ? I().nomePaciente(l.paciente) : l.paciente)}</td>
             <td>${l.origem ? Utilidades.badgeFonte(l.origem) : ''}</td><td>${esc(l.convenio)}</td><td>${esc(l.procedimento)}</td>
@@ -1605,6 +1785,13 @@
     .rf-arq { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft, #585d62); }
     .rf-layout { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #eef2f6; color: #3f6489; white-space: nowrap; }
     .rf-layout-manual1, .rf-layout-manual2 { background: #fbf3e3; color: #8a6d2f; }
+    .rf-ferr { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border, #eef0f2); }
+    .rf-ferr-head { margin-bottom: 8px; }
+    .rf-ferr-tit { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+    .rf-ferr-tx { font-size: 12px; color: var(--ink-soft, #585d62); line-height: 1.6; max-width: 980px; }
+    .rf-ferr-tx b { font-weight: 700; color: var(--ink, #1d1f20); }
+    .rf-desde { font-family: inherit; font-size: 12px; padding: 2px 6px; border: 1px solid var(--border, #eef0f2); border-radius: 8px; margin: 0 4px; }
+    .rf-vazio-mini { padding: 12px; font-size: 12px; }
     .rf-comp-arq, .rf-fora { display: inline-block; font-family: inherit; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #fbf3e3; color: #8a6d2f; white-space: nowrap; margin-left: 4px; }
     .rf-cob { font-size: 11px; color: var(--ink-soft, #585d62); white-space: nowrap; }
     .rf-cob b { font-weight: 800; color: var(--ink, #1d1f20); }
@@ -1664,6 +1851,7 @@
     auditar, confrontoDaAdmissao, exportarExcel, garantirCalculo, garantirMotor,
     CATEGORIAS, CATS_FALTA, garantirXLSX, garantirExcelJS,
     competenciaPelosDados, mesesDasAdmissoes,
+    desdeFerramenta, definirDesdeFerramenta, mesesDaFerramenta, listarTodos, temRelatorioPara, linhasFinaisDaAdmissao, mesDaFerramenta,
     _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook },
   };
 })();
