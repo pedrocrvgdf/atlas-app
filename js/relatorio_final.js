@@ -406,7 +406,11 @@
       let n = 0;
       row.forEach((c, idx) => {
         const campo = ALIAS_CAMPO.get(norm(c));
-        if (campo && mapa[campo] == null) { mapa[campo] = idx; n++; }
+        if (!campo) return;
+        if (mapa[campo] == null) { mapa[campo] = idx; n++; return; }
+        // ATLAS v1.3.8: o relatório real traz FONTE PAGADORA (a origem) E
+        // RECEBIMENTO (o nome do convênio) — a segunda coluna de origem é o convênio
+        if (campo === 'origem' && mapa.convenio == null) { mapa.convenio = idx; n++; }
       });
       if (n >= 3 && mapa.procedimento != null && mapa.valor != null) return { linha: i, mapa };
     }
@@ -550,9 +554,13 @@
       try {
         const resolvidas = l.linhas.filter(x => x.admissao_norm).length && l.meta.layout === 'manual1'
           ? l.linhas.filter(x => x.admissao_norm).length : 0;
-        const id = gravar(l);
-        importados.push({ id, medico: l.meta.medico, competencia: l.meta.competencia, layout: l.meta.layout,
-          arquivo: l.meta.arquivo, n_linhas: l.meta.n_linhas, total: l.meta.total, avisos: l.avisos,
+        const g = gravar(l);
+        // ATLAS v1.3.8: dois relatórios do mesmo médico no mesmo mês de pagamento
+        // convivem (são meses diferentes do calendário dele) — e são avisados
+        if (g.convivem) l.avisos.push(`mais ${g.convivem} relatório${g.convivem > 1 ? 's' : ''} deste médico ficou em ${fmtComp(l.meta.competencia)} (o sistema pagou os dois no mesmo mês) — todos contam, nada foi substituído`);
+        importados.push({ id: g.id, medico: l.meta.medico, competencia: l.meta.competencia, competencia_arquivo: l.meta.competencia_arquivo || '',
+          layout: l.meta.layout, arquivo: l.meta.arquivo, n_linhas: l.meta.n_linhas, total: l.meta.total, avisos: l.avisos,
+          substituidos: g.substituidos, convivem: g.convivem,
           semAdmissao: l.linhas.filter(x => !x.admissao_norm).length, resolvidas });
       } catch (e) { erros.push({ arquivo: l.meta.arquivo, erro: e.message || String(e) }); }
     }
@@ -562,16 +570,41 @@
     return { importados, erros, cancelados };
   }
 
-  /** Grava um relatório lido (substitui o mesmo médico × competência). */
+  /**
+   * ATLAS v1.3.8: IDENTIDADE DE UM RELATÓRIO FINAL — o que o ARQUIVO declara
+   * ser: o período dos pagamentos ("Pagamentos liberados entre … e …"), ou a
+   * competência que o arquivo/nome dizia (`competencia_arquivo`). NUNCA a
+   * competência resolvida pelos dados: dois relatórios DIFERENTES do mesmo
+   * médico (abril e maio, por exemplo) caem na MESMA competência quando o
+   * sistema pagou os dois no mesmo mês — e até a v1.3.7 o segundo APAGAVA o
+   * primeiro, em silêncio. Era isso que fazia admissões realmente pagas
+   * aparecerem como "não consta no relatório final" (Pedro, 17/09/2026).
+   */
+  function identidadeDeclarada(r) {
+    if (!r) return '';
+    if (r.periodo_ini && r.periodo_fim) return 'P|' + r.periodo_ini + '|' + r.periodo_fim;
+    return r.competencia_arquivo ? 'C|' + r.competencia_arquivo : '';
+  }
+  /** Grava um relatório lido (substitui só o MESMO relatório, nunca outro mês). */
   function gravar(l) {
     const m = l.meta;
     const medNorm = normNome(m.medico);
     Banco.db.exec('BEGIN');
     try {
-      // substitui o mesmo médico × mês E o mesmo ARQUIVO do médico (o mês pode
-      // ter mudado entre duas importações — pelos dados — sem virar duplicata)
-      const antigos = Banco.query(`SELECT id FROM relatorio_final WHERE medico_norm = ? AND (competencia = ? OR arquivo = ?)`,
-        [medNorm, m.competencia, m.arquivo || '']) || [];
+      // ATLAS v1.3.8: substitui o mesmo ARQUIVO, o mesmo período/competência
+      // DECLARADOS pelo arquivo, ou o mesmo conteúdo (quando não há declaração
+      // dos dois lados). Relatórios de meses diferentes convivem.
+      const idDecl = identidadeDeclarada(m);
+      const cands = Banco.query(
+        `SELECT id, competencia, competencia_arquivo, arquivo, periodo_ini, periodo_fim, n_linhas, total
+           FROM relatorio_final WHERE medico_norm = ?`, [medNorm]) || [];
+      const antigos = cands.filter(r => {
+        if (m.arquivo && r.arquivo === m.arquivo) return true;                       // o mesmo arquivo, reimportado
+        const decl = identidadeDeclarada(r);
+        if (idDecl && decl) return decl === idDecl;                                  // os dois se declaram: só o mesmo período/mês
+        return r.competencia === m.competencia && r.n_linhas === m.n_linhas          // sem declaração: mesmo conteúdo = mesmo relatório
+          && Math.abs((Number(r.total) || 0) - (Number(m.total) || 0)) < 0.005;
+      });
       for (const a of antigos) {
         Banco.db.run(`DELETE FROM relatorio_final_linhas WHERE relatorio_id = ?`, [a.id]);
         Banco.db.run(`DELETE FROM relatorio_final WHERE id = ?`, [a.id]);
@@ -596,7 +629,13 @@
         }
       } finally { stmt.free(); }
       Banco.db.exec('COMMIT');
-      return id;
+      // quantos OUTROS relatórios do médico ficaram no mesmo mês (convivem)
+      let convivem = 0;
+      try {
+        convivem = (Banco.queryUnica(`SELECT COUNT(*) AS n FROM relatorio_final WHERE medico_norm = ? AND competencia = ? AND id <> ?`,
+          [medNorm, m.competencia, id]) || {}).n || 0;
+      } catch (e) {}
+      return { id, substituidos: antigos.length, convivem };
     } catch (e) {
       try { Banco.db.exec('ROLLBACK'); } catch (_) {}
       throw e;
