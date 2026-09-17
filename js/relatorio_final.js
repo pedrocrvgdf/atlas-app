@@ -153,6 +153,7 @@
     estorno:        { rotulo: 'Estorno',                      soma: false, tom: 'info' },
     aguardando:     { rotulo: 'Aguardando convênio',          soma: false, tom: 'info' },
     sem_relatorio:  { rotulo: 'Pago no Consolidado (sem relatório final do mês)', soma: false, tom: 'info' },
+    adicional:      { rotulo: 'Adicional do LIO (fora da cobrança)',  soma: false, tom: 'info' },
   };
   const CATS_FALTA = Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].soma);
 
@@ -916,9 +917,21 @@
    * classificados. Nunca deduplica: cada linha de um lado consome no máximo
    * uma do outro. Estorno (negativo) anula o positivo igual do mesmo papel.
    */
+  /**
+   * ATLAS v1.3.6: o ADICIONAL do LIO (linha "LIO · ADICIONAL" do Consolidado —
+   * % sobre a diferença da lente) NÃO entra no que falta pagar: a vigência é
+   * recente, então não há o que cobrar para trás (Pedro, 17/09/2026). Ele
+   * continua aparecendo, como item informativo.
+   */
+  function ehAdicional(x) {
+    return !!x && /ADICIONAL/.test(norm(x.modulo || ''));
+  }
   function confrontarAdmissao(dev, rec, ctx) {
     const out = [];
-    const base = (d, r, categoria, falta) => ({
+    const base = (d, r, categoria, falta) => {
+      // ATLAS v1.3.6: nenhuma categoria do ADICIONAL soma no falta pagar
+      if (CATEGORIAS[categoria] && CATEGORIAS[categoria].soma && ehAdicional(d || r)) { categoria = 'adicional'; falta = 0; }
+      return {
       categoria, rotulo: CATEGORIAS[categoria].rotulo, tom: CATEGORIAS[categoria].tom,
       competencia: (d || r).competencia, medico: (d && d.medico) || (r && r.medico) || (ctx && ctx.medico) || '',
       admissao: (d && d.admissao) || (r && r.admissao) || '', admissao_norm: (d && d.admissao_norm) || (r && r.admissao_norm) || '',
@@ -936,7 +949,9 @@
       foraDoMes: !!(d && d.dentro === false),
       // ATLAS v1.3.5: o recebido veio do Consolidado da ferramenta (não do arquivo)
       recDoConsolidado: !!(r && r.virtual),
-    });
+      adicional: ehAdicional(d || r),   // ATLAS v1.3.6
+      };
+    };
     // 1) estornos: negativo anula o positivo igual (mesmo papel e exame)
     const recAtivas = rec.slice();
     for (const neg of rec.filter(r => r.valor < -0.004)) {
