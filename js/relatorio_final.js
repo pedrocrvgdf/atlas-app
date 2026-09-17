@@ -155,6 +155,7 @@
     sem_relatorio:  { rotulo: 'Pago no Consolidado (sem relatório final do mês)', soma: false, tom: 'info' },
     adicional:      { rotulo: 'Adicional do LIO (fora da cobrança)',  soma: false, tom: 'info' },
     desempenho:     { rotulo: 'Pago por módulo de desempenho',        soma: false, tom: 'info' },
+    adiantamento:   { rotulo: 'Adiantamento (o convênio ainda não pagou)', soma: false, tom: 'info' },
   };
   const CATS_FALTA = Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].soma);
 
@@ -420,6 +421,49 @@
   // ──────────────────────────────────────────────────────────────────────
   // EM QUE MÊS O SISTEMA PAGOU ESSAS ADMISSÕES? (a competência pelos dados)
   // ──────────────────────────────────────────────────────────────────────
+  /**
+   * ATLAS v1.3.9: ADIANTAMENTO — a regra V802 do módulo Inspeção, trazida para
+   * a auditoria. "Muito provavelmente são valores de adiantamento da admissão:
+   * alguma coisa que pagou adiantada naquela admissão, que ainda não recebeu do
+   * convênio" (o fundador do módulo Inspeção, via Pedro em 17/09/2026). No
+   * bloco 1 — o que chega do sistema — a admissão não tem recebimento do
+   * convênio: ou não há linha nenhuma (o V802 puro: "sem NADA na base padrão a
+   * admissão ainda não foi recebida"), ou as linhas de convênio somam RECEBIDO
+   * zero. O que a ferramenta pagou ali é adiantamento, e adiantamento não é
+   * dívida do hospital com o médico. Particular não espera convênio: fica fora.
+   */
+  let _adiCache = { versao: -1, mapa: new Map() };
+  function admissoesAdiantadas(adms) {
+    const v = Banco._versao || 0;
+    if (_adiCache.versao !== v) _adiCache = { versao: v, mapa: new Map() };
+    const todas = [...new Set((adms || []).map(normAdm).filter(Boolean))];
+    const faltam = todas.filter(a => !_adiCache.mapa.has(a));
+    const variantes = I().variantesAdm || ((a) => [a]);
+    for (let i = 0; i < faltam.length; i += 120) {
+      const lote = faltam.slice(i, i + 120);
+      const vars = [...new Set(lote.flatMap(variantes))];
+      const achou = new Map();   // admNorm → { n, nConv, recConv }
+      try {
+        for (const r of Banco.query(
+          `SELECT admissao, UPPER(COALESCE(origem, '')) AS org, COUNT(*) AS n, SUM(COALESCE(recebido, 0)) AS rec
+             FROM linhas_qvis WHERE admissao IN (${vars.map(() => '?').join(',')})
+            GROUP BY admissao, org`, vars) || []) {
+          const k = normAdm(r.admissao);
+          const e = achou.get(k) || { n: 0, nConv: 0, recConv: 0 };
+          e.n += Number(r.n) || 0;
+          if (String(r.org) !== 'PARTICULAR') { e.nConv += Number(r.n) || 0; e.recConv += Number(r.rec) || 0; }
+          achou.set(k, e);
+        }
+      } catch (e) {}
+      for (const a of lote) {
+        const e = achou.get(a);
+        _adiCache.mapa.set(a, !e || !e.n || (e.nConv > 0 && !(e.recConv > 0.004)));
+      }
+    }
+    const out = new Set();
+    for (const a of todas) if (_adiCache.mapa.get(a)) out.add(a);
+    return out;
+  }
   /** admissões (normalizadas) → Set de meses de pagamento em linhas_qvis */
   function mesesDasAdmissoes(adms) {
     const mapa = new Map();
@@ -988,6 +1032,9 @@
       // ATLAS v1.3.7: linha de módulo de desempenho que não aparece no relatório
       // final não é dívida — o módulo já pagou; fica informativa, para conferir
       else if (CATS_AUSENCIA.has(categoria) && ehDesempenho(d || r)) { categoria = 'desempenho'; falta = 0; }
+      // ATLAS v1.3.9: o que a ferramenta pagou numa admissão que o convênio
+      // ainda não pagou é ADIANTAMENTO — informa, não cobra (regra V802)
+      else if (CATS_AUSENCIA.has(categoria) && d && d.adiantamento) { categoria = 'adiantamento'; falta = 0; }
       return {
       categoria, rotulo: CATEGORIAS[categoria].rotulo, tom: CATEGORIAS[categoria].tom,
       competencia: (d || r).competencia, medico: (d && d.medico) || (r && r.medico) || (ctx && ctx.medico) || '',
@@ -1008,6 +1055,7 @@
       recDoConsolidado: !!(r && r.virtual),
       adicional: ehAdicional(d || r),   // ATLAS v1.3.6
       desempenho: ehDesempenho(d || r),  // ATLAS v1.3.7
+      adiantamento: !!(d && d.adiantamento),   // ATLAS v1.3.9
       };
     };
     // 1) estornos: negativo anula o positivo igual (mesmo papel e exame)
@@ -1348,6 +1396,10 @@
           if (semRel) { if (!semRelatorioAviso.has(comp)) semRelatorioAviso.set(comp, new Set()); semRelatorioAviso.get(comp).add(g.medico); }
         }
       }
+      // ATLAS v1.3.9: adiantamento — o que a ferramenta pagou numa admissão que
+      // o convênio ainda não pagou (regra V802 do módulo Inspeção)
+      const adiSet = admissoesAdiantadas(dev.map(d => d.admissao_norm));
+      for (const d of dev) if (d.admissao_norm && adiSet.has(d.admissao_norm)) d.adiantamento = true;
       // confronto por admissão (qualquer mês)
       const gDev = agruparPorAdm(dev), gRec = agruparPorAdm(rec);
       const chaves = new Set([...gDev.keys(), ...gRec.keys()]);
@@ -1436,6 +1488,11 @@
     // `finais` já traz as linhas virtuais dos meses da ferramenta (linhasFinaisDaAdmissao)
     const rec = (finais || []).map(itemRecebido);
     const devTodos = (consolidado || []).map(r => itemDeveria(r.linha, r.competencia));
+    // ATLAS v1.3.9: adiantamento (regra V802) — o convênio ainda não pagou esta admissão
+    try {
+      const adi = admissoesAdiantadas(devTodos.map(d => d.admissao_norm).concat([normAdm(adm)]));
+      for (const d of devTodos) if (d.admissao_norm && adi.has(d.admissao_norm)) d.adiantamento = true;
+    } catch (e) {}
     if (!devTodos.length && !rec.length) return { tom: 'info', titulo: 'Nada a confrontar nesta admissão', texto: '', itens: [] };
     // ATLAS v1.3.2: mês sem relatório final (nem arquivo, nem ferramenta) → não
     // cobra. E o confronto é por MÉDICO, em qualquer mês (como na auditoria em
@@ -1472,6 +1529,10 @@
     else if (tom === 'ok' && itens.some(i => i.recDoConsolidado) && itens.some(i => !i.recDoConsolidado && i.recebido > 0.004)) {
       titulo = 'Pago — arquivo do médico e Consolidado da ferramenta';
       texto = 'O arquivo importado não traz todas as linhas desta admissão; as que faltam estão no Consolidado do mês, que nesse período É o relatório final — por isso contam como pagas.';
+    } else if (tom === 'ok' && itens.some(i => i.categoria === 'adiantamento')) {
+      // ATLAS v1.3.9: a regra V802 do módulo Inspeção, no confronto
+      titulo = 'Adiantamento — o convênio ainda não pagou esta admissão';
+      texto = 'A base do sistema não mostra recebimento do convênio nesta admissão: o que a ferramenta pagou aqui é adiantamento, não dívida com o médico. Quando o convênio pagar, a admissão entra no repasse normal.';
     } else if (tom === 'ok' && itens.some(i => i.categoria === 'desempenho' || i.categoria === 'adicional')) {
       // ATLAS v1.3.7: o que o módulo de desempenho pagou não é cobrado
       titulo = 'Pago — inclui linha de módulo de desempenho';
@@ -2115,6 +2176,7 @@
     CATEGORIAS, CATS_FALTA, garantirXLSX, garantirExcelJS,
     competenciaPelosDados, mesesDasAdmissoes,
     desdeFerramenta, definirDesdeFerramenta, mesesDaFerramenta, listarTodos, temRelatorioPara, linhasFinaisDaAdmissao, mesDaFerramenta,
+    admissoesAdiantadas,   // ATLAS v1.3.9
     medicoAuditado, definirMedicoAuditado, medicosConhecidos,
     _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook },
   };

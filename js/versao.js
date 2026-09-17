@@ -9,7 +9,7 @@
  * a contagem continua de 1000.
  */
 window.ATLAS_VERSAO = {
-  pacote: 'v1.3.8',
-  numero: 1012,
+  pacote: 'v1.3.9',
+  numero: 1013,
   gerado: '2026-09-16',
 };
