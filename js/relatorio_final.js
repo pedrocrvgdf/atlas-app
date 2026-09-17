@@ -156,6 +156,7 @@
     adicional:      { rotulo: 'Adicional do LIO (fora da cobrança)',  soma: false, tom: 'info' },
     desempenho:     { rotulo: 'Pago por módulo de desempenho',        soma: false, tom: 'info' },
     adiantamento:   { rotulo: 'Adiantamento (o convênio ainda não pagou)', soma: false, tom: 'info' },
+    vigencia:       { rotulo: 'Versão da Base Tabela na data (não é falta)', soma: false, tom: 'info' },
   };
   const CATS_FALTA = Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].soma);
 
@@ -1023,6 +1024,49 @@
   function ehDesempenho(x) {
     return !!x && /^(DESEMPENHO|CARGO ADMINISTRATIVO)/.test(norm(x.status || ''));
   }
+  /**
+   * ATLAS v1.3.10: A BASE TABELA TEM VERSÕES E DATA DE VIGÊNCIA (V563,
+   * `js/versoes_tabela.js`) — "não foi pago a menos, a vigência era outra"
+   * (Pedro, 17/09/2026). Antes de cobrar uma diferença de VALOR, a auditoria
+   * pergunta: o que o médico recebeu é o valor de alguma VERSÃO publicada da
+   * Base Tabela para este procedimento × papel? Se é, a diferença é de
+   * vigência (o Consolidado precificou por outra versão), não dívida.
+   * Cobre as regras de VALOR fixo; regra por percentual depende do produzido
+   * da linha e segue no confronto normal.
+   */
+  let _verCache = { versao: -1, mapa: new Map() };
+  function versaoQueExplica(d, valorRec) {
+    if (!d || !(valorRec > 0.004)) return null;
+    const V = window.AtlasVersoesTabela;
+    if (!V || typeof V.listar !== 'function' || !I()._regrasDaVersao) return null;
+    const bv = Banco._versao || 0;
+    if (_verCache.versao !== bv) _verCache = { versao: bv, mapa: new Map() };
+    const chave = normNome(d.procedimento) + '|' + (d.papel || '') + '|' + valorRec.toFixed(2);
+    if (_verCache.mapa.has(chave)) return _verCache.mapa.get(chave);
+    let achada = null;
+    try {
+      const versoes = V.listar() || [];
+      if (versoes.length > 1) {
+        const naData = (typeof V.resolver === 'function') ? V.resolver(d.data, versoes) : null;
+        // a versão vigente na data da admissão responde primeiro
+        const ordem = naData ? [naData].concat(versoes.filter(v => v.id !== naData.id)) : versoes;
+        for (const v of ordem) {
+          const regras = I()._regrasDaVersao(v.id);
+          if (!regras || !regras.procs || !regras.porProcValores) continue;
+          const pid = regras.procs.get(normNome(d.procedimento));
+          if (pid == null) continue;
+          const r = regras.porProcValores.get(pid) && regras.porProcValores.get(pid).get(d.papel);
+          if (!r) continue;
+          if (Math.abs((Number(r.valor) || 0) - valorRec) < 0.005) {
+            achada = { id: v.id, numero: v.numero, data_vigencia: v.data_vigencia, naData: !!(naData && naData.id === v.id) };
+            break;
+          }
+        }
+      }
+    } catch (e) { achada = null; }
+    _verCache.mapa.set(chave, achada);
+    return achada;
+  }
   const CATS_AUSENCIA = new Set(['nao_pago', 'nao_consta']);
   function confrontarAdmissao(dev, rec, ctx) {
     const out = [];
@@ -1035,6 +1079,13 @@
       // ATLAS v1.3.9: o que a ferramenta pagou numa admissão que o convênio
       // ainda não pagou é ADIANTAMENTO — informa, não cobra (regra V802)
       else if (CATS_AUSENCIA.has(categoria) && d && d.adiantamento) { categoria = 'adiantamento'; falta = 0; }
+      // ATLAS v1.3.10: a diferença de valor é de VERSÃO da Base Tabela? o que o
+      // médico recebeu é o valor de uma versão publicada → vigência, não falta
+      let _ver = null;
+      if (categoria === 'a_menor' || categoria === 'a_maior') {
+        _ver = versaoQueExplica(d, r ? Number(r.valor) || 0 : 0);
+        if (_ver && categoria === 'a_menor') { categoria = 'vigencia'; falta = 0; }
+      }
       return {
       categoria, rotulo: CATEGORIAS[categoria].rotulo, tom: CATEGORIAS[categoria].tom,
       competencia: (d || r).competencia, medico: (d && d.medico) || (r && r.medico) || (ctx && ctx.medico) || '',
@@ -1056,6 +1107,8 @@
       adicional: ehAdicional(d || r),   // ATLAS v1.3.6
       desempenho: ehDesempenho(d || r),  // ATLAS v1.3.7
       adiantamento: !!(d && d.adiantamento),   // ATLAS v1.3.9
+      versaoPaga: _ver ? String(_ver.numero) : '',            // ATLAS v1.3.10
+      versaoNaData: !!(_ver && _ver.naData),
       };
     };
     // 1) estornos: negativo anula o positivo igual (mesmo papel e exame)
@@ -1529,6 +1582,11 @@
     else if (tom === 'ok' && itens.some(i => i.recDoConsolidado) && itens.some(i => !i.recDoConsolidado && i.recebido > 0.004)) {
       titulo = 'Pago — arquivo do médico e Consolidado da ferramenta';
       texto = 'O arquivo importado não traz todas as linhas desta admissão; as que faltam estão no Consolidado do mês, que nesse período É o relatório final — por isso contam como pagas.';
+    } else if (tom === 'ok' && itens.some(i => i.categoria === 'vigencia')) {
+      // ATLAS v1.3.10: a diferença era de versão da Base Tabela
+      const v = itens.find(i => i.categoria === 'vigencia');
+      titulo = `Pago pela versão ${v.versaoPaga} da Base Tabela${v.versaoNaData ? ' (a vigente na data)' : ''}`;
+      texto = 'O valor que o médico recebeu é o da versão da Base Tabela que valia para esta admissão; o Consolidado mostra o da versão atual. A diferença é de vigência, não é falta de pagamento.';
     } else if (tom === 'ok' && itens.some(i => i.categoria === 'adiantamento')) {
       // ATLAS v1.3.9: a regra V802 do módulo Inspeção, no confronto
       titulo = 'Adiantamento — o convênio ainda não pagou esta admissão';
@@ -1573,7 +1631,8 @@
           data: dataBR(it.data), paciente: it.paciente, procedimento: it.procedimento, papel: it.papel, origem: it.origem,
           convenio: it.convenio, deveria: Number(it.deveria) || 0, recebido: Number(it.recebido) || 0,
           falta: Number(it.falta) || 0, fonte: it.fonte,
-          pagoPor: it.recDoConsolidado ? 'Consolidado da ferramenta' : (Number(it.recebido) > 0.004 ? 'arquivo do médico' : '') });
+          pagoPor: (it.recDoConsolidado ? 'Consolidado da ferramenta' : (Number(it.recebido) > 0.004 ? 'arquivo do médico' : ''))
+            + (it.versaoPaga ? ` · Base Tabela v${it.versaoPaga}${it.versaoNaData ? ' (vigente na data)' : ''}` : '') });
         ['deveria', 'recebido', 'falta'].forEach(k => { row.getCell(k).numFmt = 'R$ #,##0.00'; });
         if (it.tom === 'falta') row.getCell('falta').font = { bold: true, color: { argb: 'FFA15646' } };
       }
@@ -2041,7 +2100,7 @@
           <td>${esc(I().nomePaciente ? I().nomePaciente(it.paciente) : it.paciente)}</td><td>${esc(it.procedimento)}</td><td>${esc(it.papel)}</td>
           <td>${it.origem ? Utilidades.badgeFonte(it.origem) : ''}</td>
           <td class="num mono" data-ocultavel>R$ ${fmtN(it.deveria)}</td>
-          <td class="num mono" data-ocultavel>R$ ${fmtN(it.recebido)}${it.recDoConsolidado ? ' <span class="rf-do-cons" title="Esta linha não está no arquivo importado; ela está no Consolidado do mês, que nesse período é o relatório final — por isso conta como paga">Consolidado</span>' : ''}</td>
+          <td class="num mono" data-ocultavel>R$ ${fmtN(it.recebido)}${it.recDoConsolidado ? ' <span class="rf-do-cons" title="Esta linha não está no arquivo importado; ela está no Consolidado do mês, que nesse período é o relatório final — por isso conta como paga">Consolidado</span>' : ''}${it.versaoPaga ? ` <span class="rf-do-cons" title="Este é o valor da versão ${esc(it.versaoPaga)} da Base Tabela${it.versaoNaData ? ', a vigente na data da admissão' : ''} — a diferença é de vigência, não de pagamento">v${esc(it.versaoPaga)}</span>` : ''}</td>
           <td class="num mono rf-falta" data-ocultavel>${it.falta > 0.004 ? 'R$ ' + fmtN(it.falta) : ''}</td></tr>`).join('')}
         </tbody></table>
         ${vis.length > 2000 ? `<div class="rf-truncado">Mostrando 2.000 de ${vis.length} itens — refine os filtros ou exporte o Excel.</div>` : ''}

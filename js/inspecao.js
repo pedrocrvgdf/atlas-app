@@ -5145,6 +5145,9 @@
     mesmoProduto, mesmoExame, mesmoConteudo,
     // V871: o repasse faltante e a resolução de versão por data de admissão
     repasseFaltanteDe, versaoDaAdmissao,
+    // ATLAS v1.3.10: as regras da Base Tabela por VERSÃO/vigência — a auditoria
+    // do relatório final precisa saber quanto valia o procedimento na data
+    _regrasNaData, _regrasDaVersao, _carregarRegras,
     // V876: a poda das competências pela lista do Consolidado
     competenciasDaAdmissao, buscarConsolidado,
     // V880: a frase da linha particular
