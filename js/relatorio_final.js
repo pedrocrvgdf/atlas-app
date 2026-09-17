@@ -1052,6 +1052,16 @@
    * Uma consulta agregada por versão do banco resolve para toda a auditoria.
    */
   const MIN_RECORRENCIA = 5;
+  /**
+   * ATLAS v1.3.12: a inferência de "preço de tabela antiga" (v1.3.11) SÓ vale
+   * numa faixa de REAJUSTE. O 04/2026 auditado pelo Pedro mostrou por que:
+   * lá os "pago a menor" legítimos são o INDICANTE recebendo EXATAMENTE METADE
+   * (51,00 → 25,50; 39,00 → 19,50; 18,00 → 9,00 …) — e metade se repete muito
+   * no relatório final, então a recorrência sozinha apagaria dívida real.
+   * Reajuste de tabela é uma diferença pequena (326,43 / 341,54 = 0,956);
+   * receber metade, ou um terço, é divergência de pagamento.
+   */
+  const MIN_RAZAO_REAJUSTE = 0.80;
   let _tabCache = { versao: -1, mapa: null };
   function valoresDeTabelaNoFinal() {
     const v = Banco._versao || 0;
@@ -1129,7 +1139,9 @@
         // ATLAS v1.3.11: sem versão publicada, o valor que se repete no relatório
         // final do mesmo procedimento × papel também é valor de TABELA de outra
         // época — mudança de tabela, não pagamento a menor
-        if (!_ver) _rec = recorrenciaNoFinal(d && d.procedimento, d && d.papel, vRec);
+        // ATLAS v1.3.12: só infere tabela antiga dentro da faixa de reajuste
+        const razao = (d && (Number(d.valor) || 0) > 0.004) ? vRec / Number(d.valor) : 0;
+        if (!_ver && razao >= MIN_RAZAO_REAJUSTE && razao < 1) _rec = recorrenciaNoFinal(d && d.procedimento, d && d.papel, vRec);
         if ((_ver || _rec >= MIN_RECORRENCIA) && categoria === 'a_menor') { categoria = 'vigencia'; falta = 0; }
       }
       return {
