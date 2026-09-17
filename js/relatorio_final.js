@@ -154,6 +154,7 @@
     aguardando:     { rotulo: 'Aguardando convênio',          soma: false, tom: 'info' },
     sem_relatorio:  { rotulo: 'Pago no Consolidado (sem relatório final do mês)', soma: false, tom: 'info' },
     adicional:      { rotulo: 'Adicional do LIO (fora da cobrança)',  soma: false, tom: 'info' },
+    desempenho:     { rotulo: 'Pago por módulo de desempenho',        soma: false, tom: 'info' },
   };
   const CATS_FALTA = Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].soma);
 
@@ -926,11 +927,28 @@
   function ehAdicional(x) {
     return !!x && /ADICIONAL/.test(norm(x.modulo || ''));
   }
+  /**
+   * ATLAS v1.3.7: a linha veio de um MÓDULO DE DESEMPENHO (os fichários: LIO,
+   * OPME, Laudos, Fellow, Períodos, Fracionamento, Lentes de Contato, Luz
+   * Pulsada, Estrabismo, Crosslink, Refractive Laser, Exceção · Produção,
+   * Cargos). No Consolidado elas nascem com status "Desempenho" / "CARGO
+   * ADMINISTRATIVO" (`relatorios.js`), contra "QVIS", "GLOSA" e "Ajustes" do
+   * repasse comum. O que o módulo de desempenho pagou FOI PAGO (Pedro,
+   * 17/09/2026): não achar a linha no relatório final do médico é motivo para
+   * CONFERIR, não para cobrar.
+   */
+  function ehDesempenho(x) {
+    return !!x && /^(DESEMPENHO|CARGO ADMINISTRATIVO)/.test(norm(x.status || ''));
+  }
+  const CATS_AUSENCIA = new Set(['nao_pago', 'nao_consta']);
   function confrontarAdmissao(dev, rec, ctx) {
     const out = [];
     const base = (d, r, categoria, falta) => {
       // ATLAS v1.3.6: nenhuma categoria do ADICIONAL soma no falta pagar
       if (CATEGORIAS[categoria] && CATEGORIAS[categoria].soma && ehAdicional(d || r)) { categoria = 'adicional'; falta = 0; }
+      // ATLAS v1.3.7: linha de módulo de desempenho que não aparece no relatório
+      // final não é dívida — o módulo já pagou; fica informativa, para conferir
+      else if (CATS_AUSENCIA.has(categoria) && ehDesempenho(d || r)) { categoria = 'desempenho'; falta = 0; }
       return {
       categoria, rotulo: CATEGORIAS[categoria].rotulo, tom: CATEGORIAS[categoria].tom,
       competencia: (d || r).competencia, medico: (d && d.medico) || (r && r.medico) || (ctx && ctx.medico) || '',
@@ -950,6 +968,7 @@
       // ATLAS v1.3.5: o recebido veio do Consolidado da ferramenta (não do arquivo)
       recDoConsolidado: !!(r && r.virtual),
       adicional: ehAdicional(d || r),   // ATLAS v1.3.6
+      desempenho: ehDesempenho(d || r),  // ATLAS v1.3.7
       };
     };
     // 1) estornos: negativo anula o positivo igual (mesmo papel e exame)
@@ -1414,6 +1433,10 @@
     else if (tom === 'ok' && itens.some(i => i.recDoConsolidado) && itens.some(i => !i.recDoConsolidado && i.recebido > 0.004)) {
       titulo = 'Pago — arquivo do médico e Consolidado da ferramenta';
       texto = 'O arquivo importado não traz todas as linhas desta admissão; as que faltam estão no Consolidado do mês, que nesse período É o relatório final — por isso contam como pagas.';
+    } else if (tom === 'ok' && itens.some(i => i.categoria === 'desempenho' || i.categoria === 'adicional')) {
+      // ATLAS v1.3.7: o que o módulo de desempenho pagou não é cobrado
+      titulo = 'Pago — inclui linha de módulo de desempenho';
+      texto = 'A linha de desempenho (LIO, OPME, Laudos, Fellow…) foi paga pelo módulo e não foi localizada no relatório final do médico: confira nele, mas a ATLAS não cobra o que a própria ferramenta pagou.';
     } else if (tom === 'ok' && itens.some(i => i.recDoConsolidado)) {
       texto = texto || 'O que está no Consolidado do mês conta como pago — nesse período o relatório final é o da própria ferramenta.';
     }
