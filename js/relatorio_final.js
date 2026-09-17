@@ -546,7 +546,14 @@
   // IMPORTAÇÃO EM LOTE (vários arquivos, sem travar)
   // ──────────────────────────────────────────────────────────────────────
   let _listaCache = { versao: -1, lista: null };
-  function invalidar() { _listaCache = { versao: -1, lista: null }; _admCache = new Map(); _admCacheV = -1; }
+  function invalidar() {
+    _listaCache = { versao: -1, lista: null }; _admCache = new Map(); _admCacheV = -1;
+    // ATLAS v1.3.9/v1.3.11: os caches que leem o banco (adiantamento, versões
+    // da Base Tabela, valores de tabela do relatório final) também caem
+    try { _adiCache = { versao: -1, mapa: new Map() }; } catch (e) {}
+    try { _verCache = { versao: -1, mapa: new Map() }; } catch (e) {}
+    try { _tabCache = { versao: -1, mapa: null }; } catch (e) {}
+  }
   let _colunasOk = false;
   /** bancos gravados pela v1.3.0 não têm competencia_arquivo (a migração de banco.js também cobre) */
   function garantirColunas() {
@@ -1034,6 +1041,40 @@
    * Cobre as regras de VALOR fixo; regra por percentual depende do produzido
    * da linha e segue no confronto normal.
    */
+  /**
+   * ATLAS v1.3.11: VALOR DE TABELA DE OUTRA ÉPOCA, SEM VERSÃO PUBLICADA.
+   * O aumento da Base Tabela pode ter sido feito na tabela viva, sem publicar
+   * versão — aí não há vigência gravada para a v1.3.10 consultar. Mas o padrão
+   * denuncia: centenas de admissões antigas do MESMO procedimento × papel com
+   * exatamente o mesmo par (deveria 341,54 × recebido 326,43, os 4,63% do
+   * aumento). Um valor que se repete assim nos relatórios finais É um valor de
+   * tabela — não é "pago a menor" admissão a admissão (Pedro, 17/09/2026).
+   * Uma consulta agregada por versão do banco resolve para toda a auditoria.
+   */
+  const MIN_RECORRENCIA = 5;
+  let _tabCache = { versao: -1, mapa: null };
+  function valoresDeTabelaNoFinal() {
+    const v = Banco._versao || 0;
+    if (_tabCache.versao === v && _tabCache.mapa) return _tabCache.mapa;
+    const mapa = new Map();
+    try {
+      for (const r of Banco.query(
+        `SELECT procedimento_norm AS p, papel_canon AS pa, ROUND(valor, 2) AS v, COUNT(*) AS n
+           FROM relatorio_final_linhas WHERE valor > 0.004 AND glosa = 0
+          GROUP BY procedimento_norm, papel_canon, ROUND(valor, 2)
+         HAVING COUNT(*) >= ?`, [MIN_RECORRENCIA]) || []) {
+        mapa.set(String(r.p || '') + '|' + String(r.pa || '') + '|' + Number(r.v).toFixed(2), Number(r.n) || 0);
+      }
+    } catch (e) {}
+    _tabCache = { versao: v, mapa };
+    return mapa;
+  }
+  /** quantas vezes este valor aparece no relatório final para o mesmo procedimento × papel */
+  function recorrenciaNoFinal(procedimento, papel, valor) {
+    if (!(valor > 0.004)) return 0;
+    const m = valoresDeTabelaNoFinal();
+    return m.get(normNome(procedimento) + '|' + (papel || '') + '|' + Number(valor).toFixed(2)) || 0;
+  }
   let _verCache = { versao: -1, mapa: new Map() };
   function versaoQueExplica(d, valorRec) {
     if (!d || !(valorRec > 0.004)) return null;
@@ -1081,10 +1122,15 @@
       else if (CATS_AUSENCIA.has(categoria) && d && d.adiantamento) { categoria = 'adiantamento'; falta = 0; }
       // ATLAS v1.3.10: a diferença de valor é de VERSÃO da Base Tabela? o que o
       // médico recebeu é o valor de uma versão publicada → vigência, não falta
-      let _ver = null;
+      let _ver = null, _rec = 0;
       if (categoria === 'a_menor' || categoria === 'a_maior') {
-        _ver = versaoQueExplica(d, r ? Number(r.valor) || 0 : 0);
-        if (_ver && categoria === 'a_menor') { categoria = 'vigencia'; falta = 0; }
+        const vRec = r ? Number(r.valor) || 0 : 0;
+        _ver = versaoQueExplica(d, vRec);
+        // ATLAS v1.3.11: sem versão publicada, o valor que se repete no relatório
+        // final do mesmo procedimento × papel também é valor de TABELA de outra
+        // época — mudança de tabela, não pagamento a menor
+        if (!_ver) _rec = recorrenciaNoFinal(d && d.procedimento, d && d.papel, vRec);
+        if ((_ver || _rec >= MIN_RECORRENCIA) && categoria === 'a_menor') { categoria = 'vigencia'; falta = 0; }
       }
       return {
       categoria, rotulo: CATEGORIAS[categoria].rotulo, tom: CATEGORIAS[categoria].tom,
@@ -1109,6 +1155,7 @@
       adiantamento: !!(d && d.adiantamento),   // ATLAS v1.3.9
       versaoPaga: _ver ? String(_ver.numero) : '',            // ATLAS v1.3.10
       versaoNaData: !!(_ver && _ver.naData),
+      recorrenteNoFinal: _rec || 0,                           // ATLAS v1.3.11
       };
     };
     // 1) estornos: negativo anula o positivo igual (mesmo papel e exame)
@@ -1513,6 +1560,21 @@
         }
       }
       itens.push(...doMed);
+    }
+    // ATLAS v1.3.11: a diferença era de TABELA — avisa com o % e o volume, para
+    // o Pedro reconhecer o aumento (e publicar a versão com a data de vigência)
+    const porTab = new Map();
+    for (const it of itens) {
+      if (it.categoria !== 'vigencia') continue;
+      const k = normNome(it.procedimento) + '|' + it.papel + '|' + Number(it.deveria).toFixed(2) + '|' + Number(it.recebido).toFixed(2);
+      if (!porTab.has(k)) porTab.set(k, { proc: it.procedimento, papel: it.papel, dev: Number(it.deveria) || 0, rec: Number(it.recebido) || 0, n: 0, versao: it.versaoPaga });
+      porTab.get(k).n++;
+    }
+    for (const g of [...porTab.values()].sort((a, b) => b.n - a.n).slice(0, 8)) {
+      const pct = g.rec > 0.004 ? ((g.dev - g.rec) / g.rec) * 100 : 0;
+      avisos.push(`${g.proc} · ${g.papel}: ${g.n} ${g.n > 1 ? 'admissões' : 'admissão'} com deveria R$ ${fmtN(g.dev)} e recebido R$ ${fmtN(g.rec)} (${pct.toFixed(2).replace('.', ',')}%) — ${g.versao
+        ? `é o valor da versão ${g.versao} da Base Tabela`
+        : 'esse valor se repete no relatório final, é preço de tabela de outra época'}: MUDANÇA DE TABELA, não falta.${g.versao ? '' : ' Publique a versão da Base Tabela com a data de vigência para a ATLAS precificar pela época.'}`);
     }
     for (const [comp, meds] of semRelatorioAviso) {
       avisos.push(`Consolidado de ${fmtComp(comp)}: admissões de ${[...meds].join(', ')} pagas nesse mês sem relatório final importado — o que está lá conta como pago, não como falta; importe o arquivo de ${fmtComp(comp)} para conferir (ou inclua o mês em "desde a ferramenta")`);
@@ -2236,6 +2298,7 @@
     competenciaPelosDados, mesesDasAdmissoes,
     desdeFerramenta, definirDesdeFerramenta, mesesDaFerramenta, listarTodos, temRelatorioPara, linhasFinaisDaAdmissao, mesDaFerramenta,
     admissoesAdiantadas,   // ATLAS v1.3.9
+    recorrenciaNoFinal,    // ATLAS v1.3.11
     medicoAuditado, definirMedicoAuditado, medicosConhecidos,
     _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook },
   };
