@@ -5,7 +5,7 @@
  *
  * A ferramenta roda 100% no navegador, com os dados só na máquina de quem a
  * abre: uma tela de login aqui nunca foi segurança de verdade (quem tem o
- * computador tem o IndexedDB). Por isso a ATLAS entra direto.
+ * computador tem o IndexedDB). Por isso o ATLAS entra direto.
  *
  * O que fica é a SENHA ADMINISTRATIVA — uma trava de confirmação para as
  * ações que não têm volta (apagar tudo, publicar uma versão da Base Tabela,

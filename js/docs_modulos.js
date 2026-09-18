@@ -950,7 +950,7 @@
     titulo: 'Inspeção',
     secoes: [
       { titulo: 'O que este módulo faz', tipo: 'paragrafo', conteudo: [
-        'É o módulo de **auditoria** da ATLAS. A aba **Admissão** rastreia uma admissão pelas quatro bases — como ela **chega do sistema**, como fica no **Consolidado** da ferramenta, como aparece na **produção analítica** e o que o médico **de fato recebeu** no relatório final — e diz onde ela parou.',
+        'É o módulo de **auditoria** do ATLAS. A aba **Admissão** rastreia uma admissão pelas quatro bases — como ela **chega do sistema**, como fica no **Consolidado** da ferramenta, como aparece na **produção analítica** e o que o médico **de fato recebeu** no relatório final — e diz onde ela parou.',
         'A aba **Relatório final** importa os relatórios que os médicos receberam (um arquivo por médico e mês de pagamento, vários de uma vez) e faz a auditoria em lote: confronta o que a ferramenta manda pagar com o que foi pago e lista **o que falta pagar** ao médico.'
       ] },
       { titulo: 'Como operar (passo a passo)', tipo: 'passos', conteudo: [

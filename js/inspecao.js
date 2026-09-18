@@ -1895,10 +1895,21 @@
       _papeisCache = { versao: Banco._versao, mapa };
     }
     let c = _papeisCache.mapa.get(n) || n;
-    if (c === 'CIRURGIAO' || c === 'MEDICO') c = 'EXECUTANTE';
-    if (c === 'MEDICO DE LAUDO') c = 'MEDICO LAUDO';
-    if (/^AUXILIAR( \d)?$/.test(c)) c = 'AUXILIAR';
-    if (c === 'SOLICITANTE') c = 'INDICANTE';        // mesma regra de repasse
+    /**
+     * ATLAS v1.3.13: as GRAFIAS REAIS dos relatórios e dos dois sistemas —
+     * o relatório de fevereiro/2025 do médico traz, no mesmo arquivo,
+     * "CIRURGIAO", "MEDICO", "Md" (Medical), "SOLICITANTE", "Encaminh",
+     * "Auxiliar", "AUXILIAR 1" e "AUXILIAR 2". CIRURGIÃO e MÉDICO são o
+     * EXECUTANTE e SOLICITANTE é o INDICANTE — já era a regra da ferramenta,
+     * mas só valia para a grafia exata, e as abreviadas/numeradas ficavam
+     * cruas: o papel não casava e a linha virava "papel não pago" (Pedro,
+     * 18/09/2026). O de-para do banco (mapeamento_papeis) continua mandando
+     * primeiro; isto aqui é a rede que pega o resto.
+     */
+    if (/^(MEDICO|MEDICA) (DE )?LAUDO/.test(c) || c === 'LAUDISTA' || c === 'MEDICO LAUDO') c = 'MEDICO LAUDO';
+    else if (/^MEDIC[OA] AUXILIAR/.test(c) || /^AUX/.test(c) || /^\d+\s*[ºO]?\s*AUXILIAR/.test(c)) c = 'AUXILIAR';
+    else if (/^(CIRURGI|MEDIC|EXECUT)/.test(c) || c === 'MD' || c === 'MED') c = 'EXECUTANTE';
+    else if (/^(SOLIC|ENCAMINH|INDIC)/.test(c)) c = 'INDICANTE';   // mesma regra de repasse
     return c;
   }
 

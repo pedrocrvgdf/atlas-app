@@ -100,7 +100,7 @@ App.telas['administracao'] = function () {
         <div class="card" style="margin-bottom: 16px">
           <h3 class="card-title">Senha administrativa</h3>
           <p class="card-subtitle">
-            A ATLAS não tem tela de login. Esta senha só confirma as ações que não têm volta —
+            O ATLAS não tem tela de login. Esta senha só confirma as ações que não têm volta —
             apagar tudo, publicar uma versão da Base Tabela, desmarcar uma admissão paga no OPME.
             Padrão de fábrica: <strong class="mono">1q2w3e4r5t6y7u</strong> — troque aqui.
           </p>

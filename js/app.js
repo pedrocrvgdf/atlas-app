@@ -506,7 +506,7 @@ const App = {
   // Tabela, Médicos, De-Para · Configurações. Gerenciais, Produção Médica,
   // Controle de Notas, Consolidação, Unidades e os 12 Desempenhos continuam
   // registrados em App.telas (a lógica fica), só não têm botão.
-  // ATLAS v1.3: a ATLAS não faz repasse, audita — o CALCULAR saiu do dock e a
+  // ATLAS v1.3: o ATLAS não faz repasse, audita — o CALCULAR saiu do dock e a
   // INSPEÇÃO (admissão + relatório final) entrou no lugar. O Calcular segue
   // registrado e suas regras rodam por baixo (AtlasCalcular.calcularESalvar).
   // ATLAS v1.3.4: a VISÃO GERAL ('dashboard') saiu do dock e do boot por
@@ -561,7 +561,7 @@ const App = {
       `<button type="button" class="dock-mitem" data-tela="${esc(i.tela)}" title="${esc(i.titulo)}"
          aria-label="${esc(i.titulo)}" style="--i:${itens.length - 1 - idx}"><i class="ti ${esc(i.icone)}"></i></button>`).join('');
     return `
-      <nav id="atlas-dock" class="atlas-dock" aria-label="Módulos da ATLAS">
+      <nav id="atlas-dock" class="atlas-dock" aria-label="Módulos do ATLAS">
         <div class="dock-desktop" id="dock-desktop">${desktop}</div>
         <div class="dock-mobile" id="dock-mobile">
           <div class="dock-mobile-itens" id="dock-mobile-itens" hidden>${mobile}</div>

@@ -2,7 +2,7 @@
  * ============================================================================
  * ATLAS v1.3 — TELA "INSPEÇÃO" (no dock, no lugar do Calcular Repasse)
  * ============================================================================
- * A ATLAS não faz repasse — ela AUDITA o repasse que o hospital fez. Por isso
+ * O ATLAS não faz repasse — ele AUDITA o repasse que o hospital fez. Por isso
  * o botão do Calcular saiu do dock (as regras dele continuam valendo por
  * baixo: AtlasCalcular.calcularESalvar) e no lugar entra a Inspeção, com duas
  * abas:

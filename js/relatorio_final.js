@@ -91,7 +91,7 @@
  * sem pagamento (regra_nao_paga). Arquivo importado do mesmo médico × mês
  * vence o virtual. E linha do Consolidado de um mês SEM relatório (nem arquivo,
  * nem virtual) nunca é dívida: vira 'sem_relatorio', informativa — sem o
- * relatório daquele mês a ATLAS não pode afirmar que faltou.
+ * relatório daquele mês o ATLAS não pode afirmar que faltou.
  *
  * Módulo GLOBAL: window.AtlasRelatorioFinal — montar(container) desenha a aba;
  * linhasDaAdmissao/confrontoDaAdmissao alimentam o 4º painel da Inspeção.
@@ -282,6 +282,12 @@
     if (/^SOLIC/.test(n)) return 'SOLICITANTE';
     return String(p || '').trim();
   }
+  /**
+   * ATLAS v1.3.13: os papéis que a Base Tabela conhece. O que sobra fora
+   * disto não casa com o Consolidado — e a auditoria avisa em vez de tratar
+   * como falta silenciosa.
+   */
+  const PAPEIS_CANONICOS = new Set(['EXECUTANTE', 'AUXILIAR', 'INDICANTE', 'MEDICO LAUDO']);
   function papelCanon(p) {
     const b = papelBruto(p);
     return I().papelCanonico ? I().papelCanonico(b) : normNome(b);
@@ -1392,6 +1398,7 @@
     const selBruta = (ids && ids.length) ? todos.filter(r => ids.includes(r.id)) : todos.slice();
     const avisos = [];
     const avisosComp = new Set();
+    const papeisCrus = new Map();   // ATLAS v1.3.13: papel do relatório sem canônico
     const semRelatorioAviso = new Map();   // comp → Set(médico) — meses do Consolidado sem relatório final
     // o "deveria" de cada mês, montado uma vez (sob demanda)
     const devCache = new Map();
@@ -1457,7 +1464,13 @@
       for (const r of rels) {
         progresso({ fase: 'relatorio', i: iRel++, n: sel.length, medico: r.medico, competencia: r.competencia });
         await tick();
-        for (const x of linhasDoRelatorio(r.id)) { const it = itemRecebido(x); it.relatorio_id = r.id; rec.push(it); }
+        for (const x of linhasDoRelatorio(r.id)) {
+          const it = itemRecebido(x);
+          it.relatorio_id = r.id;
+          // ATLAS v1.3.13: papel do relatório que não vira nenhum canônico
+          if (it.papel && !PAPEIS_CANONICOS.has(it.papel)) papeisCrus.set(it.papelRot || it.papel, (papeisCrus.get(it.papelRot || it.papel) || 0) + 1);
+          rec.push(it);
+        }
       }
       // deveria dos meses dos relatórios
       const dev = [];
@@ -1573,6 +1586,12 @@
       }
       itens.push(...doMed);
     }
+    // ATLAS v1.3.13: papéis do relatório final que não viram papel da Base Tabela
+    if (papeisCrus.size) {
+      const lista = [...papeisCrus.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
+        .map(([p, n]) => `"${p}" (${n})`).join(', ');
+      avisos.push(`papel não reconhecido no relatório final: ${lista} — essas linhas não casam com o Consolidado (CIRURGIÃO/MÉDICO/Md são Executante, SOLICITANTE/Encaminh são Indicante). Diga a que papel correspondem para o de-para (Configurações › mapeamento de papéis).`);
+    }
     // ATLAS v1.3.11: a diferença era de TABELA — avisa com o % e o volume, para
     // o Pedro reconhecer o aumento (e publicar a versão com a data de vigência)
     const porTab = new Map();
@@ -1586,7 +1605,7 @@
       const pct = g.rec > 0.004 ? ((g.dev - g.rec) / g.rec) * 100 : 0;
       avisos.push(`${g.proc} · ${g.papel}: ${g.n} ${g.n > 1 ? 'admissões' : 'admissão'} com deveria R$ ${fmtN(g.dev)} e recebido R$ ${fmtN(g.rec)} (${pct.toFixed(2).replace('.', ',')}%) — ${g.versao
         ? `é o valor da versão ${g.versao} da Base Tabela`
-        : 'esse valor se repete no relatório final, é preço de tabela de outra época'}: MUDANÇA DE TABELA, não falta.${g.versao ? '' : ' Publique a versão da Base Tabela com a data de vigência para a ATLAS precificar pela época.'}`);
+        : 'esse valor se repete no relatório final, é preço de tabela de outra época'}: MUDANÇA DE TABELA, não falta.${g.versao ? '' : ' Publique a versão da Base Tabela com a data de vigência para o ATLAS precificar pela época.'}`);
     }
     for (const [comp, meds] of semRelatorioAviso) {
       avisos.push(`Consolidado de ${fmtComp(comp)}: admissões de ${[...meds].join(', ')} pagas nesse mês sem relatório final importado — o que está lá conta como pago, não como falta; importe o arquivo de ${fmtComp(comp)} para conferir (ou inclua o mês em "desde a ferramenta")`);
@@ -1668,7 +1687,7 @@
     } else if (tom === 'ok' && itens.some(i => i.categoria === 'desempenho' || i.categoria === 'adicional')) {
       // ATLAS v1.3.7: o que o módulo de desempenho pagou não é cobrado
       titulo = 'Pago — inclui linha de módulo de desempenho';
-      texto = 'A linha de desempenho (LIO, OPME, Laudos, Fellow…) foi paga pelo módulo e não foi localizada no relatório final do médico: confira nele, mas a ATLAS não cobra o que a própria ferramenta pagou.';
+      texto = 'A linha de desempenho (LIO, OPME, Laudos, Fellow…) foi paga pelo módulo e não foi localizada no relatório final do médico: confira nele, mas o ATLAS não cobra o que a própria ferramenta pagou.';
     } else if (tom === 'ok' && itens.some(i => i.recDoConsolidado)) {
       texto = texto || 'O que está no Consolidado do mês conta como pago — nesse período o relatório final é o da própria ferramenta.';
     }
