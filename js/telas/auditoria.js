@@ -4130,6 +4130,104 @@ const AuditoriaApp = (function () {
     .calc-fil-opt-check { display: inline-block; width: 14px; color: #3f6489; font-weight: 700; }
   `;
 
+  // ────────────────────────────────────────────────────────────────────────
+  // ATLAS v1.3.17: A TRAVA DE ESPECIALIDADE DA LINHA-FILHA DO PACOTE VALE
+  // TAMBÉM NA LEITURA DO CÁLCULO SALVO
+  // ────────────────────────────────────────────────────────────────────────
+  // A regra é do Calcular (V132.x/V617): a linha-filha do PACOTE DE CONSULTA
+  // (os "exames inclusos" — no hospital atendido, "MAPEAMENTO DE RETINA -
+  // PACOTE") só é paga a quem tem uma das especialidades configuradas
+  // (config_sistema → PACOTE_CONSULTA_ESPECIALIDADES, padrão Retina) no módulo
+  // Médicos. Só que ela rodava UMA VEZ, na hora de calcular: o mês calculado
+  // ANTES da trava — ou antes de arrumar a especialidade do médico — ficou com
+  // a filha CONGELADA no repasse_snapshot, e o Consolidado (logo a Inspeção e a
+  // auditoria do Relatório final) seguia pagando/cobrando essa filha de quem
+  // não tem a especialidade (Pedro, 18/09/2026). Agora a trava é conferida na
+  // LEITURA da matriz, com os cadastros de HOJE: filha de pacote de médico sem
+  // a especialidade NÃO entra, exatamente como se o mês fosse recalculado.
+  // Nada disso é silencioso: travaPacoteDaComp(comp) conta o que saiu e a
+  // auditoria do Relatório final avisa.
+  const ESP_PACOTE_CHAVE = 'PACOTE_CONSULTA_ESPECIALIDADES';
+  let _espPacoteCache = { v: -1, dados: null };
+  function espPacoteDados() {
+    const v = Banco._versao || 0;
+    if (_espPacoteCache.v === v && _espPacoteCache.dados) return _espPacoteCache.dados;
+    // ids das especialidades exigidas — MESMA leitura do calcular.js
+    // (lerEspecialidadesPacote): config vale mesmo vazia; nunca configurada → Retina
+    let ids = [];
+    try {
+      const r = Banco.queryUnica(`SELECT valor FROM config_sistema WHERE chave = ?`, [ESP_PACOTE_CHAVE]);
+      let leu = false;
+      if (r && r.valor != null && String(r.valor).trim() !== '') {
+        const arr = JSON.parse(r.valor);
+        if (Array.isArray(arr)) { ids = arr.map(Number).filter(x => x > 0); leu = true; }
+      }
+      if (!leu) {
+        const ret = Banco.queryUnica(`SELECT id FROM especialidades WHERE UPPER(TRIM(nome)) = 'RETINA'`);
+        if (ret && ret.id != null) ids = [Number(ret.id)];
+      }
+    } catch (_) {}
+    const medicos = new Set();   // medico_id com QUALQUER das especialidades
+    const nomes = [];            // rótulo das especialidades exigidas (pro aviso)
+    try {
+      if (ids.length) {
+        const ph = ids.map(() => '?').join(',');
+        for (const r of (Banco.query(
+          `SELECT DISTINCT medico_id AS mid FROM medico_especialidades WHERE especialidade_id IN (${ph})`, ids) || []))
+          if (r.mid != null) medicos.add(Number(r.mid));
+        for (const r of (Banco.query(`SELECT nome FROM especialidades WHERE id IN (${ph}) ORDER BY nome`, ids) || []))
+          if (r.nome) nomes.push(String(r.nome).trim());
+      }
+    } catch (_) {}
+    // de-para de nomes (oficial + sinônimos) — o snapshot antigo pode não ter _medicoId
+    let porNome = new Map();
+    try { porNome = cpMapaNomeId(); } catch (_) {}
+    const dados = { ids, nomes, medicos, porNome };
+    _espPacoteCache = { v, dados };
+    return dados;
+  }
+  // linha-filha do PACOTE DE CONSULTA (calcular.js) — NÃO confundir com a filha
+  // de papel faltante da própria Auditoria, que também usa o visual 'Ajustes'
+  function ehFilhaPacote(l) {
+    return !!(l && l._ehPacoteDetalhe && !l._ehAuditoria &&
+              (l._fonteValor === 'pacote-filha' || l._regraPacote));
+  }
+  const _travaPacote = new Map();   // competência → resumo da trava
+  function travaPacoteDaComp(comp) { return _travaPacote.get(comp) || null; }
+  function aplicarTravaEspPacote(linhas, competencia) {
+    const info = { removidas: 0, valor: 0, porMedico: new Map(), mantidas: 0, porMedicoOk: new Map(), esp: [] };
+    let temFilha = false;
+    for (const l of linhas) if (ehFilhaPacote(l)) { temFilha = true; break; }
+    if (!temFilha) { _travaPacote.set(competencia, info); return linhas; }
+    const d = espPacoteDados();
+    info.esp = d.nomes.slice();
+    const out = [];
+    for (const l of linhas) {
+      if (!ehFilhaPacote(l)) { out.push(l); continue; }
+      const nome = String(l.nome_profissional || '').trim();
+      // o NOME manda (é o que o de-para de hoje resolve); _medicoId do snapshot
+      // é só reserva — ids mudam quando a base é reimportada
+      let mid = d.porNome.get(norm(nome));
+      if (mid == null && l._medicoId != null) mid = Number(l._medicoId);
+      if (mid != null && d.medicos.has(mid)) {
+        info.mantidas++;
+        info.porMedicoOk.set(nome, (info.porMedicoOk.get(nome) || 0) + 1);
+        l._travaEspPacoteOk = true;
+        out.push(l);
+        continue;
+      }
+      info.removidas++;
+      info.valor += Number(l._repasse) || 0;
+      info.porMedico.set(nome, (info.porMedico.get(nome) || 0) + 1);
+    }
+    if (info.removidas) {
+      console.info(`[auditoria] pacote ${competencia}: ${info.removidas} linha(s)-filha(s) fora do repasse ` +
+        `(R$ ${fmt(info.valor)}) — médico sem a especialidade ${info.esp.join('/') || 'exigida'}`);
+    }
+    _travaPacote.set(competencia, info);
+    return out;
+  }
+
   // V132.38: expõe a matriz auditada de uma competência pro módulo Relatórios.
   // Reaproveita exatamente a mesma lógica da Auditoria (auditar + snapshot),
   // recarregando os caches da Base/Produção pra refletir o estado atual.
@@ -4168,12 +4266,14 @@ const AuditoriaApp = (function () {
     let linhas = (res && Array.isArray(res.linhas)) ? res.linhas : [];
     aplicarOverridesHonorario(competencia, linhas);   // V239 (antes do V844: o médico do HM pode ter sido ajustado)
     linhas = aplicarRegraHonorarioExecutante(linhas); // V844: HM substitui a tabela do executante
+    linhas = aplicarTravaEspPacote(linhas, competencia);   // ATLAS v1.3.17: filha de pacote só com a especialidade
     _matrizCache = { key, linhas };   // V492
     try { if (window.__atlasMatrizLRU) { window.__atlasMatrizLRU.clear(); delete window.__atlasMatrizLRU; } } catch (_) {}   // V601: limpa resíduo da V597
     return linhas;
   }
 
-  return { montar, matrizDaCompetencia, competenciasDisponiveis, fmtDataAdm, fonteBadge };
+  return { montar, matrizDaCompetencia, competenciasDisponiveis, fmtDataAdm, fonteBadge,
+           travaPacoteDaComp };   // ATLAS v1.3.17
 })();
 
 if (typeof window !== 'undefined') window.AtlasAuditoria = AuditoriaApp;

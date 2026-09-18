@@ -1593,6 +1593,7 @@
     try { religadas = religarAdmissoes(); } catch (e) {}
     if (religadas) avisos.push(`${religadas} linha${religadas > 1 ? 's' : ''} do relatório final estava${religadas > 1 ? 'm' : ''} sem admissão e foi${religadas > 1 ? 'ram' : ''} religada${religadas > 1 ? 's' : ''} agora (paciente + data ou paciente + procedimento) — acontece quando o relatório é importado antes do mês do sistema`);
     const semRelatorioAviso = new Map();   // comp → Set(médico) — meses do Consolidado sem relatório final
+    const travaPacote = new Map();         // ATLAS v1.3.17: comp → resumo da trava de especialidade do pacote
     // o "deveria" de cada mês, montado uma vez (sob demanda)
     const devCache = new Map();
     const getDeveria = async (comp) => {
@@ -1611,6 +1612,13 @@
         if (!porMed.has(k)) porMed.set(k, []);
         porMed.get(k).push(itemDeveria(l, comp));
       }
+      // ATLAS v1.3.17: a trava de especialidade da filha do pacote roda na
+      // leitura da matriz (auditoria.js) — aqui só recolhemos o que ela tirou
+      try {
+        const t = window.AtlasAuditoria && AtlasAuditoria.travaPacoteDaComp
+          ? AtlasAuditoria.travaPacoteDaComp(comp) : null;
+        if (t && (t.removidas || t.mantidas)) travaPacote.set(comp, t);
+      } catch (_) {}
       const ent = { porMed, ok: calc.ok };
       devCache.set(comp, ent);
       return ent;
@@ -1814,6 +1822,30 @@
       avisos.push(`${g.proc} · ${g.papel}: ${g.n} ${g.n > 1 ? 'admissões' : 'admissão'} com deveria R$ ${fmtN(g.dev)} e recebido R$ ${fmtN(g.rec)} (${pct.toFixed(2).replace('.', ',')}%) — ${g.versao
         ? `é o valor da versão ${g.versao} da Base Tabela`
         : 'esse valor se repete no relatório final, é preço de tabela de outra época'}: MUDANÇA DE TABELA, não falta.${g.versao ? '' : ' Publique a versão da Base Tabela com a data de vigência para o ATLAS precificar pela época.'}`);
+    }
+    // ATLAS v1.3.17: a filha do pacote ("exames inclusos") que saiu do "deveria"
+    // por falta da especialidade — e a que FICOU, quando é do médico auditado:
+    // as duas respostas do "por que o ATLAS está (ou não está) pagando isso".
+    if (travaPacote.size) {
+      let nFora = 0, valFora = 0;
+      const foraPorMed = new Map(), okPorMed = new Map();
+      const esps = new Set();
+      for (const t of travaPacote.values()) {
+        nFora += t.removidas || 0; valFora += t.valor || 0;
+        for (const e of (t.esp || [])) esps.add(e);
+        for (const [m, n] of (t.porMedico || new Map())) foraPorMed.set(m, (foraPorMed.get(m) || 0) + n);
+        for (const [m, n] of (t.porMedicoOk || new Map())) okPorMed.set(m, (okPorMed.get(m) || 0) + n);
+      }
+      const espTxt = esps.size ? [...esps].join('/') : 'exigida';
+      if (nFora) {
+        const quem = [...foraPorMed.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
+          .map(([m, n]) => `${m} (${n})`).join(', ');
+        avisos.push(`Pacote de consulta — exames inclusos: ${nFora} linha${nFora > 1 ? 's' : ''}-filha${nFora > 1 ? 's' : ''} (R$ ${fmtN(valFora)}) ficou fora do "deveria" porque o médico não tem a especialidade ${espTxt} cadastrada no módulo Médicos: ${quem}. Vinha do cálculo salvo antes da regra — recalcule ${[...travaPacote.keys()].map(fmtComp).join(', ')} para o Consolidado gravado também refletir.`);
+      }
+      const nOkAud = audNorm ? [...okPorMed.entries()].filter(([m]) => normNome(m) === audNorm).reduce((s, [, n]) => s + n, 0) : 0;
+      if (nOkAud) {
+        avisos.push(`${auditado} recebe os exames inclusos do pacote (${nOkAud} linha${nOkAud > 1 ? 's' : ''}) porque está cadastrado com a especialidade ${espTxt} no módulo Médicos — se não for o caso, tire a especialidade dele lá e o ATLAS deixa de cobrar essa linha-filha.`);
+      }
     }
     for (const [comp, meds] of semRelatorioAviso) {
       avisos.push(`Consolidado de ${fmtComp(comp)}: admissões de ${[...meds].join(', ')} pagas nesse mês sem relatório final importado — o que está lá conta como pago, não como falta; importe o arquivo de ${fmtComp(comp)} para conferir (ou inclua o mês em "desde a ferramenta")`);
