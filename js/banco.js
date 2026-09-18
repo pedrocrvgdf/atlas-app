@@ -1468,6 +1468,8 @@ const Banco = {
       "ALTER TABLE excecoes_cargo ADD COLUMN valor_fixo REAL NOT NULL DEFAULT 0",
       // ATLAS v1.3.1: o mês que o arquivo do relatório final dizia
       "ALTER TABLE relatorio_final ADD COLUMN competencia_arquivo TEXT",
+      // ATLAS v1.3.18: carimbo da regra que inferiu a admissão (layout sem coluna de admissão)
+      "ALTER TABLE relatorio_final ADD COLUMN regra_adm INTEGER DEFAULT 0",
     ];
 
     for (const sql of migracoes) {

@@ -524,27 +524,68 @@
   // ADMISSÃO POR PACIENTE + DATA (layout manual sem coluna de admissão)
   // ──────────────────────────────────────────────────────────────────────
   function resolverAdmissoesPorPacienteData(linhas) {
-    const pend = linhas.filter(l => !l.admissao_norm && l.paciente_norm && l.data);
+    // ATLAS v1.3.18: a linha SEM DATA também entra — ela não casa na 1ª camada,
+    // mas a 2ª (paciente + procedimento) resolve; antes ficava órfã para sempre
+    const pend = linhas.filter(l => !l.admissao_norm && l.paciente_norm && (l.data || l.procedimento_norm));
     if (!pend.length) return 0;
-    const datas = [...new Set(pend.map(l => l.data))];
-    const porChave = new Map();
-    const juntar = (sql, campoAdm, campoPac, campoData) => {
+    const datas = [...new Set(pend.map(l => l.data).filter(Boolean))];
+    // ATLAS v1.3.18: paciente|data → TODAS as admissões daquele dia (com os
+    // procedimentos e papéis de cada uma), não só a primeira que a consulta
+    // devolveu — ver `escolherAdm` abaixo
+    const porChave = new Map();   // paciente|data → Map(admissão → { adm, procs, papeis })
+    const juntar = (sql, campoAdm, campoPac, campoData, campoProc, campoProc2, campoPapel) => {
       for (let i = 0; i < datas.length; i += 200) {
         const lote = datas.slice(i, i + 200);
         try {
           for (const r of Banco.query(sql.replace('__IN__', lote.map(() => '?').join(',')), lote) || []) {
+            const adm = String(r[campoAdm] || '').trim();
+            if (!adm) continue;
             const k = normNome(r[campoPac]) + '|' + normData(r[campoData]);
-            if (!porChave.has(k)) porChave.set(k, String(r[campoAdm]));
+            let ent = porChave.get(k);
+            if (!ent) { ent = new Map(); porChave.set(k, ent); }
+            let a = ent.get(adm);
+            if (!a) { a = { adm, procs: [], papeis: new Set() }; ent.set(adm, a); }
+            for (const c of [campoProc, campoProc2]) {
+              const v = c ? String(r[c] || '').trim() : '';
+              if (v && a.procs.length < 40 && !a.procs.includes(v)) a.procs.push(v);
+            }
+            if (campoPapel && r[campoPapel]) a.papeis.add(papelCanon(r[campoPapel]));
           }
         } catch (e) {}
       }
     };
-    juntar(`SELECT cod_admissao, paciente, data_admissao FROM linhas_producao WHERE substr(data_admissao, 1, 10) IN (__IN__)`, 'cod_admissao', 'paciente', 'data_admissao');
-    juntar(`SELECT admissao, paciente, data_admissao FROM linhas_qvis WHERE substr(data_admissao, 1, 10) IN (__IN__)`, 'admissao', 'paciente', 'data_admissao');
+    juntar(`SELECT cod_admissao, paciente, data_admissao, procedimento_principal, produto FROM linhas_producao WHERE substr(data_admissao, 1, 10) IN (__IN__)`,
+      'cod_admissao', 'paciente', 'data_admissao', 'procedimento_principal', 'produto', null);
+    juntar(`SELECT admissao, paciente, data_admissao, procedimento_normalizado, papel FROM linhas_qvis WHERE substr(data_admissao, 1, 10) IN (__IN__)`,
+      'admissao', 'paciente', 'data_admissao', 'procedimento_normalizado', null, 'papel');
+    /**
+     * ATLAS v1.3.18: MESMO PACIENTE, MESMO DIA, MAIS DE UMA ADMISSÃO — vence a
+     * que tem o PROCEDIMENTO da linha (e, no desempate, o papel). Até a v1.3.17
+     * vencia a PRIMEIRA que a consulta devolvia: a consulta e os exames do
+     * mesmo dia são admissões diferentes, a linha PAGA ia para a errada e o
+     * confronto quebrava dos dois lados — o "deveria" da admissão certa virava
+     * "não consta no relatório final" (cobrado) e o recebido virava "sem
+     * lastro" (Pedro, 18/09/2026). Sem candidato que case, fica a primeira,
+     * como antes.
+     */
+    const escolherAdm = (ent, l) => {
+      if (!ent || !ent.size) return null;
+      const lista = [...ent.values()];
+      if (lista.length === 1) return lista[0];
+      let melhor = null, melhorNota = -1;
+      for (const c of lista) {
+        const bateProc = !!(l.procedimento_norm && c.procs.some(p => mesmoExame(p, l.procedimento_norm)));
+        const batePapel = !!(l.papel_canon && c.papeis.has(l.papel_canon));
+        const nota = (bateProc ? 2 : 0) + (batePapel ? 1 : 0);
+        if (nota > melhorNota) { melhorNota = nota; melhor = c; }
+      }
+      return melhor;
+    };
     let n = 0;
     for (const l of pend) {
-      const a = porChave.get(l.paciente_norm + '|' + l.data);
-      if (a) { l.admissao = a; l.admissao_norm = normAdm(a); n++; }
+      if (!l.data) continue;
+      const a = escolherAdm(porChave.get(l.paciente_norm + '|' + l.data), l);
+      if (a) { l.admissao = a.adm; l.admissao_norm = normAdm(a.adm); n++; }
     }
     /**
      * ATLAS v1.3.14: 2ª CAMADA — PACIENTE + PROCEDIMENTO. No relatório manual a
@@ -593,31 +634,65 @@
    * e a auditoria cobrava o que estava pago. Agora, antes de auditar, as linhas
    * órfãs são resolvidas de novo com os dados de HOJE e gravadas.
    */
+  /**
+   * ATLAS v1.3.18: e REFAZER a admissão INFERIDA. No layout sem coluna de
+   * admissão (manual1) a admissão nunca veio do arquivo — foi deduzida. Uma
+   * dedução da v1.3.17 ou anterior podia cair na admissão ERRADA (o mesmo
+   * paciente com a consulta e os exames no mesmo dia), e a auditoria cobrava
+   * como "não consta" exatamente a linha que o médico recebeu. Cada relatório
+   * carrega em `regra_adm` a versão da regra que o resolveu: quem está para
+   * trás é refeito UMA vez, com a regra de hoje.
+   */
+  const REGRA_ADM = 1318;
   let _religadoV = -1;
+  let _religarInfo = { orfas: 0, corrigidas: 0 };
   function religarAdmissoes(forcar) {
     const v = Banco._versao || 0;
     if (!forcar && _religadoV === v) return 0;
     _religadoV = v;
-    let orfas = [];
+    _religarInfo = { orfas: 0, corrigidas: 0 };
+    garantirColunas();
+    const COLS = `id, paciente, paciente_norm, data, procedimento, procedimento_norm, papel_canon`;
+    let orfas = [], inferidas = [], relsVelhos = [];
     try {
       orfas = Banco.query(
-        `SELECT id, paciente, paciente_norm, data, procedimento, procedimento_norm
-           FROM relatorio_final_linhas WHERE (admissao_norm IS NULL OR admissao_norm = '')`) || [];
+        `SELECT ${COLS} FROM relatorio_final_linhas WHERE (admissao_norm IS NULL OR admissao_norm = '')`) || [];
+      relsVelhos = (Banco.query(
+        `SELECT id FROM relatorio_final WHERE layout = 'manual1' AND COALESCE(regra_adm, 0) < ?`, [REGRA_ADM]) || [])
+        .map(r => r.id);
+      if (relsVelhos.length) {
+        const ph = relsVelhos.map(() => '?').join(',');
+        inferidas = (Banco.query(
+          `SELECT ${COLS}, admissao_norm AS adm_antes FROM relatorio_final_linhas
+            WHERE relatorio_id IN (${ph}) AND admissao_norm IS NOT NULL AND admissao_norm <> ''`, relsVelhos) || [])
+          .map(l => Object.assign(l, { admissao: '', admissao_norm: '' }));   // refaz do zero
+      }
     } catch (e) { return 0; }
-    if (!orfas.length) return 0;
-    const n = resolverAdmissoesPorPacienteData(orfas);
-    if (!n) return 0;
+    if (!orfas.length && !inferidas.length && !relsVelhos.length) return 0;
+    const alvo = orfas.concat(inferidas);
+    if (alvo.length) resolverAdmissoesPorPacienteData(alvo);
+    // grava só o que MUDOU (a inferência velha quase sempre continua valendo)
+    const mudou = alvo.filter(l => l.admissao_norm && l.admissao_norm !== (l.adm_antes || ''));
     try {
       Banco.db.exec('BEGIN');
-      const st = Banco.db.prepare(`UPDATE relatorio_final_linhas SET admissao = ?, admissao_norm = ? WHERE id = ?`);
-      try { for (const l of orfas) if (l.admissao_norm) st.run([l.admissao || '', l.admissao_norm, l.id]); }
-      finally { st.free(); }
+      if (mudou.length) {
+        const st = Banco.db.prepare(`UPDATE relatorio_final_linhas SET admissao = ?, admissao_norm = ? WHERE id = ?`);
+        try { for (const l of mudou) st.run([l.admissao || '', l.admissao_norm, l.id]); }
+        finally { st.free(); }
+      }
+      if (relsVelhos.length) {
+        const st2 = Banco.db.prepare(`UPDATE relatorio_final SET regra_adm = ? WHERE id = ?`);
+        try { for (const id of relsVelhos) st2.run([REGRA_ADM, id]); }
+        finally { st2.free(); }
+      }
       Banco.db.exec('COMMIT');
     } catch (e) { try { Banco.db.exec('ROLLBACK'); } catch (_) {} return 0; }
+    _religarInfo = { orfas: mudou.filter(l => !l.adm_antes).length, corrigidas: mudou.filter(l => l.adm_antes).length };
+    if (!mudou.length) { _religadoV = Banco._versao || 0; return 0; }
     invalidar();
     _religadoV = Banco._versao || 0;
     Banco.salvarDebounced && Banco.salvarDebounced(2000);
-    return n;
+    return mudou.length;
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -637,6 +712,7 @@
   function garantirColunas() {
     if (_colunasOk) return;
     try { Banco.db.exec(`ALTER TABLE relatorio_final ADD COLUMN competencia_arquivo TEXT`); } catch (e) {}
+    try { Banco.db.exec(`ALTER TABLE relatorio_final ADD COLUMN regra_adm INTEGER DEFAULT 0`); } catch (e) {}   // ATLAS v1.3.18
     _colunasOk = true;
   }
 
@@ -741,9 +817,10 @@
       }
       garantirColunas();
       Banco.db.run(
-        `INSERT INTO relatorio_final (medico, medico_norm, competencia, competencia_arquivo, layout, arquivo, periodo_ini, periodo_fim, n_linhas, total, importado_em)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-        [m.medico, medNorm, m.competencia, m.competencia_arquivo || null, m.layout, m.arquivo, m.periodo_ini || null, m.periodo_fim || null, m.n_linhas, m.total]);
+        `INSERT INTO relatorio_final (medico, medico_norm, competencia, competencia_arquivo, layout, arquivo, periodo_ini, periodo_fim, n_linhas, total, regra_adm, importado_em)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        [m.medico, medNorm, m.competencia, m.competencia_arquivo || null, m.layout, m.arquivo, m.periodo_ini || null, m.periodo_fim || null, m.n_linhas, m.total,
+         REGRA_ADM]);   // ATLAS v1.3.18: nasce com a regra de hoje
       const id = Banco.queryUnica(`SELECT last_insert_rowid() AS id`).id;
       const stmt = Banco.db.prepare(
         `INSERT INTO relatorio_final_linhas
@@ -1361,10 +1438,24 @@
     for (const d of devItens) {
       if (!d.admissao_norm || !d.paciente) continue;
       const p = normNome(d.paciente);
-      if (d.data) { const k = p + '|' + d.data; if (!porPacData.has(k)) porPacData.set(k, d); }
+      // ATLAS v1.3.18: TODOS os deveria daquele paciente naquele dia (podem ser
+      // de admissões diferentes — a consulta e os exames), não só o primeiro
+      if (d.data) { const k = p + '|' + d.data; if (!porPacData.has(k)) porPacData.set(k, []); porPacData.get(k).push(d); }
       if (!porPac.has(p)) porPac.set(p, []);
       porPac.get(p).push(d);
     }
+    // ATLAS v1.3.18: entre os do mesmo dia vence o do MESMO PROCEDIMENTO (e
+    // papel) — a linha do relatório não pode cair na admissão do vizinho
+    const escolherDev = (lista, r) => {
+      if (!lista || !lista.length) return null;
+      if (lista.length === 1) return lista[0];
+      let melhor = null, melhorNota = -1;
+      for (const d of lista) {
+        const nota = (mesmoExame(d.procedimento, r.procedimento) ? 2 : 0) + (d.papel && r.papel && d.papel === r.papel ? 1 : 0);
+        if (nota > melhorNota) { melhorNota = nota; melhor = d; }
+      }
+      return melhor;
+    };
     const dist = (a, b) => { const x = Date.parse(a), y = Date.parse(b); return (isNaN(x) || isNaN(y)) ? 9e9 : Math.abs(x - y); };
     const cont = { data: 0, procedimento: 0, paciente: 0, fantasma: 0 };
     for (const r of recItens) {
@@ -1380,7 +1471,7 @@
       const fantasma = !!(r.admissao_norm && fantasmas && fantasmas.has(r.admissao_norm));
       if (r.admissao_norm && !fantasma) continue;
       const p = normNome(r.paciente);
-      let d = r.data ? porPacData.get(p + '|' + r.data) : null;
+      let d = r.data ? escolherDev(porPacData.get(p + '|' + r.data), r) : null;
       let via = d ? 'data' : '';
       if (!d && r.procedimento) {
         const cands = (porPac.get(p) || []).filter(x => mesmoExame(x.procedimento, r.procedimento));
@@ -1591,7 +1682,15 @@
     const cruzamento = { data: 0, procedimento: 0, paciente: 0, fantasma: 0 };   // ATLAS v1.3.15/v1.3.16
     let religadas = 0;
     try { religadas = religarAdmissoes(); } catch (e) {}
-    if (religadas) avisos.push(`${religadas} linha${religadas > 1 ? 's' : ''} do relatório final estava${religadas > 1 ? 'm' : ''} sem admissão e foi${religadas > 1 ? 'ram' : ''} religada${religadas > 1 ? 's' : ''} agora (paciente + data ou paciente + procedimento) — acontece quando o relatório é importado antes do mês do sistema`);
+    if (_religarInfo.orfas) {
+      const n = _religarInfo.orfas;
+      avisos.push(`${n} linha${n > 1 ? 's' : ''} do relatório final estava${n > 1 ? 'm' : ''} sem admissão e foi${n > 1 ? 'ram' : ''} religada${n > 1 ? 's' : ''} agora (paciente + data ou paciente + procedimento) — acontece quando o relatório é importado antes do mês do sistema`);
+    }
+    // ATLAS v1.3.18: admissão INFERIDA que estava na admissão errada
+    if (_religarInfo.corrigidas) {
+      const n = _religarInfo.corrigidas;
+      avisos.push(`${n} linha${n > 1 ? 's' : ''} do relatório final estava${n > 1 ? 'm' : ''} na ADMISSÃO ERRADA e foi${n > 1 ? 'ram' : ''} corrigida${n > 1 ? 's' : ''} agora: o layout manual não traz admissão, e quando o paciente tem mais de uma admissão no mesmo dia (a consulta e os exames) valia a primeira. Agora vence a do MESMO PROCEDIMENTO — o que estava pago deixa de ser cobrado`);
+    }
     const semRelatorioAviso = new Map();   // comp → Set(médico) — meses do Consolidado sem relatório final
     const travaPacote = new Map();         // ATLAS v1.3.17: comp → resumo da trava de especialidade do pacote
     // o "deveria" de cada mês, montado uma vez (sob demanda)
