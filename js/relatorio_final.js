@@ -157,6 +157,7 @@
     desempenho:     { rotulo: 'Pago por módulo de desempenho',        soma: false, tom: 'info' },
     adiantamento:   { rotulo: 'Adiantamento (o convênio ainda não pagou)', soma: false, tom: 'info' },
     vigencia:       { rotulo: 'Versão da Base Tabela na data (não é falta)', soma: false, tom: 'info' },
+    indicante_exec: { rotulo: 'Indicante é o próprio executante (não acumula)', soma: false, tom: 'info' },
   };
   const CATS_FALTA = Object.keys(CATEGORIAS).filter(k => CATEGORIAS[k].soma);
 
@@ -545,6 +546,77 @@
       const a = porChave.get(l.paciente_norm + '|' + l.data);
       if (a) { l.admissao = a; l.admissao_norm = normAdm(a); n++; }
     }
+    /**
+     * ATLAS v1.3.14: 2ª CAMADA — PACIENTE + PROCEDIMENTO. No relatório manual a
+     * DATA é a do procedimento/atendimento e nem sempre é a data da ADMISSÃO
+     * (uma consulta de 16/01 e os exames de 07/02 podem estar na mesma
+     * admissão). Sem a admissão a linha PAGA não casa com nada e a auditoria
+     * dizia "não consta no relatório final" para o que estava pago (Pedro,
+     * 18/09/2026). Aqui a busca é pelo paciente e pelo procedimento; com mais
+     * de uma admissão candidata vence a de data mais próxima.
+     */
+    const resto = pend.filter(l => !l.admissao_norm && l.procedimento_norm);
+    if (resto.length) {
+      const nomes = [...new Set(resto.map(l => String(l.paciente || '').trim().toUpperCase()).filter(Boolean))];
+      const cand = new Map();   // pacienteNorm → [{ adm, procNorm, data }]
+      const juntarProc = (sql, cAdm, cPac, cProc, cData) => {
+        for (let i = 0; i < nomes.length; i += 120) {
+          const lote = nomes.slice(i, i + 120);
+          try {
+            for (const r of Banco.query(sql.replace('__IN__', lote.map(() => '?').join(',')), lote) || []) {
+              const k = normNome(r[cPac]);
+              if (!cand.has(k)) cand.set(k, []);
+              cand.get(k).push({ adm: String(r[cAdm] || ''), procNorm: String(r[cProc] || ''), data: normData(r[cData]) });
+            }
+          } catch (e) {}
+        }
+      };
+      juntarProc(`SELECT admissao, paciente, procedimento_normalizado, data_admissao FROM linhas_qvis
+                   WHERE UPPER(TRIM(COALESCE(paciente, ''))) IN (__IN__)`, 'admissao', 'paciente', 'procedimento_normalizado', 'data_admissao');
+      juntarProc(`SELECT cod_admissao, paciente, procedimento_principal, data_admissao FROM linhas_producao
+                   WHERE UPPER(TRIM(COALESCE(paciente, ''))) IN (__IN__)`, 'cod_admissao', 'paciente', 'procedimento_principal', 'data_admissao');
+      const dist = (a, b) => { const x = Date.parse(a), y = Date.parse(b); return (isNaN(x) || isNaN(y)) ? 9e9 : Math.abs(x - y); };
+      for (const l of resto) {
+        const lista = (cand.get(l.paciente_norm) || []).filter(c => c.adm && mesmoExame(c.procNorm, l.procedimento_norm));
+        if (!lista.length) continue;
+        const escolhido = lista.length === 1 ? lista[0]
+          : lista.slice().sort((a, b) => dist(a.data, l.data) - dist(b.data, l.data))[0];
+        if (escolhido && escolhido.adm) { l.admissao = escolhido.adm; l.admissao_norm = normAdm(escolhido.adm); n++; }
+      }
+    }
+    return n;
+  }
+  /**
+   * ATLAS v1.3.14: RELIGAR AS LINHAS JÁ GRAVADAS SEM ADMISSÃO. O relatório
+   * importado ANTES do mês do sistema ficava sem admissão PARA SEMPRE — e sem
+   * admissão nada casa: a Inspeção dizia "não consta em nenhum relatório final"
+   * e a auditoria cobrava o que estava pago. Agora, antes de auditar, as linhas
+   * órfãs são resolvidas de novo com os dados de HOJE e gravadas.
+   */
+  let _religadoV = -1;
+  function religarAdmissoes(forcar) {
+    const v = Banco._versao || 0;
+    if (!forcar && _religadoV === v) return 0;
+    _religadoV = v;
+    let orfas = [];
+    try {
+      orfas = Banco.query(
+        `SELECT id, paciente, paciente_norm, data, procedimento, procedimento_norm
+           FROM relatorio_final_linhas WHERE (admissao_norm IS NULL OR admissao_norm = '')`) || [];
+    } catch (e) { return 0; }
+    if (!orfas.length) return 0;
+    const n = resolverAdmissoesPorPacienteData(orfas);
+    if (!n) return 0;
+    try {
+      Banco.db.exec('BEGIN');
+      const st = Banco.db.prepare(`UPDATE relatorio_final_linhas SET admissao = ?, admissao_norm = ? WHERE id = ?`);
+      try { for (const l of orfas) if (l.admissao_norm) st.run([l.admissao || '', l.admissao_norm, l.id]); }
+      finally { st.free(); }
+      Banco.db.exec('COMMIT');
+    } catch (e) { try { Banco.db.exec('ROLLBACK'); } catch (_) {} return 0; }
+    invalidar();
+    _religadoV = Banco._versao || 0;
+    Banco.salvarDebounced && Banco.salvarDebounced(2000);
     return n;
   }
 
@@ -1034,6 +1106,10 @@
    * 17/09/2026): não achar a linha no relatório final do médico é motivo para
    * CONFERIR, não para cobrar.
    */
+  /** ATLAS v1.3.14: a linha é do módulo LIO (a lente)? */
+  function ehLio(x) {
+    return !!x && /(^|[^A-Z])LIO([^A-Z]|$)/.test(norm(x.modulo || ''));
+  }
   function ehDesempenho(x) {
     return !!x && /^(DESEMPENHO|CARGO ADMINISTRATIVO)/.test(norm(x.status || ''));
   }
@@ -1127,9 +1203,30 @@
   const CATS_AUSENCIA = new Set(['nao_pago', 'nao_consta']);
   function confrontarAdmissao(dev, rec, ctx) {
     const out = [];
+    /**
+     * ATLAS v1.3.14: O INDICANTE QUE É O PRÓPRIO EXECUTANTE NÃO ACUMULA — é a
+     * regra do módulo LIO (`repasse_lio_core.js`: `indDiferente = indicante &&
+     * executante && indicante !== executante`; o 2,5% do indicante só sai
+     * quando ele é OUTRA pessoa). "O INDICANTE só recebe quando ele não é o
+     * executante e no relatório não respeitou isso" (Pedro, 18/09/2026).
+     * Quando o mesmo médico aparece como EXECUTANTE e como INDICANTE do mesmo
+     * procedimento na mesma admissão, o indicante dele não é dívida.
+     *
+     * Vale SÓ para o LIO: fora dele o mesmo médico recebe pelos dois papéis
+     * (no relatório real o médico da consulta recebe como solicitante dos
+     * exames da mesma admissão), e essas linhas continuam sendo cobradas.
+     */
+    for (const d of dev) {
+      if (d.papel !== 'INDICANTE' || !ehLio(d)) continue;   // a regra é do LIO
+      d.indicanteDoExecutante = dev.some(x => x.papel === 'EXECUTANTE'
+        && normNome(x.medico) === normNome(d.medico) && mesmoExame(x.procedimento, d.procedimento));
+    }
     const base = (d, r, categoria, falta) => {
       // ATLAS v1.3.6: nenhuma categoria do ADICIONAL soma no falta pagar
       if (CATEGORIAS[categoria] && CATEGORIAS[categoria].soma && ehAdicional(d || r)) { categoria = 'adicional'; falta = 0; }
+      // ATLAS v1.3.14: indicante que é o próprio executante (regra do LIO) —
+      // antes da guarda de desempenho, porque explica melhor a linha
+      else if (CATEGORIAS[categoria] && CATEGORIAS[categoria].soma && d && d.indicanteDoExecutante) { categoria = 'indicante_exec'; falta = 0; }
       // ATLAS v1.3.7: linha de módulo de desempenho que não aparece no relatório
       // final não é dívida — o módulo já pagou; fica informativa, para conferir
       else if (CATS_AUSENCIA.has(categoria) && ehDesempenho(d || r)) { categoria = 'desempenho'; falta = 0; }
@@ -1399,6 +1496,11 @@
     const avisos = [];
     const avisosComp = new Set();
     const papeisCrus = new Map();   // ATLAS v1.3.13: papel do relatório sem canônico
+    // ATLAS v1.3.14: linhas gravadas sem admissão (relatório importado antes do
+    // mês do sistema) voltam a ter admissão antes do confronto
+    let religadas = 0;
+    try { religadas = religarAdmissoes(); } catch (e) {}
+    if (religadas) avisos.push(`${religadas} linha${religadas > 1 ? 's' : ''} do relatório final estava${religadas > 1 ? 'm' : ''} sem admissão e foi${religadas > 1 ? 'ram' : ''} religada${religadas > 1 ? 's' : ''} agora (paciente + data ou paciente + procedimento) — acontece quando o relatório é importado antes do mês do sistema`);
     const semRelatorioAviso = new Map();   // comp → Set(médico) — meses do Consolidado sem relatório final
     // o "deveria" de cada mês, montado uma vez (sob demanda)
     const devCache = new Map();
@@ -2328,6 +2430,7 @@
     CATEGORIAS, CATS_FALTA, garantirXLSX, garantirExcelJS,
     competenciaPelosDados, mesesDasAdmissoes,
     desdeFerramenta, definirDesdeFerramenta, mesesDaFerramenta, listarTodos, temRelatorioPara, linhasFinaisDaAdmissao, mesDaFerramenta,
+    religarAdmissoes,      // ATLAS v1.3.14
     admissoesAdiantadas,   // ATLAS v1.3.9
     recorrenciaNoFinal,    // ATLAS v1.3.11
     medicoAuditado, definirMedicoAuditado, medicosConhecidos,
