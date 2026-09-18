@@ -1355,7 +1355,8 @@
    *   3. paciente com UMA ÚNICA admissão no conjunto (aí não há ambiguidade).
    * Devolve a contagem de cada camada, para a auditoria avisar.
    */
-  function adotarAdmissoes(recItens, devItens) {
+  function adotarAdmissoes(recItens, devItens, opts) {
+    const fantasmas = (opts && opts.fantasmas) || null;   // ATLAS v1.3.16
     const porPacData = new Map(), porPac = new Map();
     for (const d of devItens) {
       if (!d.admissao_norm || !d.paciente) continue;
@@ -1365,9 +1366,19 @@
       porPac.get(p).push(d);
     }
     const dist = (a, b) => { const x = Date.parse(a), y = Date.parse(b); return (isNaN(x) || isNaN(y)) ? 9e9 : Math.abs(x - y); };
-    const cont = { data: 0, procedimento: 0, paciente: 0 };
+    const cont = { data: 0, procedimento: 0, paciente: 0, fantasma: 0 };
     for (const r of recItens) {
-      if (r.admissao_norm || !r.paciente) continue;
+      if (!r.paciente) continue;
+      /**
+       * ATLAS v1.3.16: a 2ª chave vale para a linha SEM admissão e também para
+       * a linha cuja ADMISSÃO NÃO EXISTE — digitada errada no relatório, de
+       * outro sistema ou de uma admissão que nunca entrou. "Cruza pela
+       * admissão; caso não ache, cruza pelo nome do paciente" (Pedro,
+       * 18/09/2026). Admissão que existe no sistema NÃO entra aqui: se ela está
+       * noutro mês, quem resolve é o casamento entre meses (v1.3.1).
+       */
+      const fantasma = !!(r.admissao_norm && fantasmas && fantasmas.has(r.admissao_norm));
+      if (r.admissao_norm && !fantasma) continue;
       const p = normNome(r.paciente);
       let d = r.data ? porPacData.get(p + '|' + r.data) : null;
       let via = d ? 'data' : '';
@@ -1384,6 +1395,7 @@
         if (adms.length === 1) { d = lista[0]; via = 'paciente'; }
       }
       if (!d) continue;
+      if (fantasma) { r.admissaoArquivo = r.admissao; cont.fantasma++; }
       r.admissao = d.admissao; r.admissao_norm = d.admissao_norm;
       r.casadoPor = via;                       // de que jeito a linha foi cruzada
       cont[via]++;
@@ -1576,7 +1588,7 @@
     const papeisCrus = new Map();   // ATLAS v1.3.13: papel do relatório sem canônico
     // ATLAS v1.3.14: linhas gravadas sem admissão (relatório importado antes do
     // mês do sistema) voltam a ter admissão antes do confronto
-    const cruzamento = { data: 0, procedimento: 0, paciente: 0 };   // ATLAS v1.3.15
+    const cruzamento = { data: 0, procedimento: 0, paciente: 0, fantasma: 0 };   // ATLAS v1.3.15/v1.3.16
     let religadas = 0;
     try { religadas = religarAdmissoes(); } catch (e) {}
     if (religadas) avisos.push(`${religadas} linha${religadas > 1 ? 's' : ''} do relatório final estava${religadas > 1 ? 'm' : ''} sem admissão e foi${religadas > 1 ? 'ram' : ''} religada${religadas > 1 ? 's' : ''} agora (paciente + data ou paciente + procedimento) — acontece quando o relatório é importado antes do mês do sistema`);
@@ -1687,6 +1699,14 @@
         if (!outros.has(c)) outros.set(c, new Set());
         outros.get(c).add(adm);
       }
+      // ATLAS v1.3.16: admissão do relatório que o sistema NÃO conhece (não
+      // está no "deveria" nem em nenhum mês pago) — cai para a 2ª chave, o
+      // paciente. Reaproveita o `onde` que o casamento entre meses já montou.
+      const fantasmas = new Set(faltando.filter(a => !(onde.get(a) || new Set()).size));
+      if (fantasmas.size) {
+        const c2 = adotarAdmissoes(rec, dev, { fantasmas });
+        if (c2) { cruzamento.data += c2.data; cruzamento.procedimento += c2.procedimento; cruzamento.paciente += c2.paciente; cruzamento.fantasma += c2.fantasma; }
+      }
       for (const [comp, adms] of outros) {
         const ent = await getDeveria(comp);
         const temArquivo = temRelatorio(medNorm, comp);
@@ -1772,7 +1792,7 @@
     // (não pela admissão, que o layout manual não traz)
     const totCruz = cruzamento.data + cruzamento.procedimento + cruzamento.paciente;
     if (totCruz) {
-      avisos.push(`${totCruz} linha${totCruz > 1 ? 's' : ''} do relatório final sem admissão ${totCruz > 1 ? 'foram cruzadas' : 'foi cruzada'} pelo PACIENTE: ${cruzamento.data} por paciente + data, ${cruzamento.procedimento} por paciente + procedimento, ${cruzamento.paciente} por paciente com admissão única`);
+      avisos.push(`${totCruz} linha${totCruz > 1 ? 's' : ''} do relatório final ${totCruz > 1 ? 'foram cruzadas' : 'foi cruzada'} pelo PACIENTE (a admissão não resolveu): ${cruzamento.data} por paciente + data, ${cruzamento.procedimento} por paciente + procedimento, ${cruzamento.paciente} por paciente com admissão única${cruzamento.fantasma ? ` · ${cruzamento.fantasma} tinha${cruzamento.fantasma > 1 ? 'm' : ''} no arquivo uma admissão que o sistema não conhece` : ''}`);
     }
     // ATLAS v1.3.13: papéis do relatório final que não viram papel da Base Tabela
     if (papeisCrus.size) {
