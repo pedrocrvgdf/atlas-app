@@ -950,7 +950,24 @@
   }
   /** 4º painel da Inspeção: linhas importadas + as do Consolidado dos meses da ferramenta */
   function linhasFinaisDaAdmissao(adm, consolidado) {
-    const importadas = linhasDaAdmissao(adm);
+    const importadas = linhasDaAdmissao(adm).slice();
+    // ATLAS v1.3.15: a 2ª chave de procura — o PACIENTE. Linha do relatório que
+    // ficou sem admissão (layout manual) entra pelo nome do paciente da
+    // admissão, quando a data ou o procedimento batem.
+    try {
+      const pacs = [...new Set((consolidado || []).map(r => normNome(r.linha && r.linha.paciente)).filter(Boolean))];
+      const jaTem = new Set(importadas.map(l => l.id));
+      for (const p of pacs) {
+        for (const o of linhasOrfasPorPaciente(p)) {
+          if (jaTem.has(o.id)) continue;
+          const casa = (consolidado || []).some(r => normNome(r.linha && r.linha.paciente) === p
+            && (normData(r.linha && r.linha.data) === o.data || mesmoExame(r.linha && r.linha.descricao, o.procedimento)));
+          if (!casa) continue;
+          jaTem.add(o.id);
+          importadas.push(Object.assign({}, o, { admissao: String(adm || ''), admissao_norm: normAdm(adm), casadoPor: 'paciente' }));
+        }
+      }
+    } catch (e) {}
     const virtuais = [];
     // ATLAS v1.3.5: nos meses da ferramenta o Consolidado É o relatório final —
     // ele entra MESMO quando há arquivo importado do mesmo médico × mês (o
@@ -1326,17 +1343,78 @@
     }
     return m;
   }
-  /** Linhas do final SEM admissão ganham a admissão do deveria por paciente + data */
+  /**
+   * ATLAS v1.3.15: O CRUZAMENTO TEM DUAS CHAVES — A ADMISSÃO E O PACIENTE.
+   * "Deve então ter duas formas de cruzamento/procura: a admissão e o nome do
+   * paciente" (Pedro, 18/09/2026). A linha do relatório manual não traz
+   * admissão; aqui ela adota a do "deveria", em três camadas:
+   *   1. paciente + DATA (a data do relatório é a do procedimento e às vezes
+   *      bate com a da admissão);
+   *   2. paciente + PROCEDIMENTO (quando a data não bate — com mais de um
+   *      candidato vence a admissão de data mais próxima);
+   *   3. paciente com UMA ÚNICA admissão no conjunto (aí não há ambiguidade).
+   * Devolve a contagem de cada camada, para a auditoria avisar.
+   */
   function adotarAdmissoes(recItens, devItens) {
-    const porPacData = new Map();
-    for (const d of devItens) if (d.admissao_norm && d.paciente && d.data) {
-      const k = normNome(d.paciente) + '|' + d.data;
-      if (!porPacData.has(k)) porPacData.set(k, d);
+    const porPacData = new Map(), porPac = new Map();
+    for (const d of devItens) {
+      if (!d.admissao_norm || !d.paciente) continue;
+      const p = normNome(d.paciente);
+      if (d.data) { const k = p + '|' + d.data; if (!porPacData.has(k)) porPacData.set(k, d); }
+      if (!porPac.has(p)) porPac.set(p, []);
+      porPac.get(p).push(d);
     }
-    for (const r of recItens) if (!r.admissao_norm && r.paciente && r.data) {
-      const d = porPacData.get(normNome(r.paciente) + '|' + r.data);
-      if (d) { r.admissao = d.admissao; r.admissao_norm = d.admissao_norm; }
+    const dist = (a, b) => { const x = Date.parse(a), y = Date.parse(b); return (isNaN(x) || isNaN(y)) ? 9e9 : Math.abs(x - y); };
+    const cont = { data: 0, procedimento: 0, paciente: 0 };
+    for (const r of recItens) {
+      if (r.admissao_norm || !r.paciente) continue;
+      const p = normNome(r.paciente);
+      let d = r.data ? porPacData.get(p + '|' + r.data) : null;
+      let via = d ? 'data' : '';
+      if (!d && r.procedimento) {
+        const cands = (porPac.get(p) || []).filter(x => mesmoExame(x.procedimento, r.procedimento));
+        if (cands.length) {
+          d = cands.length === 1 ? cands[0] : cands.slice().sort((a, b) => dist(a.data, r.data) - dist(b.data, r.data))[0];
+          via = 'procedimento';
+        }
+      }
+      if (!d) {
+        const lista = porPac.get(p) || [];
+        const adms = [...new Set(lista.map(x => x.admissao_norm))];
+        if (adms.length === 1) { d = lista[0]; via = 'paciente'; }
+      }
+      if (!d) continue;
+      r.admissao = d.admissao; r.admissao_norm = d.admissao_norm;
+      r.casadoPor = via;                       // de que jeito a linha foi cruzada
+      cont[via]++;
     }
+    return cont;
+  }
+  /**
+   * ATLAS v1.3.15: as linhas do relatório SEM admissão, por paciente — é a
+   * segunda chave de procura do 4º painel da Inspeção (a primeira é a
+   * admissão). Um mapa só, por versão do banco.
+   */
+  let _orfasCache = { versao: -1, mapa: null };
+  function linhasOrfasPorPaciente(pacienteNorm) {
+    const k = normNome(pacienteNorm);
+    if (!k) return [];
+    const v = Banco._versao || 0;
+    if (_orfasCache.versao !== v || !_orfasCache.mapa) {
+      const mapa = new Map();
+      try {
+        for (const r of Banco.query(`SELECT l.*, r.arquivo, r.layout FROM relatorio_final_linhas l
+                                       JOIN relatorio_final r ON r.id = l.relatorio_id
+                                      WHERE (l.admissao_norm IS NULL OR l.admissao_norm = '')
+                                        AND l.paciente_norm IS NOT NULL AND l.paciente_norm <> ''`) || []) {
+          const p = String(r.paciente_norm || '');
+          if (!mapa.has(p)) mapa.set(p, []);
+          mapa.get(p).push(r);
+        }
+      } catch (e) {}
+      _orfasCache = { versao: v, mapa };
+    }
+    return _orfasCache.mapa.get(k) || [];
   }
 
   /** grafias conhecidas do médico (cadastro + de-para), normalizadas */
@@ -1498,6 +1576,7 @@
     const papeisCrus = new Map();   // ATLAS v1.3.13: papel do relatório sem canônico
     // ATLAS v1.3.14: linhas gravadas sem admissão (relatório importado antes do
     // mês do sistema) voltam a ter admissão antes do confronto
+    const cruzamento = { data: 0, procedimento: 0, paciente: 0 };   // ATLAS v1.3.15
     let religadas = 0;
     try { religadas = religarAdmissoes(); } catch (e) {}
     if (religadas) avisos.push(`${religadas} linha${religadas > 1 ? 's' : ''} do relatório final estava${religadas > 1 ? 'm' : ''} sem admissão e foi${religadas > 1 ? 'ram' : ''} religada${religadas > 1 ? 's' : ''} agora (paciente + data ou paciente + procedimento) — acontece quando o relatório é importado antes do mês do sistema`);
@@ -1595,7 +1674,8 @@
           complemento.set(comp, (complemento.get(comp) || 0) + 1);
         }
       }
-      adotarAdmissoes(rec, dev);
+      const cruz = adotarAdmissoes(rec, dev);
+      if (cruz) { cruzamento.data += cruz.data; cruzamento.procedimento += cruz.procedimento; cruzamento.paciente += cruz.paciente; }
       // admissões recebidas que não estão nesses meses: em que mês o sistema as pagou?
       const admsDev = new Set(dev.map(d => d.admissao_norm).filter(Boolean));
       const admsRec = [...new Set(rec.map(x => x.admissao_norm).filter(Boolean))];
@@ -1687,6 +1767,12 @@
         }
       }
       itens.push(...doMed);
+    }
+    // ATLAS v1.3.15: quantas linhas do relatório foram cruzadas PELO PACIENTE
+    // (não pela admissão, que o layout manual não traz)
+    const totCruz = cruzamento.data + cruzamento.procedimento + cruzamento.paciente;
+    if (totCruz) {
+      avisos.push(`${totCruz} linha${totCruz > 1 ? 's' : ''} do relatório final sem admissão ${totCruz > 1 ? 'foram cruzadas' : 'foi cruzada'} pelo PACIENTE: ${cruzamento.data} por paciente + data, ${cruzamento.procedimento} por paciente + procedimento, ${cruzamento.paciente} por paciente com admissão única`);
     }
     // ATLAS v1.3.13: papéis do relatório final que não viram papel da Base Tabela
     if (papeisCrus.size) {
@@ -2431,9 +2517,11 @@
     competenciaPelosDados, mesesDasAdmissoes,
     desdeFerramenta, definirDesdeFerramenta, mesesDaFerramenta, listarTodos, temRelatorioPara, linhasFinaisDaAdmissao, mesDaFerramenta,
     religarAdmissoes,      // ATLAS v1.3.14
+    linhasOrfasPorPaciente,  // ATLAS v1.3.15
     admissoesAdiantadas,   // ATLAS v1.3.9
     recorrenciaNoFinal,    // ATLAS v1.3.11
     medicoAuditado, definirMedicoAuditado, medicosConhecidos,
-    _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook },
+    _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook,
+      adotarAdmissoes },   // ATLAS v1.3.15
   };
 })();
