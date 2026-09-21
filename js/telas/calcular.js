@@ -1777,6 +1777,37 @@ App.telas['calcular'] = function (opts) {
     const mapPapeis = new Map();
     for (const p of papeis) mapPapeis.set(normalizar(p.nome), p.id);
 
+    /**
+     * ATLAS v1.3.19: PAPÉIS IRMÃOS — INDICANTE e SOLICITANTE são o MESMO papel
+     * ("alguns procedimentos terão INDICANTE, outros SOLICITANTE, mas são em
+     * suma o mesmo papel", Pedro em 21/09/2026), mas são DOIS ids na tabela
+     * `papeis`. Como a Base Tabela guarda a regra por papel_id, a linha lançada
+     * num deles não achava a regra cadastrada no outro — e o motor OMITIA a
+     * linha como "papel não remunerado neste procedimento" (o `semRemuneracao`
+     * logo abaixo). Resultado: o exame PAGO sumia do Consolidado, a auditoria
+     * ficava sem "deveria" e o que o médico recebeu voltava como "sem lastro".
+     * O mapa abaixo é consultado pelo `buscarRegra` — tenta o papel e, só se
+     * não achar, os irmãos. Nunca soma os dois.
+     */
+    let papelIrmaos = new Map();
+    try {
+      papelIrmaos = (window.AtlasInspecao && AtlasInspecao._interno.papeisIrmaosId)
+        ? AtlasInspecao._interno.papeisIrmaosId() : new Map();
+    } catch (_) {}
+    if (!papelIrmaos.size) {   // reserva: agrupa pelo prefixo, sem depender da Inspeção
+      const porCanon = new Map();
+      for (const p of papeis) {
+        const n = normalizar(p.nome);
+        const c = /^(SOLIC|ENCAMINH|INDIC)/.test(n) ? 'INDICANTE' : n;
+        if (!porCanon.has(c)) porCanon.set(c, []);
+        porCanon.get(c).push(Number(p.id));
+      }
+      for (const ids of porCanon.values()) {
+        if (ids.length < 2) continue;
+        for (const id of ids) papelIrmaos.set(id, ids.filter(x => x !== id));
+      }
+    }
+
     let mapeamento = [];
     try { mapeamento = Banco.query(`SELECT papel_qvis, papel_id FROM mapeamento_papeis`) || []; } catch (_) {}
     const mapPapelQvis = new Map();
@@ -1996,7 +2027,7 @@ App.telas['calcular'] = function (opts) {
       return rg;
     }
 
-    const auxResult = { procs, mapProcsExatos, mapSinos, procPorId, papeis, mapPapeis, mapPapelQvis, mapRegras, procsComRegra,
+    const auxResult = { procs, mapProcsExatos, mapSinos, procPorId, papeis, mapPapeis, mapPapelQvis, papelIrmaos, mapRegras, procsComRegra,
              medicos, mapMedicosExato, mapSinMed, medicoPorId, mapRegrasExcecao, mapExcecaoAnula, mapPacotes, mapProcsPacote, mapAliasPacote,
              medicosEspPacote, perfisAtivos, mapPerfilAjuste, mapPerfilProcTabela, mapPerfilProcValor,
              // V563
@@ -2044,6 +2075,19 @@ App.telas['calcular'] = function (opts) {
   // veio da tabela VIVA (buraco na versão congelada) e não da versão da data.
   let _regraVeioDaViva = false;
   function buscarRegra(aux, procId, papelId, fonteN) {
+    // ATLAS v1.3.19: sem regra para o papel, vale a do papel IRMÃO
+    // (INDICANTE ↔ SOLICITANTE — o mesmo papel em dois ids). Tenta o papel da
+    // linha primeiro; o irmão é só o segundo lugar, nunca soma.
+    let regra = _buscarRegraPapel(aux, procId, papelId, fonteN);
+    if (!regra) {
+      for (const irmao of (aux.papelIrmaos && aux.papelIrmaos.get(papelId)) || []) {
+        regra = _buscarRegraPapel(aux, procId, irmao, fonteN);
+        if (regra) break;
+      }
+    }
+    return regra;
+  }
+  function _buscarRegraPapel(aux, procId, papelId, fonteN) {
     _regraVeioDaViva = false;
     let regra = aux.mapRegras.get(`${procId}|${papelId}|${fonteN}`);
     if (!regra) regra = aux.mapRegras.get(`${procId}|${papelId}|TODAS`);

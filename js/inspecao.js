@@ -1914,6 +1914,41 @@
   }
 
   /**
+   * ATLAS v1.3.19: PAPÉIS IRMÃOS — ids diferentes, MESMO papel.
+   *
+   * "INDICANTE = SOLICITANTE; alguns procedimentos terão INDICANTE, outros
+   * SOLICITANTE, mas são em suma o mesmo papel" (Pedro, 21/09/2026). No banco
+   * eles são DUAS linhas da tabela `papeis` (o próprio seed já dizia
+   * "Indicante — paga o mesmo valor que Solicitante"), e a Base Tabela guarda a
+   * regra por papel_id: a regra cadastrada num NÃO era encontrada pelo outro.
+   *
+   * Aqui os papéis são agrupados pelo CANÔNICO (`papelCanonico`, o canonizador
+   * oficial) e cada id ganha a lista dos IRMÃOS — os outros ids que significam
+   * a mesma coisa. Quem consulta regra tenta o papel e, só se não achar, os
+   * irmãos: nunca soma, nunca paga duas vezes.
+   */
+  let _irmaosCache = { versao: null, mapa: null };
+  function papeisIrmaosId() {
+    if (_irmaosCache.versao === Banco._versao && _irmaosCache.mapa) return _irmaosCache.mapa;
+    const mapa = new Map();
+    try {
+      const porCanon = new Map();
+      for (const p of Banco.query(`SELECT id, nome FROM papeis`) || []) {
+        const c = papelCanonico(p.nome);
+        if (!c) continue;
+        if (!porCanon.has(c)) porCanon.set(c, []);
+        porCanon.get(c).push(Number(p.id));
+      }
+      for (const ids of porCanon.values()) {
+        if (ids.length < 2) continue;
+        for (const id of ids) mapa.set(id, ids.filter(x => x !== id));
+      }
+    } catch (e) { console.warn('[inspecao] papeisIrmaosId', e); }
+    _irmaosCache = { versao: Banco._versao, mapa };
+    return mapa;
+  }
+
+  /**
    * V760: existe REGRA de repasse para esse procedimento + papel?
    *
    * Leitura DIRETA da Base Tabela (tabela_repasse + exceções), sem passar pelo
@@ -5150,7 +5185,7 @@
   window.AtlasInspecao = { abrir, montar, inspecionarAdmissao, definirPauta,   // ATLAS v1.3
     _interno: { normAdm, normNome, normData, casarNaProducao, diagnosticar,
     // ATLAS v1.3: o que o RELATÓRIO FINAL (js/relatorio_final.js) reaproveita
-    papelCanonico, nomeOficialMedico, temRegraDeRepasse, competenciasComSnapshot, variantesAdm, sqlIn,
+    papelCanonico, papeisIrmaosId, nomeOficialMedico, temRegraDeRepasse, competenciasComSnapshot, variantesAdm, sqlIn,   // ATLAS v1.3.19: papeisIrmaosId
     produtoRepassavel, ehMedicoInstitucional, lerLista, valorConsolidado, dataBR, nomePaciente, resolverAdmissoes,
     lerPlanilha, buscarQvis, buscarRepasse, buscarProducao, buscarAdmissoesPorPaciente,
     mesmoProduto, mesmoExame, mesmoConteudo,

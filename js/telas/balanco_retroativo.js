@@ -492,8 +492,29 @@
     return null;
   }
   function regraDe(aux, procId, papelId, fonteN) {
-    return aux.regras.get(procId + '|' + papelId + '|' + fonteN)
-        || aux.regras.get(procId + '|' + papelId + '|TODAS') || null;
+    const um = (pid) => aux.regras.get(procId + '|' + pid + '|' + fonteN)
+                     || aux.regras.get(procId + '|' + pid + '|TODAS') || null;
+    let r = um(papelId);
+    // ATLAS v1.3.19: papéis IRMÃOS — a regra do INDICANTE vale para o
+    // SOLICITANTE e vice-versa (mesmo papel, dois ids na tabela `papeis`)
+    if (!r) for (const irmao of irmaosDe(aux, papelId)) { r = um(irmao); if (r) break; }
+    return r;
+  }
+  /** ATLAS v1.3.19: ids que significam o MESMO papel do `papelId` */
+  function irmaosDe(aux, papelId) {
+    if (!aux._irmaos) {
+      let m = new Map();
+      try {
+        m = (window.AtlasInspecao && AtlasInspecao._interno.papeisIrmaosId)
+          ? AtlasInspecao._interno.papeisIrmaosId() : new Map();
+      } catch (_) {}
+      if (!m.size) {
+        const iInd = aux.papelId.get('INDICANTE'), iSol = aux.papelId.get('SOLICITANTE');
+        if (iInd != null && iSol != null) { m.set(iInd, [iSol]); m.set(iSol, [iInd]); }
+      }
+      aux._irmaos = m;
+    }
+    return aux._irmaos.get(papelId) || [];
   }
   function excDe(aux, medId, procId, papelId, fonteN) {
     if (medId == null) return null;
@@ -538,8 +559,13 @@
         const rv = verInfo.regrasDe(ver.id);
         if (rv.procs.has(procId)) {
           _fonteRegra = 'v' + ver.numero;
-          return rv.regras.get(procId + '|' + papelId + '|' + fonteN)
-              || rv.regras.get(procId + '|' + papelId + '|TODAS') || null;
+          {   // ATLAS v1.3.19: papel IRMÃO também vale na versão congelada
+            const umV = (pid) => rv.regras.get(procId + '|' + pid + '|' + fonteN)
+                              || rv.regras.get(procId + '|' + pid + '|TODAS') || null;
+            let rr = umV(papelId);
+            if (!rr) for (const irmao of irmaosDe(aux, papelId)) { rr = umV(irmao); if (rr) break; }
+            return rr;
+          }
         }
         // V639: proc publicado em OUTRA versão (vigência própria — ex.: só
         // entrou na 2.0) → NÃO cai na viva; nesta data ele não tinha regra.

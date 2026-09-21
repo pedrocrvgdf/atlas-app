@@ -1565,6 +1565,40 @@
     } catch (e) {}
     return 0;
   }
+  /**
+   * ATLAS v1.3.19: a MESMA regra cadastrada nos DOIS papéis irmãos (Indicante e
+   * Solicitante) com VALORES DIFERENTES. Como são o mesmo papel, o motor usa a
+   * do papel da linha e só cai no irmão quando não há — mas valores diferentes
+   * são erro de cadastro, e a auditoria não escolhe em silêncio: avisa.
+   */
+  let _conflitoCache = { versao: -1, lista: null };
+  function conflitoPapeisIrmaos() {
+    if (_conflitoCache.versao === (Banco._versao || 0) && _conflitoCache.lista) return _conflitoCache.lista;
+    const out = [];
+    try {
+      const grupos = new Map();   // procId|fonte|canônico → Map(papel → 'valor|pct')
+      for (const r of Banco.query(
+        `SELECT t.procedimento_id AS pid, pr.nome_oficial AS proc, pa.nome AS papel,
+                COALESCE(t.fonte_pagadora, 'TODAS') AS fonte, t.valor, t.percentual
+           FROM tabela_repasse t
+           JOIN papeis pa ON pa.id = t.papel_id
+           JOIN procedimentos pr ON pr.id = t.procedimento_id
+          WHERE COALESCE(t.ativo, 1) = 1`) || []) {
+        const canon = papelCanon(r.papel);
+        const k = r.pid + '|' + norm(r.fonte) + '|' + canon;
+        if (!grupos.has(k)) grupos.set(k, { proc: r.proc, fonte: r.fonte, canon, porPapel: new Map() });
+        grupos.get(k).porPapel.set(r.papel,
+          (Number(r.valor) || 0).toFixed(4) + '|' + (Number(r.percentual) || 0).toFixed(6));
+      }
+      for (const g of grupos.values()) {
+        if (g.porPapel.size < 2) continue;
+        if (new Set(g.porPapel.values()).size < 2) continue;   // mesmo valor nos dois: sem conflito
+        out.push({ proc: g.proc, fonte: g.fonte, papeis: [...g.porPapel.keys()] });
+      }
+    } catch (e) { console.warn('[relatorio_final] conflitoPapeisIrmaos', e); }
+    _conflitoCache = { versao: Banco._versao || 0, lista: out };
+    return out;
+  }
   /** Linhas do sistema do médico no mês, com regra, sem pagamento em lugar nenhum */
   function regraNaoPaga(medico, comp, itensJa) {
     const qvis = qvisDoMedico(medico, comp);
@@ -1945,6 +1979,12 @@
       if (nOkAud) {
         avisos.push(`${auditado} recebe os exames inclusos do pacote (${nOkAud} linha${nOkAud > 1 ? 's' : ''}) porque está cadastrado com a especialidade ${espTxt} no módulo Médicos — se não for o caso, tire a especialidade dele lá e o ATLAS deixa de cobrar essa linha-filha.`);
       }
+    }
+    // ATLAS v1.3.19: Indicante e Solicitante cadastrados com valores diferentes
+    const conflitos = conflitoPapeisIrmaos();
+    if (conflitos.length) {
+      const lista = conflitos.slice(0, 5).map(c => `${c.proc} (${c.fonte})`).join(', ');
+      avisos.push(`Base Tabela: ${conflitos.length} procedimento${conflitos.length > 1 ? 's têm' : ' tem'} regra cadastrada nos DOIS papéis — ${conflitos[0].papeis.join(' e ')} — com VALORES DIFERENTES: ${lista}${conflitos.length > 5 ? ` e mais ${conflitos.length - 5}` : ''}. Como são o mesmo papel, vale a do papel da linha; deixe só uma para o valor não depender de como o sistema lançou.`);
     }
     for (const [comp, meds] of semRelatorioAviso) {
       avisos.push(`Consolidado de ${fmtComp(comp)}: admissões de ${[...meds].join(', ')} pagas nesse mês sem relatório final importado — o que está lá conta como pago, não como falta; importe o arquivo de ${fmtComp(comp)} para conferir (ou inclua o mês em "desde a ferramenta")`);
@@ -2673,6 +2713,6 @@
     recorrenciaNoFinal,    // ATLAS v1.3.11
     medicoAuditado, definirMedicoAuditado, medicosConhecidos,
     _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook,
-      adotarAdmissoes },   // ATLAS v1.3.15
+      adotarAdmissoes, conflitoPapeisIrmaos },   // ATLAS v1.3.15 / v1.3.19
   };
 })();

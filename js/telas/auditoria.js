@@ -126,7 +126,18 @@ const AuditoriaApp = (function () {
       const mr = Banco.query('SELECT papel_qvis, papel_id FROM mapeamento_papeis') || [];
       for (const m of mr) mapQvis.set(norm(m.papel_qvis), m.papel_id);
     } catch (e) { /* ignora */ }
-    cachePapeis = { porId, mapQvis, idExecutante, idAuxiliar, idIndicante, idSolicitante, idLaudo };
+    // ATLAS v1.3.19: papéis IRMÃOS (mesmo papel canônico, ids diferentes) —
+    // INDICANTE e SOLICITANTE. A regra cadastrada num vale para o outro.
+    let irmaos = new Map();
+    try {
+      irmaos = (window.AtlasInspecao && AtlasInspecao._interno.papeisIrmaosId)
+        ? AtlasInspecao._interno.papeisIrmaosId() : new Map();
+    } catch (_) {}
+    if (!irmaos.size && idIndicante != null && idSolicitante != null) {
+      irmaos.set(idIndicante, [idSolicitante]);
+      irmaos.set(idSolicitante, [idIndicante]);
+    }
+    cachePapeis = { porId, mapQvis, idExecutante, idAuxiliar, idIndicante, idSolicitante, idLaudo, irmaos };
     return cachePapeis;
   }
 
@@ -274,7 +285,16 @@ const AuditoriaApp = (function () {
   function regraDe(procId, papelId, fonte, dataAdm) {
     const base = baseDaData(dataAdm);
     const fN = norm(fonte);
-    return base.regras.get(`${procId}|${papelId}|${fN}`) || base.regras.get(`${procId}|${papelId}|TODAS`) || null;
+    const um = (pid) => base.regras.get(`${procId}|${pid}|${fN}`) || base.regras.get(`${procId}|${pid}|TODAS`) || null;
+    let r = um(papelId);
+    // ATLAS v1.3.19: sem regra para o papel, vale a do IRMÃO (INDICANTE ↔ SOLICITANTE)
+    if (!r) {
+      for (const irmao of (lerPapeis().irmaos || new Map()).get(papelId) || []) {
+        r = um(irmao);
+        if (r) break;
+      }
+    }
+    return r;
   }
 
   // ── V640: BALANÇO DO ERRO DE VERSÃO ─────────────────────────────────────
