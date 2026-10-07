@@ -1630,6 +1630,157 @@
     }
     return [...grupos.values()];
   }
+  /**
+   * ATLAS v1.3.20: AUDITORIA POR PRODUTO. "Reconhecer apenas determinados
+   * PRODUTOS que irá fazer a auditoria, por exemplo COMPLEMENTO HM /
+   * HONORARIO: ele visitará os relatórios de PRODUÇÃO e QVIS e verificará no
+   * relatório se todos foram pagos" (Pedro, 07/10/2026).
+   *
+   * Por que a auditoria comum não pega isso: produto como o complemento de
+   * honorário não tem regra na Base Tabela — no Consolidado a linha sai ZERADA
+   * (ou nem entra, quando a classificação está fora do escopo do Calcular), e o
+   * confronto pula "deveria" zerado. Aqui o "deveria" vem do SISTEMA: cada
+   * linha do QVIS com o produto vale o que o Consolidado der para ela (regra da
+   * Base Tabela ou ajuste da aba Honorário) e, sem isso, o REPASSADO do próprio
+   * QVIS — a mesma evidência que `valorDaRegra` já aceita. Convênio com
+   * recebido zero é glosa (vale zero). O produto que só aparece na PRODUÇÃO,
+   * sem linha no sistema, é "aguardando" — informa, não cobra.
+   *
+   * A lista mora em config_sistema → RELATORIO_FINAL_PRODUTOS (JSON), editável
+   * na aba Relatório final. Termo curto (até 3 letras, "HM") só casa como
+   * PALAVRA inteira — senão "HM" pegaria qualquer nome que contém as letras.
+   */
+  const PROD_CHAVE = 'RELATORIO_FINAL_PRODUTOS';
+  const PRODUTOS_PADRAO = ['COMPLEMENTO HM', 'HONORARIO'];
+  function produtosAuditados() {
+    try {
+      const r = Banco.queryUnica(`SELECT valor FROM config_sistema WHERE chave = ?`, [PROD_CHAVE]);
+      if (r && r.valor != null && String(r.valor).trim() !== '') {
+        const arr = JSON.parse(r.valor);
+        if (Array.isArray(arr)) return arr.map(x => String(x || '').trim()).filter(Boolean);
+      }
+    } catch (e) {}
+    return PRODUTOS_PADRAO.slice();
+  }
+  function definirProdutosAuditados(lista) {
+    const limpa = [...new Set((lista || []).map(x => normNome(x)).filter(Boolean))];
+    try { Banco.executar(`INSERT OR REPLACE INTO config_sistema (chave, valor) VALUES (?, ?)`, [PROD_CHAVE, JSON.stringify(limpa)]); }
+    catch (e) { return produtosAuditados(); }
+    Banco.salvarDebounced(1500);
+    return limpa;
+  }
+  /** o nome casa com algum dos produtos? termo de até 3 letras só como palavra inteira */
+  function casaProduto(nome, termos) {
+    const n = ' ' + normNome(nome) + ' ';
+    if (!n.trim()) return false;
+    return (termos || []).some(t => {
+      const tt = normNome(t);
+      if (!tt) return false;
+      return tt.length <= 3 ? n.includes(' ' + tt + ' ') : n.includes(tt);
+    });
+  }
+  /** a palavra mais longa do termo — filtro largo no SQL, o fino é o casaProduto */
+  function prefiltroProduto(t) {
+    return normNome(t).split(' ').sort((a, b) => b.length - a.length)[0] || '';
+  }
+  /**
+   * O "deveria" dos produtos num mês: as linhas do QVIS com o produto, no
+   * formato de linha do Consolidado. `consItens` são os itens do Consolidado do
+   * mês (já montados pela auditoria) — o valor dele vale primeiro, em fila,
+   * uma linha por linha do sistema, nunca somado.
+   */
+  function deveriaProdutosDaCompetencia(comp, termos, consItens) {
+    const fila = new Map();
+    for (const it of consItens || []) {
+      if (!casaProduto(it.procedimento, termos)) continue;
+      const k = it.admissao_norm + '|' + normNome(it.procedimento) + '|' + normNome(it.medico);
+      if (!fila.has(k)) fila.set(k, []);
+      fila.get(k).push(Number(it.valor) || 0);
+    }
+    const chaves = [...new Set((termos || []).map(prefiltroProduto).filter(Boolean))];
+    if (!chaves.length) return [];
+    let rows = [];
+    try {
+      const cond = chaves.map(() => `UPPER(COALESCE(procedimento_normalizado, procedimento, '')) LIKE ?`).join(' OR ');
+      rows = Banco.query(
+        `SELECT admissao, data_admissao, paciente, nome_profissional, papel, procedimento, procedimento_normalizado,
+                origem, convenio, recebido, repassado
+           FROM linhas_qvis WHERE mes_pagamento = ? AND (${cond}) ORDER BY id`,
+        [comp, ...chaves.map(c => '%' + c + '%')]) || [];
+    } catch (e) { rows = []; }
+    const out = [];
+    for (const q of rows) {
+      const proc = String(q.procedimento || q.procedimento_normalizado || '').trim();
+      if (!casaProduto(proc, termos)) continue;
+      const med = nomeOficial(q.nome_profissional || '');
+      const k = normAdm(q.admissao) + '|' + normNome(proc) + '|' + normNome(med);
+      const f = fila.get(k);
+      const doConsolidado = f && f.length ? f.shift() : 0;
+      const glosa = String(q.origem || '').toUpperCase() !== 'PARTICULAR' && (Number(q.recebido) || 0) <= 0;
+      const valor = glosa ? 0 : (doConsolidado > 0.004 ? doConsolidado : (Number(q.repassado) || 0));
+      out.push({ admissao: q.admissao, data: q.data_admissao, paciente: q.paciente || '', papel: q.papel || '',
+        descricao: proc, valor, status: glosa ? 'GLOSA' : 'QVIS', modulo: 'Produto', origem: q.origem || '',
+        convenio: q.convenio || '', profissional: med });
+    }
+    return out;
+  }
+  /**
+   * O produto que está na PRODUÇÃO do médico (até 3 meses antes do mês) e NÃO
+   * tem a linha dele no sistema — em nenhum mês. É "aguardando": o sistema
+   * ainda não registrou; não é dívida.
+   */
+  function produtosSoNaProducao(medico, comp, termos, jaVistas) {
+    const g = new Set(grafiasDoMedico(medico));
+    if (!g.size || !(termos || []).length) return [];
+    const [ano, mes] = comp.split('-').map(Number);
+    const comps = [];
+    for (let k = 0; k < 3; k++) {
+      const d = new Date(Date.UTC(ano, mes - 1 - k, 1));
+      comps.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+    }
+    let rows = [];
+    try {
+      rows = Banco.query(
+        `SELECT cod_admissao, data_admissao, paciente, produto, procedimento_principal, tipo_recebimento, convenio,
+                medico, cirurgiao, indicante, solicitante, auxiliar_1, auxiliar_2
+           FROM linhas_producao WHERE competencia IN (${comps.map(() => '?').join(',')})`, comps) || [];
+    } catch (e) { rows = []; }
+    const COLS = [['cirurgiao', 'EXECUTANTE'], ['medico', 'EXECUTANTE'], ['indicante', 'INDICANTE'],
+      ['solicitante', 'INDICANTE'], ['auxiliar_1', 'AUXILIAR'], ['auxiliar_2', 'AUXILIAR']];
+    const cand = [];
+    for (const r of rows) {
+      const proc = String(r.produto || r.procedimento_principal || '').trim();
+      if (!casaProduto(proc, termos) && !casaProduto(r.procedimento_principal, termos)) continue;
+      const k = normAdm(r.cod_admissao);
+      if (!k || jaVistas.has(k)) continue;
+      const col = COLS.find(([c]) => r[c] && (g.has(norm(r[c])) || g.has(normNome(r[c]))));
+      if (!col) continue;
+      cand.push({ r, k, papel: col[1], proc });
+    }
+    if (!cand.length) return [];
+    const comProduto = new Set();   // admissões em que o sistema já tem o produto
+    const variantes = I().variantesAdm || ((a) => [a]);
+    const adms = [...new Set(cand.map(c => c.k))];
+    for (let i = 0; i < adms.length; i += 120) {
+      const vars = [...new Set(adms.slice(i, i + 120).flatMap(variantes))];
+      try {
+        for (const x of Banco.query(`SELECT admissao, procedimento FROM linhas_qvis WHERE admissao IN (${vars.map(() => '?').join(',')})`, vars) || []) {
+          if (casaProduto(x.procedimento, termos)) comProduto.add(normAdm(x.admissao));
+        }
+      } catch (e) {}
+    }
+    const out = new Map();
+    for (const c of cand) {
+      if (comProduto.has(c.k)) continue;
+      const gk = c.k + '|' + c.papel + '|' + normNome(c.proc);
+      if (out.has(gk)) continue;
+      out.set(gk, { categoria: 'aguardando', rotulo: CATEGORIAS.aguardando.rotulo, tom: 'info', competencia: comp, medico,
+        admissao: String(c.r.cod_admissao || '').trim(), admissao_norm: c.k, data: normData(c.r.data_admissao),
+        paciente: c.r.paciente || '', procedimento: c.proc, papel: c.papel, deveria: 0, recebido: 0, falta: 0,
+        status: 'Produção', modulo: 'Produção', origem: c.r.tipo_recebimento || '', convenio: c.r.convenio || '', fonte: 'producao' });
+    }
+    return [...out.values()];
+  }
   /** Produzido nos últimos 3 meses e ainda fora do sistema (não é dívida — informativo) */
   function aguardandoConvenio(medico, comp, jaVistas) {
     const g = new Set(grafiasDoMedico(medico));
@@ -1756,6 +1907,30 @@
       devCache.set(comp, ent);
       return ent;
     };
+    // ATLAS v1.3.20: auditoria POR PRODUTO — o "deveria" vem do SISTEMA (QVIS)
+    // para os produtos escolhidos; o relatório recebido segue o mesmo
+    const termos = opts.produtos ? (Array.isArray(opts.produtos) ? opts.produtos : produtosAuditados()) : null;
+    const devProdCache = new Map();
+    const getDeveriaProd = async (comp) => {
+      if (devProdCache.has(comp)) return devProdCache.get(comp);
+      const cons = await getDeveria(comp);
+      const consItens = [];
+      for (const its of cons.porMed.values()) consItens.push(...its);
+      const porMed = new Map();
+      for (const l of deveriaProdutosDaCompetencia(comp, termos, consItens)) {
+        const k = medNormDeLinhaCons(l);
+        if (!porMed.has(k)) porMed.set(k, []);
+        porMed.get(k).push(itemDeveria(l, comp));
+      }
+      const ent = { porMed, ok: cons.ok };
+      devProdCache.set(comp, ent);
+      return ent;
+    };
+    const devDoMes = (comp) => (termos ? getDeveriaProd(comp) : getDeveria(comp));
+    // no mês da ferramenta o relatório recebido É o Consolidado — mesmo na
+    // auditoria por produto (aí só as linhas dos produtos)
+    const consDoMedico = async (comp, medNorm) => ((await getDeveria(comp)).porMed.get(medNorm) || [])
+      .filter(it => !termos || casaProduto(it.procedimento, termos));
     // ATLAS v1.3.3: o médico auditado recorta os meses da ferramenta; relatório
     // importado de outro médico entra, mas avisado
     const auditado = medicoAuditado();
@@ -1800,6 +1975,7 @@
         await tick();
         for (const x of linhasDoRelatorio(r.id)) {
           const it = itemRecebido(x);
+          if (termos && !casaProduto(it.procedimento, termos)) continue;   // ATLAS v1.3.20
           it.relatorio_id = r.id;
           // ATLAS v1.3.13: papel do relatório que não vira nenhum canônico
           if (it.papel && !PAPEIS_CANONICOS.has(it.papel)) papeisCrus.set(it.papelRot || it.papel, (papeisCrus.get(it.papelRot || it.papel) || 0) + 1);
@@ -1809,7 +1985,7 @@
       // deveria dos meses dos relatórios
       const dev = [];
       for (const comp of compsRel) {
-        const ent = await getDeveria(comp);
+        const ent = await devDoMes(comp);   // ATLAS v1.3.20: por produto, o sistema
         for (const it of (ent.porMed.get(medNorm) || [])) { it.dentro = true; dev.push(it); }
       }
       // ATLAS v1.3.5: nos meses da ferramenta o Consolidado É o relatório final
@@ -1821,8 +1997,10 @@
       for (const comp of compsRel) {
         if (!compDaFerramenta(comp)) continue;
         if (!temRelatorio(medNorm, comp)) continue;   // sem arquivo o mês virtual já entrou como relatório
-        for (const it of dev) {
-          if (it.competencia !== comp) continue;
+        // ATLAS v1.3.20: na auditoria por produto o "deveria" é o sistema, então
+        // o recebido virtual vem do Consolidado (o relatório), não do dev
+        const virt = termos ? await consDoMedico(comp, medNorm) : dev.filter(it => it.competencia === comp);
+        for (const it of virt) {
           rec.push(recVirtualDeItem(it, comp));
           complemento.set(comp, (complemento.get(comp) || 0) + 1);
         }
@@ -1849,10 +2027,15 @@
         if (c2) { cruzamento.data += c2.data; cruzamento.procedimento += c2.procedimento; cruzamento.paciente += c2.paciente; cruzamento.fantasma += c2.fantasma; }
       }
       for (const [comp, adms] of outros) {
-        const ent = await getDeveria(comp);
+        const ent = await devDoMes(comp);   // ATLAS v1.3.20
         const temArquivo = temRelatorio(medNorm, comp);
         const ehFerramenta = compDaFerramenta(comp);   // ATLAS v1.3.5: o Consolidado vale mesmo com arquivo
         const semRel = !temArquivo && !ehFerramenta;
+        // ATLAS v1.3.20: por produto, o recebido do mês da ferramenta é a linha
+        // do produto no Consolidado (o "deveria" aqui é o sistema)
+        if (ehFerramenta && termos) {
+          for (const ci of await consDoMedico(comp, medNorm)) if (adms.has(ci.admissao_norm)) rec.push(recVirtualDeItem(ci, comp));
+        }
         for (const it of (ent.porMed.get(medNorm) || [])) {
           if (!adms.has(it.admissao_norm)) continue;
           it.dentro = false;
@@ -1860,7 +2043,7 @@
           dev.push(it);
           // ATLAS v1.3.2: no mês da ferramenta o Consolidado É o relatório
           // final — o que está nele entra como recebido (pago)
-          if (ehFerramenta) rec.push(recVirtualDeItem(it, comp));   // ATLAS v1.3.5
+          if (ehFerramenta && !termos) rec.push(recVirtualDeItem(it, comp));   // ATLAS v1.3.5
           if (semRel) { if (!semRelatorioAviso.has(comp)) semRelatorioAviso.set(comp, new Set()); semRelatorioAviso.get(comp).add(g.medico); }
         }
       }
@@ -1887,11 +2070,12 @@
       // com regra e sem pagamento / aguardando — por mês de relatório
       for (const comp of compsRel) {
         const rel = relDoComp(comp);
-        const extras = opts.semRegra ? [] : regraNaoPaga(g.medico, comp, doMed);
+        const extras = (opts.semRegra || termos) ? [] : regraNaoPaga(g.medico, comp, doMed);   // ATLAS v1.3.20
         for (const it of extras) { it.relatorio_id = rel ? rel.id : rels[0].id; doMed.push(it); }
         if (!opts.semAguardando) {
           const vistas = new Set(doMed.map(x => x.admissao_norm).filter(Boolean));
-          for (const it of aguardandoConvenio(g.medico, comp, vistas)) { it.relatorio_id = rel ? rel.id : rels[0].id; doMed.push(it); }
+          const agu = termos ? produtosSoNaProducao(g.medico, comp, termos, vistas) : aguardandoConvenio(g.medico, comp, vistas);   // ATLAS v1.3.20
+          for (const it of agu) { it.relatorio_id = rel ? rel.id : rels[0].id; doMed.push(it); }
         }
       }
       // cobertura de cada relatório: onde estão as admissões dele
@@ -1992,7 +2176,8 @@
     invalidar();   // um cálculo pode ter gravado snapshot → listas por versão
     progresso({ fase: 'fim', n: sel.length });
     return { itens, porRelatorio, totais: totais(itens), avisos, geradoEm: new Date().toISOString(),
-      competencias: [...new Set(sel.map(r => r.competencia))].sort(), relatorios: sel.map(r => r.id), medicoAuditado: auditado };
+      competencias: [...new Set(sel.map(r => r.competencia))].sort(), relatorios: sel.map(r => r.id), medicoAuditado: auditado,
+      produtos: termos || null };   // ATLAS v1.3.20
   }
   function totais(itens) {
     const t = { deveria: 0, recebido: 0, falta: 0, semLastro: 0, n: itens.length, porCategoria: {} };
@@ -2177,9 +2362,13 @@
           <div class="rf-auditado" id="rf-auditado"></div>
           <div class="rf-filtros" id="rf-filtros"></div>
           <div class="rf-lista" id="rf-lista"></div>
+          <div class="rf-produtos" id="rf-produtos"></div><!-- ATLAS v1.3.20: auditoria por produto -->
           <div class="rf-lista-acoes">
             <button type="button" class="btn btn-primary" id="rf-auditar" title="Confronta o Consolidado da ferramenta com os relatórios marcados (ou todos) e lista o que falta pagar">
               <i class="ti ti-scale"></i> Auditar <span id="rf-auditar-n"></span>
+            </button>
+            <button type="button" class="btn" id="rf-auditar-prod" title="Confere só os produtos da lista acima: tudo o que o sistema (QVIS) e a produção têm deles para o médico, contra o relatório final">
+              <i class="ti ti-filter"></i> Auditar produtos
             </button>
             <button type="button" class="btn" id="rf-pauta" title="Manda as admissões dos relatórios marcados para a pauta da aba Admissão">Mandar admissões para a pauta</button>
           </div>
@@ -2188,7 +2377,35 @@
       </div>`;
     ligar();
     pintarLista();
+    pintarProdutos();   // ATLAS v1.3.20
     if (ui.resultado) pintarResultado();
+  }
+  /**
+   * ATLAS v1.3.20: os PRODUTOS da auditoria por produto, como pílulas
+   * removíveis + um campo para acrescentar (Enter). Grava em config_sistema.
+   */
+  function pintarProdutos() {
+    const alvo = $('rf-produtos');
+    if (!alvo) return;
+    const lista = produtosAuditados();
+    alvo.innerHTML = `
+      <span class="rf-prod-lbl" title="A auditoria por produto confere estes produtos direto no sistema (QVIS) e na produção">Produtos auditados</span>
+      ${lista.map((t, i) => `<span class="rf-prod-chip">${esc(t)}<button type="button" class="rf-prod-x" data-rm="${i}" title="Tirar ${esc(t)}">×</button></span>`).join('')}
+      <input type="text" class="rf-prod-novo" id="rf-prod-novo" placeholder="+ produto (Enter)" autocomplete="off">`;
+    alvo.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => {
+      const l = produtosAuditados(); l.splice(Number(b.dataset.rm), 1);
+      definirProdutosAuditados(l); pintarProdutos();
+    }));
+    const inp = $('rf-prod-novo');
+    inp.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const v = inp.value.trim();
+      if (!v) return;
+      definirProdutosAuditados(produtosAuditados().concat([v]));
+      pintarProdutos();
+      $('rf-prod-novo')?.focus();
+    });
   }
 
   function ligar() {
@@ -2207,6 +2424,7 @@
       if (files.length) await importarUI(files);
     });
     $('rf-auditar').addEventListener('click', () => auditarUI());
+    $('rf-auditar-prod').addEventListener('click', () => auditarUI({ produtos: true }));   // ATLAS v1.3.20
     $('rf-pauta').addEventListener('click', () => {
       const ids = idsSelecionados();
       const itens = [];
@@ -2467,16 +2685,19 @@
     else if (window.AtlasInspecao && AtlasInspecao.inspecionarAdmissao) AtlasInspecao.inspecionarAdmissao(adm);
   }
 
-  async function auditarUI() {
+  async function auditarUI(modo) {
     if (ui.ocupado) return;
+    const porProduto = !!(modo && modo.produtos);   // ATLAS v1.3.20
+    if (porProduto && !produtosAuditados().length) { Utilidades.toast?.('Inclua ao menos um produto na lista "Produtos auditados".', 'warning', 3500); return; }
     const ids = idsSelecionados();
     if (!ids.length) { Utilidades.toast?.('Importe ao menos um relatório final.', 'warning', 3000); return; }
     ui.ocupado = true;
     const prog = $('rf-progresso'), fill = $('rf-barra-fill'), tx = $('rf-prog-tx');
     prog.hidden = false; fill.style.width = '2%'; tx.textContent = 'Preparando…';
     const btn = $('rf-auditar'); if (btn) btn.disabled = true;
+    const btnP = $('rf-auditar-prod'); if (btnP) btnP.disabled = true;
     try {
-      ui.resultado = await auditar(ids, { progresso: (p) => {
+      ui.resultado = await auditar(ids, { produtos: porProduto ? produtosAuditados() : null, progresso: (p) => {
         const pct = p.fase === 'fim' ? 100 : p.fase === 'competencia' ? Math.round(((p.i || 0) / Math.max(1, p.n)) * 40)
           : 40 + Math.round(((p.i || 0) / Math.max(1, p.n)) * 60);
         fill.style.width = pct + '%';
@@ -2494,6 +2715,7 @@
     } finally {
       ui.ocupado = false;
       if (btn) btn.disabled = false;
+      if (btnP) btnP.disabled = false;
       setTimeout(() => { if (prog) prog.hidden = true; }, 900);
     }
   }
@@ -2520,8 +2742,10 @@
     alvo.innerHTML = `
       <div class="rf-head">
         <div>
-          <h3>O que falta pagar</h3>
-          <p>Deveria (Consolidado da ferramenta) × recebido (relatório final), por admissão e papel. ${res.porRelatorio.length} relatório${res.porRelatorio.length !== 1 ? 's' : ''} · ${res.competencias.join(', ')}.${res.medicoAuditado ? ` Médico auditado: <strong>${esc(CodigoMedico.exibir(res.medicoAuditado))}</strong>.` : ''}</p>
+          <h3>${res.produtos ? 'Auditoria por produto' : 'O que falta pagar'}</h3>
+          <p>${res.produtos
+            ? `Sistema (QVIS) e produção × relatório final, só para <strong>${res.produtos.map(esc).join(' · ')}</strong> — o que o sistema tem e o médico não recebeu.`
+            : 'Deveria (Consolidado da ferramenta) × recebido (relatório final), por admissão e papel.'} ${res.porRelatorio.length} relatório${res.porRelatorio.length !== 1 ? 's' : ''} · ${res.competencias.join(', ')}.${res.medicoAuditado ? ` Médico auditado: <strong>${esc(CodigoMedico.exibir(res.medicoAuditado))}</strong>.` : ''}</p>
         </div>
         <div class="rf-acoes">
           <button type="button" class="btn" id="rf-pauta-falta" title="Manda para a pauta da aba Admissão as admissões com valor faltante">Pauta do que falta</button>
@@ -2656,6 +2880,14 @@
     .rf-mini-x { color: #a15646; }
     .rf-link { border: none; background: none; color: #3f6489; font-weight: 700; cursor: pointer; padding: 0; font-family: inherit; text-decoration: underline dotted; }
     .rf-lista-acoes { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    /* ATLAS v1.3.20: produtos da auditoria por produto */
+    .rf-produtos { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+    .rf-prod-lbl { font-size: 11px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: #3f6489; margin-right: 4px; }
+    .rf-prod-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 3px 4px 3px 10px; border-radius: 999px; background: #eef2f6; color: #3f6489; }
+    .rf-prod-x { border: none; background: transparent; color: #3f6489; cursor: pointer; font-size: 13px; line-height: 1; padding: 0 4px; border-radius: 999px; }
+    .rf-prod-x:hover { background: #e4eaf1; }
+    .rf-prod-novo { font-size: 11.5px; padding: 4px 10px; border-radius: 999px; border: 1px dashed #c9d2dd; background: #fff; min-width: 150px; font-family: inherit; color: #1d1f20; }
+    .rf-prod-novo:focus { outline: none; border-color: #5980a6; }
     .rf-avisos { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
     .rf-aviso { font-size: 11.5px; padding: 6px 10px; border-radius: 10px; background: #fbf3e3; color: #6b4f1d; }
     .rf-aviso-erro { background: #faf5f3; color: #a15646; }
@@ -2712,7 +2944,8 @@
     admissoesAdiantadas,   // ATLAS v1.3.9
     recorrenciaNoFinal,    // ATLAS v1.3.11
     medicoAuditado, definirMedicoAuditado, medicosConhecidos,
+    produtosAuditados, definirProdutosAuditados,   // ATLAS v1.3.20
     _interno: { acharCabecalho, compDeTexto, compDoNome, medicoDoNome, papelCanon, confrontarAdmissao, itemDeveria, itemRecebido, totais, ui, catOrigem, lerWorkbook,
-      adotarAdmissoes, conflitoPapeisIrmaos },   // ATLAS v1.3.15 / v1.3.19
+      adotarAdmissoes, conflitoPapeisIrmaos, casaProduto },   // ATLAS v1.3.15 / v1.3.19 / v1.3.20
   };
 })();
